@@ -21,31 +21,38 @@
 lib_LTLIBRARIES = libqgpgme.la
 EXTRA_DIST = QGpgmeConfig.cmake.in.in QGpgmeConfigVersion.cmake.in \
              qgpgme_debug.h qgpgme_version.h.in \
-             QGpgmeConfig.cmake.in.in
+             QGpgmeConfig-w32.cmake.in.in
 
 qgpgme_sources = \
     dataprovider.cpp \
     debug.cpp \
     job.cpp multideletejob.cpp qgpgmeadduseridjob.cpp \
+    qgpgmeaddexistingsubkeyjob.cpp \
     qgpgmebackend.cpp qgpgmechangeexpiryjob.cpp qgpgmechangeownertrustjob.cpp \
     qgpgmechangepasswdjob.cpp qgpgmedecryptjob.cpp \
     qgpgmedecryptverifyjob.cpp qgpgmedeletejob.cpp qgpgmedownloadjob.cpp \
     qgpgmeencryptjob.cpp qgpgmeexportjob.cpp qgpgmeimportfromkeyserverjob.cpp \
     qgpgmeimportjob.cpp qgpgmekeygenerationjob.cpp qgpgmekeylistjob.cpp \
     qgpgmelistallkeysjob.cpp qgpgmenewcryptoconfig.cpp \
-    qgpgmerefreshkeysjob.cpp \
-    qgpgmesecretkeyexportjob.cpp qgpgmesignencryptjob.cpp \
+    qgpgmereceivekeysjob.cpp \
+    qgpgmerefreshsmimekeysjob.cpp \
+    qgpgmerevokekeyjob.cpp \
+    qgpgmesetprimaryuseridjob.cpp \
+    qgpgmesignencryptjob.cpp \
     qgpgmesignjob.cpp qgpgmesignkeyjob.cpp qgpgmeverifydetachedjob.cpp \
-    qgpgmeverifyopaquejob.cpp threadedjobmixin.cpp \
+    qgpgmeverifyopaquejob.cpp qgpgmewkdlookupjob.cpp threadedjobmixin.cpp \
     qgpgmekeyformailboxjob.cpp qgpgme_debug.cpp \
     qgpgmetofupolicyjob.cpp qgpgmequickjob.cpp \
     defaultkeygenerationjob.cpp qgpgmewkspublishjob.cpp \
-    qgpgmegpgcardjob.cpp \
-    dn.cpp cryptoconfig.cpp
+    qgpgmegpgcardjob.cpp changeexpiryjob.cpp encryptjob.cpp importjob.cpp \
+    signencryptjob.cpp \
+    dn.cpp cryptoconfig.cpp wkdlookupresult.cpp \
+    util.cpp
 
 # If you add one here make sure that you also add one in camelcase
 qgpgme_headers= \
     abstractimportjob.h \
+    addexistingsubkeyjob.h \
     adduseridjob.h \
     changeexpiryjob.h \
     changeownertrustjob.h \
@@ -65,6 +72,9 @@ qgpgme_headers= \
     qgpgme_export.h \
     qgpgmenewcryptoconfig.h \
     quickjob.h \
+    receivekeysjob.h \
+    revokekeyjob.h \
+    setprimaryuseridjob.h \
     specialjob.h \
     signjob.h \
     signkeyjob.h \
@@ -81,11 +91,14 @@ qgpgme_headers= \
     verifydetachedjob.h \
     defaultkeygenerationjob.h \
     tofupolicyjob.h \
+    wkdlookupjob.h \
+    wkdlookupresult.h \
     wkspublishjob.h \
     gpgcardjob.h \
     dn.h
 
 camelcase_headers= \
+    AddExistingSubkeyJob \
     AddUserIDJob \
     AbstractImportJob \
     ChangeExpiryJob \
@@ -105,6 +118,9 @@ camelcase_headers= \
     Protocol \
     QGpgMENewCryptoConfig \
     QuickJob \
+    ReceiveKeysJob \
+    RevokeKeyJob \
+    SetPrimaryUserIDJob \
     SpecialJob \
     SignJob \
     SignKeyJob \
@@ -121,6 +137,8 @@ camelcase_headers= \
     VerifyDetachedJob \
     KeyForMailboxJob \
     DefaultKeyGenerationJob \
+    WKDLookupJob \
+    WKDLookupResult \
     WKSPublishJob \
     TofuPolicyJob \
     GpgCardJob
@@ -128,6 +146,8 @@ camelcase_headers= \
 private_qgpgme_headers = \
     qgpgme_export.h \
     protocol_p.h \
+    job_p.h \
+    qgpgmeaddexistingsubkeyjob.h \
     qgpgmeadduseridjob.h \
     qgpgmebackend.h \
     qgpgmechangeexpiryjob.h \
@@ -144,22 +164,27 @@ private_qgpgme_headers = \
     qgpgmekeygenerationjob.h \
     qgpgmekeylistjob.h \
     qgpgmelistallkeysjob.h \
-    qgpgmerefreshkeysjob.h \
-    qgpgmesecretkeyexportjob.h \
+    qgpgmereceivekeysjob.h \
+    qgpgmerefreshsmimekeysjob.h \
+    qgpgmerevokekeyjob.h \
+    qgpgmesetprimaryuseridjob.h \
     qgpgmesignencryptjob.h \
     qgpgmesignjob.h \
     qgpgmesignkeyjob.h \
     qgpgmeverifydetachedjob.h \
     qgpgmeverifyopaquejob.h \
+    qgpgmewkdlookupjob.h \
     qgpgmekeyformailboxjob.h \
     qgpgmewkspublishjob.h \
     qgpgmetofupolicyjob.h \
     qgpgmegpgcardjob.h \
     qgpgmequickjob.h \
-    threadedjobmixin.h
+    threadedjobmixin.h \
+    util.h
 
 qgpgme_moc_sources = \
     abstractimportjob.moc \
+    addexistingsubkeyjob.moc \
     adduseridjob.moc \
     changeexpiryjob.moc \
     changeownertrustjob.moc \
@@ -178,6 +203,7 @@ qgpgme_moc_sources = \
     keylistjob.moc \
     listallkeysjob.moc \
     multideletejob.moc \
+    qgpgmeaddexistingsubkeyjob.moc \
     qgpgmeadduseridjob.moc \
     qgpgmechangeexpiryjob.moc \
     qgpgmechangeownertrustjob.moc \
@@ -193,23 +219,30 @@ qgpgme_moc_sources = \
     qgpgmekeygenerationjob.moc \
     qgpgmekeylistjob.moc \
     qgpgmelistallkeysjob.moc \
-    qgpgmerefreshkeysjob.moc \
-    qgpgmesecretkeyexportjob.moc \
+    qgpgmereceivekeysjob.moc \
+    qgpgmerefreshsmimekeysjob.moc \
+    qgpgmerevokekeyjob.moc \
+    qgpgmesetprimaryuseridjob.moc \
     qgpgmesignencryptjob.moc \
     qgpgmesignjob.moc \
     qgpgmesignkeyjob.moc \
     qgpgmeverifydetachedjob.moc \
     qgpgmeverifyopaquejob.moc \
+    qgpgmewkdlookupjob.moc \
     qgpgmewkspublishjob.moc \
     tofupolicyjob.moc \
     qgpgmetofupolicyjob.moc \
+    receivekeysjob.moc \
     refreshkeysjob.moc \
+    revokekeyjob.moc \
+    setprimaryuseridjob.moc \
     signencryptjob.moc \
     signjob.moc \
     signkeyjob.moc \
     specialjob.moc \
     verifydetachedjob.moc \
     verifyopaquejob.moc \
+    wkdlookupjob.moc \
     keyformailboxjob.moc \
     wkspublishjob.moc \
     qgpgmekeyformailboxjob.moc \

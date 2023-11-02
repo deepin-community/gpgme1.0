@@ -141,7 +141,10 @@ gpgme_error_t _gpgme_engine_op_tofu_policy (engine_t engine,
                                             gpgme_tofu_policy_t policy);
 gpgme_error_t _gpgme_engine_op_import (engine_t engine,
 				       gpgme_data_t keydata,
-                                       gpgme_key_t *keyarray);
+                                       gpgme_key_t *keyarray,
+                                       const char *keyids[],
+                                       const char *import_filter,
+                                       const char *key_origin);
 gpgme_error_t _gpgme_engine_op_keylist (engine_t engine,
 					const char *pattern,
 					int secret_only,
@@ -154,6 +157,7 @@ gpgme_error_t _gpgme_engine_op_keylist_ext (engine_t engine,
 					    gpgme_keylist_mode_t mode,
 					    int engine_flags);
 gpgme_error_t _gpgme_engine_op_keylist_data (engine_t engine,
+					     gpgme_keylist_mode_t mode,
 					     gpgme_data_t data);
 gpgme_error_t _gpgme_engine_op_sign (engine_t engine, gpgme_data_t in,
 				     gpgme_data_t out, gpgme_sig_mode_t mode,

@@ -59,6 +59,7 @@ show_usage (int ex)
          "  --ssh            export as ssh public key\n"
          "  --extern         send keys to the keyserver (TAKE CARE!)\n"
          "  --secret         export secret keys instead of public keys\n"
+         "  --secret-subkey  export secret subkeys instead of public keys\n"
          "  --raw            use PKCS#1 as secret key format\n"
          "  --pkcs12         use PKCS#12 as secret key format\n"
          , stderr);
@@ -128,6 +129,11 @@ main (int argc, char **argv)
           mode |= GPGME_EXPORT_MODE_SECRET;
           argc--; argv++;
         }
+      else if (!strcmp (*argv, "--secret-subkey"))
+        {
+          mode |= GPGME_EXPORT_MODE_SECRET_SUBKEY;
+          argc--; argv++;
+        }
       else if (!strcmp (*argv, "--raw"))
         {
           mode |= GPGME_EXPORT_MODE_RAW;
@@ -165,6 +171,16 @@ main (int argc, char **argv)
       mode = GPGME_EXPORT_MODE_SSH; /* Set only this bit for this test.  */
       keyarray[0] = NULL;
 
+      err = gpgme_op_export_ext (ctx, (const char**)argv, mode, out);
+      fail_if_err (err);
+    }
+  else if ((mode & GPGME_EXPORT_MODE_SECRET_SUBKEY))
+    {
+      keyarray[0] = NULL;
+
+      printf ("exporting secret subkeys!\n");
+
+      gpgme_set_armor (ctx, 1);
       err = gpgme_op_export_ext (ctx, (const char**)argv, mode, out);
       fail_if_err (err);
     }

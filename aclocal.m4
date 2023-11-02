@@ -1204,6 +1204,7 @@ AC_SUBST([am__untar])
 ]) # _AM_PROG_TAR
 
 m4_include([m4/ax_cxx_compile_stdcxx.m4])
+m4_include([m4/ax_gcc_func_attribute.m4])
 m4_include([m4/ax_pkg_swig.m4])
 m4_include([m4/ax_python_devel.m4])
 m4_include([m4/glib-2.0.m4])

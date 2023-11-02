@@ -107,18 +107,21 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-TESTS = initial.test t-keylist$(EXEEXT) t-keylocate$(EXEEXT) \
-	t-ownertrust$(EXEEXT) t-tofuinfo$(EXEEXT) t-encrypt$(EXEEXT) \
-	t-verify$(EXEEXT) t-various$(EXEEXT) t-config$(EXEEXT) \
-	t-remarks$(EXEEXT) t-trustsignatures$(EXEEXT)
-noinst_PROGRAMS = t-keylist$(EXEEXT) t-keylocate$(EXEEXT) \
-	t-ownertrust$(EXEEXT) t-tofuinfo$(EXEEXT) t-encrypt$(EXEEXT) \
-	run-keyformailboxjob$(EXEEXT) t-wkspublish$(EXEEXT) \
-	t-verify$(EXEEXT) t-various$(EXEEXT) t-config$(EXEEXT) \
-	t-remarks$(EXEEXT) t-trustsignatures$(EXEEXT)
+TESTS = initial.test $(am__EXEEXT_1) final.test
+noinst_PROGRAMS = t-addexistingsubkey$(EXEEXT) t-keylist$(EXEEXT) \
+	t-keylocate$(EXEEXT) t-ownertrust$(EXEEXT) t-tofuinfo$(EXEEXT) \
+	t-encrypt$(EXEEXT) run-keyformailboxjob$(EXEEXT) \
+	t-wkspublish$(EXEEXT) t-verify$(EXEEXT) t-various$(EXEEXT) \
+	t-config$(EXEEXT) t-remarks$(EXEEXT) \
+	t-trustsignatures$(EXEEXT) t-changeexpiryjob$(EXEEXT) \
+	t-wkdlookup$(EXEEXT) t-import$(EXEEXT) t-revokekey$(EXEEXT) \
+	t-setprimaryuserid$(EXEEXT) run-importjob$(EXEEXT) \
+	run-exportjob$(EXEEXT) run-receivekeysjob$(EXEEXT) \
+	run-refreshkeysjob$(EXEEXT)
 subdir = lang/qt/tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/m4/ax_gcc_func_attribute.m4 \
 	$(top_srcdir)/m4/ax_pkg_swig.m4 \
 	$(top_srcdir)/m4/ax_python_devel.m4 \
 	$(top_srcdir)/m4/glib-2.0.m4 $(top_srcdir)/m4/glibc21.m4 \
@@ -137,16 +140,48 @@ CONFIG_HEADER = $(top_builddir)/conf/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
-am_run_keyformailboxjob_OBJECTS = run-keyformailboxjob.$(OBJEXT)
-run_keyformailboxjob_OBJECTS = $(am_run_keyformailboxjob_OBJECTS)
-run_keyformailboxjob_LDADD = $(LDADD)
-run_keyformailboxjob_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
+am_run_exportjob_OBJECTS = run-exportjob.$(OBJEXT)
+run_exportjob_OBJECTS = $(am_run_exportjob_OBJECTS)
+run_exportjob_LDADD = $(LDADD)
+run_exportjob_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
 	../src/libqgpgme.la ../../../src/libgpgme.la
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+am_run_importjob_OBJECTS = run-importjob.$(OBJEXT)
+run_importjob_OBJECTS = $(am_run_importjob_OBJECTS)
+run_importjob_LDADD = $(LDADD)
+run_importjob_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
+	../src/libqgpgme.la ../../../src/libgpgme.la
+am_run_keyformailboxjob_OBJECTS = run-keyformailboxjob.$(OBJEXT)
+run_keyformailboxjob_OBJECTS = $(am_run_keyformailboxjob_OBJECTS)
+run_keyformailboxjob_LDADD = $(LDADD)
+run_keyformailboxjob_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
+	../src/libqgpgme.la ../../../src/libgpgme.la
+am_run_receivekeysjob_OBJECTS = run-receivekeysjob.$(OBJEXT)
+run_receivekeysjob_OBJECTS = $(am_run_receivekeysjob_OBJECTS)
+run_receivekeysjob_LDADD = $(LDADD)
+run_receivekeysjob_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
+	../src/libqgpgme.la ../../../src/libgpgme.la
+am_run_refreshkeysjob_OBJECTS = run-refreshkeysjob.$(OBJEXT)
+run_refreshkeysjob_OBJECTS = $(am_run_refreshkeysjob_OBJECTS)
+run_refreshkeysjob_LDADD = $(LDADD)
+run_refreshkeysjob_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
+	../src/libqgpgme.la ../../../src/libgpgme.la
 am__objects_1 = t-support.$(OBJEXT)
+am_t_addexistingsubkey_OBJECTS = t-addexistingsubkey.$(OBJEXT) \
+	$(am__objects_1)
+t_addexistingsubkey_OBJECTS = $(am_t_addexistingsubkey_OBJECTS)
+t_addexistingsubkey_LDADD = $(LDADD)
+t_addexistingsubkey_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
+	../src/libqgpgme.la ../../../src/libgpgme.la
+am_t_changeexpiryjob_OBJECTS = t-changeexpiryjob.$(OBJEXT) \
+	$(am__objects_1)
+t_changeexpiryjob_OBJECTS = $(am_t_changeexpiryjob_OBJECTS)
+t_changeexpiryjob_LDADD = $(LDADD)
+t_changeexpiryjob_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
+	../src/libqgpgme.la ../../../src/libgpgme.la
 am_t_config_OBJECTS = t-config.$(OBJEXT) $(am__objects_1)
 t_config_OBJECTS = $(am_t_config_OBJECTS)
 t_config_LDADD = $(LDADD)
@@ -156,6 +191,11 @@ am_t_encrypt_OBJECTS = t-encrypt.$(OBJEXT) $(am__objects_1)
 t_encrypt_OBJECTS = $(am_t_encrypt_OBJECTS)
 t_encrypt_LDADD = $(LDADD)
 t_encrypt_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
+	../src/libqgpgme.la ../../../src/libgpgme.la
+am_t_import_OBJECTS = t-import.$(OBJEXT) $(am__objects_1)
+t_import_OBJECTS = $(am_t_import_OBJECTS)
+t_import_LDADD = $(LDADD)
+t_import_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
 	../src/libqgpgme.la ../../../src/libgpgme.la
 am_t_keylist_OBJECTS = t-keylist.$(OBJEXT) $(am__objects_1)
 am__objects_2 =
@@ -180,6 +220,17 @@ t_remarks_OBJECTS = $(am_t_remarks_OBJECTS)
 t_remarks_LDADD = $(LDADD)
 t_remarks_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
 	../src/libqgpgme.la ../../../src/libgpgme.la
+am_t_revokekey_OBJECTS = t-revokekey.$(OBJEXT) $(am__objects_1)
+t_revokekey_OBJECTS = $(am_t_revokekey_OBJECTS)
+t_revokekey_LDADD = $(LDADD)
+t_revokekey_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
+	../src/libqgpgme.la ../../../src/libgpgme.la
+am_t_setprimaryuserid_OBJECTS = t-setprimaryuserid.$(OBJEXT) \
+	$(am__objects_1)
+t_setprimaryuserid_OBJECTS = $(am_t_setprimaryuserid_OBJECTS)
+t_setprimaryuserid_LDADD = $(LDADD)
+t_setprimaryuserid_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
+	../src/libqgpgme.la ../../../src/libgpgme.la
 am_t_tofuinfo_OBJECTS = t-tofuinfo.$(OBJEXT) $(am__objects_1)
 t_tofuinfo_OBJECTS = $(am_t_tofuinfo_OBJECTS)
 t_tofuinfo_LDADD = $(LDADD)
@@ -201,6 +252,11 @@ t_verify_OBJECTS = $(am_t_verify_OBJECTS)
 t_verify_LDADD = $(LDADD)
 t_verify_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
 	../src/libqgpgme.la ../../../src/libgpgme.la
+am_t_wkdlookup_OBJECTS = t-wkdlookup.$(OBJEXT) $(am__objects_1)
+t_wkdlookup_OBJECTS = $(am_t_wkdlookup_OBJECTS)
+t_wkdlookup_LDADD = $(LDADD)
+t_wkdlookup_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
+	../src/libqgpgme.la ../../../src/libgpgme.la
 am_t_wkspublish_OBJECTS = t-wkspublish.$(OBJEXT) $(am__objects_1)
 t_wkspublish_OBJECTS = $(am_t_wkspublish_OBJECTS)
 t_wkspublish_LDADD = $(LDADD)
@@ -221,13 +277,21 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/conf
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/run-keyformailboxjob.Po \
-	./$(DEPDIR)/t-config.Po ./$(DEPDIR)/t-encrypt.Po \
+am__depfiles_remade = ./$(DEPDIR)/run-exportjob.Po \
+	./$(DEPDIR)/run-importjob.Po \
+	./$(DEPDIR)/run-keyformailboxjob.Po \
+	./$(DEPDIR)/run-receivekeysjob.Po \
+	./$(DEPDIR)/run-refreshkeysjob.Po \
+	./$(DEPDIR)/t-addexistingsubkey.Po \
+	./$(DEPDIR)/t-changeexpiryjob.Po ./$(DEPDIR)/t-config.Po \
+	./$(DEPDIR)/t-encrypt.Po ./$(DEPDIR)/t-import.Po \
 	./$(DEPDIR)/t-keylist.Po ./$(DEPDIR)/t-keylocate.Po \
 	./$(DEPDIR)/t-ownertrust.Po ./$(DEPDIR)/t-remarks.Po \
+	./$(DEPDIR)/t-revokekey.Po ./$(DEPDIR)/t-setprimaryuserid.Po \
 	./$(DEPDIR)/t-support.Po ./$(DEPDIR)/t-tofuinfo.Po \
 	./$(DEPDIR)/t-trustsignatures.Po ./$(DEPDIR)/t-various.Po \
-	./$(DEPDIR)/t-verify.Po ./$(DEPDIR)/t-wkspublish.Po
+	./$(DEPDIR)/t-verify.Po ./$(DEPDIR)/t-wkdlookup.Po \
+	./$(DEPDIR)/t-wkspublish.Po
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
@@ -265,19 +329,28 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(run_keyformailboxjob_SOURCES) $(t_config_SOURCES) \
-	$(t_encrypt_SOURCES) $(t_keylist_SOURCES) \
+SOURCES = $(run_exportjob_SOURCES) $(run_importjob_SOURCES) \
+	$(run_keyformailboxjob_SOURCES) $(run_receivekeysjob_SOURCES) \
+	$(run_refreshkeysjob_SOURCES) $(t_addexistingsubkey_SOURCES) \
+	$(t_changeexpiryjob_SOURCES) $(t_config_SOURCES) \
+	$(t_encrypt_SOURCES) $(t_import_SOURCES) $(t_keylist_SOURCES) \
 	$(nodist_t_keylist_SOURCES) $(t_keylocate_SOURCES) \
 	$(t_ownertrust_SOURCES) $(t_remarks_SOURCES) \
+	$(t_revokekey_SOURCES) $(t_setprimaryuserid_SOURCES) \
 	$(t_tofuinfo_SOURCES) $(t_trustsignatures_SOURCES) \
 	$(t_various_SOURCES) $(t_verify_SOURCES) \
-	$(t_wkspublish_SOURCES)
-DIST_SOURCES = $(run_keyformailboxjob_SOURCES) $(t_config_SOURCES) \
-	$(t_encrypt_SOURCES) $(t_keylist_SOURCES) \
+	$(t_wkdlookup_SOURCES) $(t_wkspublish_SOURCES)
+DIST_SOURCES = $(run_exportjob_SOURCES) $(run_importjob_SOURCES) \
+	$(run_keyformailboxjob_SOURCES) $(run_receivekeysjob_SOURCES) \
+	$(run_refreshkeysjob_SOURCES) $(t_addexistingsubkey_SOURCES) \
+	$(t_changeexpiryjob_SOURCES) $(t_config_SOURCES) \
+	$(t_encrypt_SOURCES) $(t_import_SOURCES) $(t_keylist_SOURCES) \
 	$(t_keylocate_SOURCES) $(t_ownertrust_SOURCES) \
-	$(t_remarks_SOURCES) $(t_tofuinfo_SOURCES) \
+	$(t_remarks_SOURCES) $(t_revokekey_SOURCES) \
+	$(t_setprimaryuserid_SOURCES) $(t_tofuinfo_SOURCES) \
 	$(t_trustsignatures_SOURCES) $(t_various_SOURCES) \
-	$(t_verify_SOURCES) $(t_wkspublish_SOURCES)
+	$(t_verify_SOURCES) $(t_wkdlookup_SOURCES) \
+	$(t_wkspublish_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -324,6 +397,13 @@ am__tty_colors = { \
     std='[m'; \
   fi; \
 }
+am__EXEEXT_1 = t-addexistingsubkey$(EXEEXT) t-keylist$(EXEEXT) \
+	t-keylocate$(EXEEXT) t-ownertrust$(EXEEXT) t-tofuinfo$(EXEEXT) \
+	t-encrypt$(EXEEXT) t-verify$(EXEEXT) t-various$(EXEEXT) \
+	t-config$(EXEEXT) t-remarks$(EXEEXT) \
+	t-trustsignatures$(EXEEXT) t-changeexpiryjob$(EXEEXT) \
+	t-wkdlookup$(EXEEXT) t-import$(EXEEXT) t-revokekey$(EXEEXT) \
+	t-setprimaryuserid$(EXEEXT)
 am__DIST_COMMON = $(srcdir)/Makefile.in \
 	$(top_srcdir)/build-aux/depcomp \
 	$(top_srcdir)/build-aux/mkinstalldirs
@@ -377,6 +457,7 @@ GPGME_CONFIG_AVAIL_LANG = @GPGME_CONFIG_AVAIL_LANG@
 GPGME_CONFIG_CFLAGS = @GPGME_CONFIG_CFLAGS@
 GPGME_CONFIG_HOST = @GPGME_CONFIG_HOST@
 GPGME_CONFIG_LIBS = @GPGME_CONFIG_LIBS@
+GPGME_CPP_CFLAGS = @GPGME_CPP_CFLAGS@
 GPGME_QTTEST_CFLAGS = @GPGME_QTTEST_CFLAGS@
 GPGME_QTTEST_LIBS = @GPGME_QTTEST_LIBS@
 GPGME_QT_CFLAGS = @GPGME_QT_CFLAGS@
@@ -529,10 +610,20 @@ top_srcdir = @top_srcdir@
 GPG = gpg
 GNUPGHOME = $(abs_builddir)
 TESTS_ENVIRONMENT = GNUPGHOME=$(GNUPGHOME)
-EXTRA_DIST = initial.test
-moc_files = t-keylist.moc t-keylocate.moc t-ownertrust.moc t-tofuinfo.moc \
-            t-encrypt.moc t-support.hmoc t-wkspublish.moc t-verify.moc \
-            t-various.moc t-config.moc t-remarks.moc t-trustsignatures.moc
+EXTRA_DIST = initial.test final.test
+the_tests = \
+	t-addexistingsubkey \
+	t-keylist t-keylocate t-ownertrust t-tofuinfo \
+	t-encrypt t-verify t-various t-config t-remarks t-trustsignatures \
+	t-changeexpiryjob t-wkdlookup t-import t-revokekey t-setprimaryuserid
+
+moc_files = \
+	t-addexistingsubkey.moc \
+	t-keylist.moc t-keylocate.moc t-ownertrust.moc t-tofuinfo.moc \
+	t-encrypt.moc t-support.hmoc t-wkspublish.moc t-verify.moc \
+	t-various.moc t-config.moc t-remarks.moc t-trustsignatures.moc \
+	t-changeexpiryjob.moc t-wkdlookup.moc t-import.moc t-revokekey.moc \
+	t-setprimaryuserid.moc
 
 AM_LDFLAGS = -no-install
 LDADD = ../../cpp/src/libgpgmepp.la ../src/libqgpgme.la \
@@ -546,6 +637,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/lang/cpp/src -I$(top_builddir)/src \
               -DTOP_SRCDIR="$(top_srcdir)"
 
 support_src = t-support.h t-support.cpp
+t_addexistingsubkey_SOURCES = t-addexistingsubkey.cpp $(support_src)
 t_keylist_SOURCES = t-keylist.cpp $(support_src)
 t_keylocate_SOURCES = t-keylocate.cpp $(support_src)
 t_ownertrust_SOURCES = t-ownertrust.cpp $(support_src)
@@ -557,7 +649,16 @@ t_various_SOURCES = t-various.cpp $(support_src)
 t_config_SOURCES = t-config.cpp $(support_src)
 t_remarks_SOURCES = t-remarks.cpp $(support_src)
 t_trustsignatures_SOURCES = t-trustsignatures.cpp $(support_src)
+t_changeexpiryjob_SOURCES = t-changeexpiryjob.cpp $(support_src)
+t_wkdlookup_SOURCES = t-wkdlookup.cpp $(support_src)
+t_import_SOURCES = t-import.cpp $(support_src)
+t_revokekey_SOURCES = t-revokekey.cpp $(support_src)
+t_setprimaryuserid_SOURCES = t-setprimaryuserid.cpp $(support_src)
+run_exportjob_SOURCES = run-exportjob.cpp
+run_importjob_SOURCES = run-importjob.cpp
 run_keyformailboxjob_SOURCES = run-keyformailboxjob.cpp
+run_receivekeysjob_SOURCES = run-receivekeysjob.cpp
+run_refreshkeysjob_SOURCES = run-refreshkeysjob.cpp
 nodist_t_keylist_SOURCES = $(moc_files)
 BUILT_SOURCES = $(moc_files) pubring-stamp
 CLEANFILES = secring.gpg pubring.gpg pubring.kbx trustdb.gpg dirmngr.conf \
@@ -609,9 +710,33 @@ clean-noinstPROGRAMS:
 	echo " rm -f" $$list; \
 	rm -f $$list
 
+run-exportjob$(EXEEXT): $(run_exportjob_OBJECTS) $(run_exportjob_DEPENDENCIES) $(EXTRA_run_exportjob_DEPENDENCIES) 
+	@rm -f run-exportjob$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(run_exportjob_OBJECTS) $(run_exportjob_LDADD) $(LIBS)
+
+run-importjob$(EXEEXT): $(run_importjob_OBJECTS) $(run_importjob_DEPENDENCIES) $(EXTRA_run_importjob_DEPENDENCIES) 
+	@rm -f run-importjob$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(run_importjob_OBJECTS) $(run_importjob_LDADD) $(LIBS)
+
 run-keyformailboxjob$(EXEEXT): $(run_keyformailboxjob_OBJECTS) $(run_keyformailboxjob_DEPENDENCIES) $(EXTRA_run_keyformailboxjob_DEPENDENCIES) 
 	@rm -f run-keyformailboxjob$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(run_keyformailboxjob_OBJECTS) $(run_keyformailboxjob_LDADD) $(LIBS)
+
+run-receivekeysjob$(EXEEXT): $(run_receivekeysjob_OBJECTS) $(run_receivekeysjob_DEPENDENCIES) $(EXTRA_run_receivekeysjob_DEPENDENCIES) 
+	@rm -f run-receivekeysjob$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(run_receivekeysjob_OBJECTS) $(run_receivekeysjob_LDADD) $(LIBS)
+
+run-refreshkeysjob$(EXEEXT): $(run_refreshkeysjob_OBJECTS) $(run_refreshkeysjob_DEPENDENCIES) $(EXTRA_run_refreshkeysjob_DEPENDENCIES) 
+	@rm -f run-refreshkeysjob$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(run_refreshkeysjob_OBJECTS) $(run_refreshkeysjob_LDADD) $(LIBS)
+
+t-addexistingsubkey$(EXEEXT): $(t_addexistingsubkey_OBJECTS) $(t_addexistingsubkey_DEPENDENCIES) $(EXTRA_t_addexistingsubkey_DEPENDENCIES) 
+	@rm -f t-addexistingsubkey$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(t_addexistingsubkey_OBJECTS) $(t_addexistingsubkey_LDADD) $(LIBS)
+
+t-changeexpiryjob$(EXEEXT): $(t_changeexpiryjob_OBJECTS) $(t_changeexpiryjob_DEPENDENCIES) $(EXTRA_t_changeexpiryjob_DEPENDENCIES) 
+	@rm -f t-changeexpiryjob$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(t_changeexpiryjob_OBJECTS) $(t_changeexpiryjob_LDADD) $(LIBS)
 
 t-config$(EXEEXT): $(t_config_OBJECTS) $(t_config_DEPENDENCIES) $(EXTRA_t_config_DEPENDENCIES) 
 	@rm -f t-config$(EXEEXT)
@@ -620,6 +745,10 @@ t-config$(EXEEXT): $(t_config_OBJECTS) $(t_config_DEPENDENCIES) $(EXTRA_t_config
 t-encrypt$(EXEEXT): $(t_encrypt_OBJECTS) $(t_encrypt_DEPENDENCIES) $(EXTRA_t_encrypt_DEPENDENCIES) 
 	@rm -f t-encrypt$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(t_encrypt_OBJECTS) $(t_encrypt_LDADD) $(LIBS)
+
+t-import$(EXEEXT): $(t_import_OBJECTS) $(t_import_DEPENDENCIES) $(EXTRA_t_import_DEPENDENCIES) 
+	@rm -f t-import$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(t_import_OBJECTS) $(t_import_LDADD) $(LIBS)
 
 t-keylist$(EXEEXT): $(t_keylist_OBJECTS) $(t_keylist_DEPENDENCIES) $(EXTRA_t_keylist_DEPENDENCIES) 
 	@rm -f t-keylist$(EXEEXT)
@@ -637,6 +766,14 @@ t-remarks$(EXEEXT): $(t_remarks_OBJECTS) $(t_remarks_DEPENDENCIES) $(EXTRA_t_rem
 	@rm -f t-remarks$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(t_remarks_OBJECTS) $(t_remarks_LDADD) $(LIBS)
 
+t-revokekey$(EXEEXT): $(t_revokekey_OBJECTS) $(t_revokekey_DEPENDENCIES) $(EXTRA_t_revokekey_DEPENDENCIES) 
+	@rm -f t-revokekey$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(t_revokekey_OBJECTS) $(t_revokekey_LDADD) $(LIBS)
+
+t-setprimaryuserid$(EXEEXT): $(t_setprimaryuserid_OBJECTS) $(t_setprimaryuserid_DEPENDENCIES) $(EXTRA_t_setprimaryuserid_DEPENDENCIES) 
+	@rm -f t-setprimaryuserid$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(t_setprimaryuserid_OBJECTS) $(t_setprimaryuserid_LDADD) $(LIBS)
+
 t-tofuinfo$(EXEEXT): $(t_tofuinfo_OBJECTS) $(t_tofuinfo_DEPENDENCIES) $(EXTRA_t_tofuinfo_DEPENDENCIES) 
 	@rm -f t-tofuinfo$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(t_tofuinfo_OBJECTS) $(t_tofuinfo_LDADD) $(LIBS)
@@ -653,6 +790,10 @@ t-verify$(EXEEXT): $(t_verify_OBJECTS) $(t_verify_DEPENDENCIES) $(EXTRA_t_verify
 	@rm -f t-verify$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(t_verify_OBJECTS) $(t_verify_LDADD) $(LIBS)
 
+t-wkdlookup$(EXEEXT): $(t_wkdlookup_OBJECTS) $(t_wkdlookup_DEPENDENCIES) $(EXTRA_t_wkdlookup_DEPENDENCIES) 
+	@rm -f t-wkdlookup$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(t_wkdlookup_OBJECTS) $(t_wkdlookup_LDADD) $(LIBS)
+
 t-wkspublish$(EXEEXT): $(t_wkspublish_OBJECTS) $(t_wkspublish_DEPENDENCIES) $(EXTRA_t_wkspublish_DEPENDENCIES) 
 	@rm -f t-wkspublish$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(t_wkspublish_OBJECTS) $(t_wkspublish_LDADD) $(LIBS)
@@ -663,18 +804,28 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-exportjob.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-importjob.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-keyformailboxjob.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-receivekeysjob.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-refreshkeysjob.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-addexistingsubkey.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-changeexpiryjob.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-config.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-encrypt.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-import.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-keylist.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-keylocate.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-ownertrust.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-remarks.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-revokekey.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-setprimaryuserid.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-support.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-tofuinfo.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-trustsignatures.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-various.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-verify.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-wkdlookup.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-wkspublish.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -934,18 +1085,28 @@ clean-am: clean-generic clean-libtool clean-local clean-noinstPROGRAMS \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/run-keyformailboxjob.Po
+		-rm -f ./$(DEPDIR)/run-exportjob.Po
+	-rm -f ./$(DEPDIR)/run-importjob.Po
+	-rm -f ./$(DEPDIR)/run-keyformailboxjob.Po
+	-rm -f ./$(DEPDIR)/run-receivekeysjob.Po
+	-rm -f ./$(DEPDIR)/run-refreshkeysjob.Po
+	-rm -f ./$(DEPDIR)/t-addexistingsubkey.Po
+	-rm -f ./$(DEPDIR)/t-changeexpiryjob.Po
 	-rm -f ./$(DEPDIR)/t-config.Po
 	-rm -f ./$(DEPDIR)/t-encrypt.Po
+	-rm -f ./$(DEPDIR)/t-import.Po
 	-rm -f ./$(DEPDIR)/t-keylist.Po
 	-rm -f ./$(DEPDIR)/t-keylocate.Po
 	-rm -f ./$(DEPDIR)/t-ownertrust.Po
 	-rm -f ./$(DEPDIR)/t-remarks.Po
+	-rm -f ./$(DEPDIR)/t-revokekey.Po
+	-rm -f ./$(DEPDIR)/t-setprimaryuserid.Po
 	-rm -f ./$(DEPDIR)/t-support.Po
 	-rm -f ./$(DEPDIR)/t-tofuinfo.Po
 	-rm -f ./$(DEPDIR)/t-trustsignatures.Po
 	-rm -f ./$(DEPDIR)/t-various.Po
 	-rm -f ./$(DEPDIR)/t-verify.Po
+	-rm -f ./$(DEPDIR)/t-wkdlookup.Po
 	-rm -f ./$(DEPDIR)/t-wkspublish.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -992,18 +1153,28 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/run-keyformailboxjob.Po
+		-rm -f ./$(DEPDIR)/run-exportjob.Po
+	-rm -f ./$(DEPDIR)/run-importjob.Po
+	-rm -f ./$(DEPDIR)/run-keyformailboxjob.Po
+	-rm -f ./$(DEPDIR)/run-receivekeysjob.Po
+	-rm -f ./$(DEPDIR)/run-refreshkeysjob.Po
+	-rm -f ./$(DEPDIR)/t-addexistingsubkey.Po
+	-rm -f ./$(DEPDIR)/t-changeexpiryjob.Po
 	-rm -f ./$(DEPDIR)/t-config.Po
 	-rm -f ./$(DEPDIR)/t-encrypt.Po
+	-rm -f ./$(DEPDIR)/t-import.Po
 	-rm -f ./$(DEPDIR)/t-keylist.Po
 	-rm -f ./$(DEPDIR)/t-keylocate.Po
 	-rm -f ./$(DEPDIR)/t-ownertrust.Po
 	-rm -f ./$(DEPDIR)/t-remarks.Po
+	-rm -f ./$(DEPDIR)/t-revokekey.Po
+	-rm -f ./$(DEPDIR)/t-setprimaryuserid.Po
 	-rm -f ./$(DEPDIR)/t-support.Po
 	-rm -f ./$(DEPDIR)/t-tofuinfo.Po
 	-rm -f ./$(DEPDIR)/t-trustsignatures.Po
 	-rm -f ./$(DEPDIR)/t-various.Po
 	-rm -f ./$(DEPDIR)/t-verify.Po
+	-rm -f ./$(DEPDIR)/t-wkdlookup.Po
 	-rm -f ./$(DEPDIR)/t-wkspublish.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic

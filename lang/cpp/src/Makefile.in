@@ -113,6 +113,7 @@ host_triplet = @host@
 subdir = lang/cpp/src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/m4/ax_gcc_func_attribute.m4 \
 	$(top_srcdir)/m4/ax_pkg_swig.m4 \
 	$(top_srcdir)/m4/ax_python_devel.m4 \
 	$(top_srcdir)/m4/glib-2.0.m4 $(top_srcdir)/m4/glibc21.m4 \
@@ -173,10 +174,12 @@ am__objects_1 = exception.lo context.lo key.lo trustitem.lo data.lo \
 	gpgsetexpirytimeeditinteractor.lo \
 	gpgsetownertrusteditinteractor.lo gpgsignkeyeditinteractor.lo \
 	gpgadduserideditinteractor.lo gpggencardkeyinteractor.lo \
-	defaultassuantransaction.lo scdgetinfoassuantransaction.lo \
+	gpgaddexistingsubkeyeditinteractor.lo \
+	gpgrevokekeyeditinteractor.lo defaultassuantransaction.lo \
+	scdgetinfoassuantransaction.lo \
 	gpgagentgetinfoassuantransaction.lo \
 	statusconsumerassuantransaction.lo vfsmountresult.lo \
-	configuration.lo tofuinfo.lo swdbresult.lo
+	configuration.lo tofuinfo.lo swdbresult.lo util.lo
 am__objects_2 =
 am_libgpgmepp_la_OBJECTS = $(am__objects_1) $(am__objects_2) \
 	context_vanilla.lo $(am__objects_2) $(am__objects_2)
@@ -212,9 +215,11 @@ am__depfiles_remade = ./$(DEPDIR)/callbacks.Plo \
 	./$(DEPDIR)/editinteractor.Plo \
 	./$(DEPDIR)/encryptionresult.Plo ./$(DEPDIR)/engineinfo.Plo \
 	./$(DEPDIR)/eventloopinteractor.Plo ./$(DEPDIR)/exception.Plo \
+	./$(DEPDIR)/gpgaddexistingsubkeyeditinteractor.Plo \
 	./$(DEPDIR)/gpgadduserideditinteractor.Plo \
 	./$(DEPDIR)/gpgagentgetinfoassuantransaction.Plo \
 	./$(DEPDIR)/gpggencardkeyinteractor.Plo \
+	./$(DEPDIR)/gpgrevokekeyeditinteractor.Plo \
 	./$(DEPDIR)/gpgsetexpirytimeeditinteractor.Plo \
 	./$(DEPDIR)/gpgsetownertrusteditinteractor.Plo \
 	./$(DEPDIR)/gpgsignkeyeditinteractor.Plo \
@@ -225,7 +230,8 @@ am__depfiles_remade = ./$(DEPDIR)/callbacks.Plo \
 	./$(DEPDIR)/signingresult.Plo \
 	./$(DEPDIR)/statusconsumerassuantransaction.Plo \
 	./$(DEPDIR)/swdbresult.Plo ./$(DEPDIR)/tofuinfo.Plo \
-	./$(DEPDIR)/trustitem.Plo ./$(DEPDIR)/verificationresult.Plo \
+	./$(DEPDIR)/trustitem.Plo ./$(DEPDIR)/util.Plo \
+	./$(DEPDIR)/verificationresult.Plo \
 	./$(DEPDIR)/vfsmountresult.Plo
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
@@ -347,6 +353,7 @@ GPGME_CONFIG_AVAIL_LANG = @GPGME_CONFIG_AVAIL_LANG@
 GPGME_CONFIG_CFLAGS = @GPGME_CONFIG_CFLAGS@
 GPGME_CONFIG_HOST = @GPGME_CONFIG_HOST@
 GPGME_CONFIG_LIBS = @GPGME_CONFIG_LIBS@
+GPGME_CPP_CFLAGS = @GPGME_CPP_CFLAGS@
 GPGME_QTTEST_CFLAGS = @GPGME_QTTEST_CFLAGS@
 GPGME_QTTEST_LIBS = @GPGME_QTTEST_LIBS@
 GPGME_QT_CFLAGS = @GPGME_QT_CFLAGS@
@@ -509,10 +516,13 @@ main_sources = \
     engineinfo.cpp gpgsetexpirytimeeditinteractor.cpp \
     gpgsetownertrusteditinteractor.cpp gpgsignkeyeditinteractor.cpp \
     gpgadduserideditinteractor.cpp gpggencardkeyinteractor.cpp \
+    gpgaddexistingsubkeyeditinteractor.cpp \
+    gpgrevokekeyeditinteractor.cpp \
     defaultassuantransaction.cpp \
     scdgetinfoassuantransaction.cpp gpgagentgetinfoassuantransaction.cpp \
     statusconsumerassuantransaction.cpp \
-    vfsmountresult.cpp configuration.cpp tofuinfo.cpp swdbresult.cpp
+    vfsmountresult.cpp configuration.cpp tofuinfo.cpp swdbresult.cpp \
+    util.cpp
 
 gpgmepp_headers = \
     configuration.h context.h data.h decryptionresult.h \
@@ -522,6 +532,8 @@ gpgmepp_headers = \
     gpgmefw.h gpgsetexpirytimeeditinteractor.h \
     gpgsetownertrusteditinteractor.h gpgsignkeyeditinteractor.h \
     gpggencardkeyinteractor.h \
+    gpgaddexistingsubkeyeditinteractor.h \
+    gpgrevokekeyeditinteractor.h \
     importresult.h keygenerationresult.h key.h keylistresult.h \
     notation.h result.h scdgetinfoassuantransaction.h signingresult.h \
     statusconsumerassuantransaction.h \
@@ -543,7 +555,8 @@ nodist_gpgmeppinclude_HEADERS = gpgmepp_version.h
 libgpgmepp_la_SOURCES = $(main_sources) $(gpgmepp_headers) context_vanilla.cpp \
                         $(interface_headers) $(private_gpgmepp_headers)
 
-AM_CPPFLAGS = -I$(top_builddir)/src @GPG_ERROR_CFLAGS@ @LIBASSUAN_CFLAGS@ \
+AM_CPPFLAGS = -I$(top_builddir)/src \
+              @GPGME_CPP_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBASSUAN_CFLAGS@ \
               -DBUILDING_GPGMEPP -Wsuggest-override \
               -Wzero-as-null-pointer-constant
 
@@ -654,9 +667,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/engineinfo.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eventloopinteractor.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/exception.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gpgaddexistingsubkeyeditinteractor.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gpgadduserideditinteractor.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gpgagentgetinfoassuantransaction.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gpggencardkeyinteractor.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gpgrevokekeyeditinteractor.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gpgsetexpirytimeeditinteractor.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gpgsetownertrusteditinteractor.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gpgsignkeyeditinteractor.Plo@am__quote@ # am--include-marker
@@ -670,6 +685,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/swdbresult.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tofuinfo.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trustitem.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/verificationresult.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vfsmountresult.Plo@am__quote@ # am--include-marker
 
@@ -913,9 +929,11 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/engineinfo.Plo
 	-rm -f ./$(DEPDIR)/eventloopinteractor.Plo
 	-rm -f ./$(DEPDIR)/exception.Plo
+	-rm -f ./$(DEPDIR)/gpgaddexistingsubkeyeditinteractor.Plo
 	-rm -f ./$(DEPDIR)/gpgadduserideditinteractor.Plo
 	-rm -f ./$(DEPDIR)/gpgagentgetinfoassuantransaction.Plo
 	-rm -f ./$(DEPDIR)/gpggencardkeyinteractor.Plo
+	-rm -f ./$(DEPDIR)/gpgrevokekeyeditinteractor.Plo
 	-rm -f ./$(DEPDIR)/gpgsetexpirytimeeditinteractor.Plo
 	-rm -f ./$(DEPDIR)/gpgsetownertrusteditinteractor.Plo
 	-rm -f ./$(DEPDIR)/gpgsignkeyeditinteractor.Plo
@@ -929,6 +947,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/swdbresult.Plo
 	-rm -f ./$(DEPDIR)/tofuinfo.Plo
 	-rm -f ./$(DEPDIR)/trustitem.Plo
+	-rm -f ./$(DEPDIR)/util.Plo
 	-rm -f ./$(DEPDIR)/verificationresult.Plo
 	-rm -f ./$(DEPDIR)/vfsmountresult.Plo
 	-rm -f Makefile
@@ -990,9 +1009,11 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/engineinfo.Plo
 	-rm -f ./$(DEPDIR)/eventloopinteractor.Plo
 	-rm -f ./$(DEPDIR)/exception.Plo
+	-rm -f ./$(DEPDIR)/gpgaddexistingsubkeyeditinteractor.Plo
 	-rm -f ./$(DEPDIR)/gpgadduserideditinteractor.Plo
 	-rm -f ./$(DEPDIR)/gpgagentgetinfoassuantransaction.Plo
 	-rm -f ./$(DEPDIR)/gpggencardkeyinteractor.Plo
+	-rm -f ./$(DEPDIR)/gpgrevokekeyeditinteractor.Plo
 	-rm -f ./$(DEPDIR)/gpgsetexpirytimeeditinteractor.Plo
 	-rm -f ./$(DEPDIR)/gpgsetownertrusteditinteractor.Plo
 	-rm -f ./$(DEPDIR)/gpgsignkeyeditinteractor.Plo
@@ -1006,6 +1027,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/swdbresult.Plo
 	-rm -f ./$(DEPDIR)/tofuinfo.Plo
 	-rm -f ./$(DEPDIR)/trustitem.Plo
+	-rm -f ./$(DEPDIR)/util.Plo
 	-rm -f ./$(DEPDIR)/verificationresult.Plo
 	-rm -f ./$(DEPDIR)/vfsmountresult.Plo
 	-rm -f Makefile

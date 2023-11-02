@@ -177,6 +177,12 @@ struct gpgme_context
   /* The optional expiration date of a certification.  */
   char *cert_expire;
 
+  /* The optional key origin.  */
+  char *key_origin;
+
+  /* The optional import filter.  */
+  char *import_filter;
+
   /* The operation data hooked into the context.  */
   ctx_op_data_t op_data;
 

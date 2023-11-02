@@ -54,11 +54,18 @@
 # include <dirent.h>
 #endif /*USE_LINUX_GETDENTS*/
 
+#ifdef HAVE_POLL_H
+# include <poll.h>
+#else
+# ifdef HAVE_SYS_SELECT_H
+#  include <sys/select.h>
+# endif
+#endif
+#include <sys/socket.h>
 
 #include "util.h"
 #include "priv-io.h"
 #include "sema.h"
-#include "ath.h"
 #include "debug.h"
 
 
@@ -178,7 +185,7 @@ _gpgme_io_read (int fd, void *buffer, size_t count)
 
   do
     {
-      nread = _gpgme_ath_read (fd, buffer, count);
+      nread = read (fd, buffer, count);
     }
   while (nread == -1 && errno == EINTR);
 
@@ -197,7 +204,7 @@ _gpgme_io_write (int fd, const void *buffer, size_t count)
 
   do
     {
-      nwritten = _gpgme_ath_write (fd, buffer, count);
+      nwritten = write (fd, buffer, count);
     }
   while (nwritten == -1 && errno == EINTR);
 
@@ -490,7 +497,7 @@ _gpgme_io_waitpid (int pid, int hang, int *r_status, int *r_signal)
   *r_status = 0;
   *r_signal = 0;
   do
-    ret = _gpgme_ath_waitpid (pid, &status, hang? 0 : WNOHANG);
+    ret = waitpid (pid, &status, hang? 0 : WNOHANG);
   while (ret == (pid_t)(-1) && errno == EINTR);
 
   if (ret == pid)
@@ -691,8 +698,119 @@ _gpgme_io_spawn (const char *path, char *const argv[], unsigned int flags,
 
 /* Select on the list of fds.  Returns: -1 = error, 0 = timeout or
    nothing to select, > 0 = number of signaled fds.  */
-int
-_gpgme_io_select (struct io_select_fd_s *fds, size_t nfds, int nonblock)
+#ifdef HAVE_POLL_H
+static int
+_gpgme_io_select_poll (struct io_select_fd_s *fds, size_t nfds, int nonblock)
+{
+  struct pollfd *poll_fds = NULL;
+  nfds_t poll_nfds;
+  /* Use a 1s timeout.  */
+  int timeout = 1000;
+  unsigned int i;
+  int any;
+  int count;
+  void *dbg_help = NULL;
+  TRACE_BEG  (DEBUG_SYSIO, "_gpgme_io_select", NULL,
+	      "nfds=%zu, nonblock=%u", nfds, nonblock);
+
+
+  if (nonblock)
+    timeout = 0;
+
+  poll_fds = malloc (sizeof (*poll_fds)*nfds);
+  if (!poll_fds)
+    return -1;
+
+  poll_nfds = 0;
+
+  TRACE_SEQ (dbg_help, "poll on [ ");
+
+  any = 0;
+  for (i = 0; i < nfds; i++)
+    {
+      if (fds[i].fd == -1)
+	continue;
+      if (fds[i].for_read || fds[i].for_write)
+	{
+          poll_fds[poll_nfds].fd = fds[i].fd;
+          poll_fds[poll_nfds].events = 0;
+          poll_fds[poll_nfds].revents = 0;
+          if (fds[i].for_read)
+            {
+              poll_fds[poll_nfds].events |= POLLIN;
+              TRACE_ADD1 (dbg_help, "r=%d ", fds[i].fd);
+            }
+          if (fds[i].for_write)
+            {
+              poll_fds[poll_nfds].events |= POLLOUT;
+              TRACE_ADD1 (dbg_help, "w=%d ", fds[i].fd);
+            }
+          poll_nfds++;
+          any = 1;
+        }
+      fds[i].signaled = 0;
+    }
+  TRACE_END (dbg_help, "]");
+  if (!any)
+    {
+      free (poll_fds);
+      return TRACE_SYSRES (0);
+    }
+
+  do
+    count = poll (poll_fds, poll_nfds, timeout);
+  while (count < 0 && (errno == EINTR || errno == EAGAIN));
+  if (count < 0)
+    {
+      int save_errno = errno;
+      free (poll_fds);
+      errno = save_errno;
+      return TRACE_SYSRES (-1);
+    }
+
+  TRACE_SEQ (dbg_help, "poll OK [ ");
+  if (TRACE_ENABLED (dbg_help))
+    {
+      poll_nfds = 0;
+      for (i = 0; i < nfds; i++)
+	{
+          if (fds[i].fd == -1)
+            continue;
+	  if ((poll_fds[poll_nfds].revents & (POLLIN|POLLHUP)))
+	    TRACE_ADD1 (dbg_help, "r=%d ", i);
+	  if ((poll_fds[poll_nfds].revents & POLLOUT))
+	    TRACE_ADD1 (dbg_help, "w=%d ", i);
+          poll_nfds++;
+        }
+      TRACE_END (dbg_help, "]");
+    }
+
+  poll_nfds = 0;
+  for (i = 0; i < nfds; i++)
+    {
+      if (fds[i].fd == -1)
+	continue;
+      if (fds[i].for_read || fds[i].for_write)
+	{
+          short events_to_be_checked = 0;
+
+          if (fds[i].for_read)
+            events_to_be_checked |= (POLLIN|POLLHUP);
+          if (fds[i].for_write)
+            events_to_be_checked |= POLLOUT;
+          if ((poll_fds[poll_nfds].revents & events_to_be_checked))
+            fds[i].signaled = 1;
+
+          poll_nfds++;
+        }
+    }
+
+  free (poll_fds);
+  return TRACE_SYSRES (count);
+}
+#else
+static int
+_gpgme_io_select_select (struct io_select_fd_s *fds, size_t nfds, int nonblock)
 {
   fd_set readfds;
   fd_set writefds;
@@ -758,8 +876,7 @@ _gpgme_io_select (struct io_select_fd_s *fds, size_t nfds, int nonblock)
 
   do
     {
-      count = _gpgme_ath_select (max_fd + 1, &readfds, &writefds, NULL,
-				 &timeout);
+      count = select (max_fd + 1, &readfds, &writefds, NULL, &timeout);
     }
   while (count < 0 && errno == EINTR);
   if (count < 0)
@@ -802,7 +919,17 @@ _gpgme_io_select (struct io_select_fd_s *fds, size_t nfds, int nonblock)
     }
   return TRACE_SYSRES (count);
 }
+#endif
 
+int
+_gpgme_io_select (struct io_select_fd_s *fds, size_t nfds, int nonblock)
+{
+#ifdef HAVE_POLL_H
+  return _gpgme_io_select_poll (fds, nfds, nonblock);
+#else
+  return _gpgme_io_select_select (fds, nfds, nonblock);
+#endif
+}
 
 int
 _gpgme_io_recvmsg (int fd, struct msghdr *msg, int flags)
@@ -825,7 +952,7 @@ _gpgme_io_recvmsg (int fd, struct msghdr *msg, int flags)
 
   do
     {
-      nread = _gpgme_ath_recvmsg (fd, msg, flags);
+      nread = recvmsg (fd, msg, flags);
     }
   while (nread == -1 && errno == EINTR);
   saved_errno = errno;
@@ -875,7 +1002,7 @@ _gpgme_io_sendmsg (int fd, const struct msghdr *msg, int flags)
 
   do
     {
-      nwritten = _gpgme_ath_sendmsg (fd, msg, flags);
+      nwritten = sendmsg (fd, msg, flags);
     }
   while (nwritten == -1 && errno == EINTR);
   return TRACE_SYSRES (nwritten);
@@ -920,7 +1047,7 @@ _gpgme_io_connect (int fd, struct sockaddr *addr, int addrlen)
 	      "fd=%d addr=%p addrlen=%i", fd, addr, addrlen);
 
   do
-    res = ath_connect (fd, addr, addrlen);
+    res = connect (fd, addr, addrlen);
   while (res == -1 && errno == EINTR);
 
   return TRACE_SYSRES (res);

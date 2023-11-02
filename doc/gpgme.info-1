@@ -19,8 +19,8 @@ END-INFO-DIR-ENTRY
 
    This file documents the GPGME library.
 
-   This is Edition 1.15.2-beta35, last updated 13 December 2019, of ‘The
-‘GnuPG Made Easy’ Reference Manual’, for Version 1.15.2-beta35.
+   This is Edition 1.18.0, last updated 3 February 2022, of ‘The ‘GnuPG
+Made Easy’ Reference Manual’, for Version 1.18.0.
 
    Copyright © 2002–2008, 2010, 2012–2018 g10 Code GmbH.
 
@@ -41,9 +41,8 @@ File: gpgme.info,  Node: Top,  Next: Introduction,  Up: (dir)
 Main Menu
 *********
 
-This is Edition 1.15.2-beta35, last updated 13 December 2019, of ‘The
-‘GnuPG Made Easy’ Reference Manual’, for Version 1.15.2-beta35 of the
-GPGME library.
+This is Edition 1.18.0, last updated 3 February 2022, of ‘The ‘GnuPG
+Made Easy’ Reference Manual’, for Version 1.18.0 of the GPGME library.
 
 * Menu:
 
@@ -538,10 +537,6 @@ to Automake that does all the work for you.
      the string ‘libgcrypt’ is appended to the variable
      ‘gpg_config_script_warn’.
 
-     ‘AM_PATH_GPGME_PTH’ checks for the version of GPGME that can be
-     used with GNU Pth, and defines ‘GPGME_PTH_CFLAGS’ and
-     ‘GPGME_PTH_LIBS’.
-
      ‘AM_PATH_GPGME_PTHREAD’ checks for the version of GPGME that can be
      used with the native pthread implementation, and defines
      ‘GPGME_PTHREAD_CFLAGS’ and ‘GPGME_PTHREAD_LIBS’.  Since version
@@ -904,6 +899,21 @@ File: gpgme.info,  Node: Engine Version Check,  Next: Engine Information,  Up: P
 
      ‘g13-name’
           Return the name of the file container encryption engine.
+
+     ‘keyboxd-name’
+          Return the name of the key database daemon.
+
+     ‘agent-name’
+          Return the name of gpg-agent.
+
+     ‘scdaemon-name’
+          Return the name of the smart card daemon.
+
+     ‘dirmngr-name’
+          Return the name of dirmngr.
+
+     ‘pinentry-name’
+          Return the name of the pinentry program.
 
      ‘gpg-wks-client-name’
           Return the name of the Web Key Service tool.
@@ -2672,6 +2682,27 @@ File: gpgme.info,  Node: Key Listing Mode,  Next: Passphrase Callback,  Prev: In
           Currently only implemented for the S/MIME backend and ignored
           for other backends.
 
+     ‘GPGME_KEYLIST_MODE_FORCE_EXTERN’
+          SINCE: 1.18.0
+
+          The ‘GPGME_KEYLIST_MODE_FORCE_EXTERN’ symbol specifies that
+          only external sources should be searched for keys in the
+          keylisting operation.  If used in combination with
+          ‘GPGME_KEYLIST_MODE_LOCATE’, the keylisting results in a
+          ‘--locate-external-keys’ for ‘GPGME_PROTOCOL_OpenPGP’.  The
+          combination with ‘GPGME_KEYLIST_MODE_LOCAL’, but without
+          ‘GPGME_KEYLIST_MODE_EXTERN’ is not allowed.  Currently only
+          implemented for the OpenPGP backend and ignored for other
+          backends.
+
+     ‘GPGME_KEYLIST_MODE_LOCATE_EXTERNAL’
+          SINCE: 1.18.0
+
+          This is a shortcut for the combination of
+          ‘GPGME_KEYLIST_MODE_LOCATE’ and
+          ‘GPGME_KEYLIST_MODE_FORCE_EXTERN’, which results in a
+          ‘--locate-external-keys’ for ‘GPGME_PROTOCOL_OpenPGP’.
+
      At least one of ‘GPGME_KEYLIST_MODE_LOCAL’ and
      ‘GPGME_KEYLIST_MODE_EXTERN’ must be specified.  For future binary
      compatibility, you should get the current mode with
@@ -2989,6 +3020,18 @@ File: gpgme.info,  Node: Context Flags,  Next: Locale,  Prev: Status Message Cal
           engine to set the expiration time to use for key signature
           expiration.  Valid values are documented in the GnuPG manual
           and the gpg man page under the option ‘--default-cert-expire’.
+
+     ‘"key-origin"’
+          SINCE: 1.16.1 The string given in VALUE is passed to the GnuPG
+          engine to set the origin of imported keys.  Valid values are
+          documented in the GnuPG manual and the gpg man page under the
+          option ‘--key-origin’.
+
+     ‘"import-filter"’
+          SINCE: 1.16.1 The string given in VALUE is passed to the GnuPG
+          engine to use as filter when importing keys.  Valid values are
+          documented in the GnuPG manual and the gpg man page under the
+          option ‘--import-filter’.
 
      This function returns ‘0’ on success.
 
@@ -3421,7 +3464,7 @@ long as the key object itself is valid.
 
      The tofu info structure has the following members:
 
-     ‘gpgme_key_sig_t next’
+     ‘gpgme_tofu_info_t next’
           This is a pointer to the next tofu info structure in the
           linked list, or ‘NULL’ if this is the last element.
 
@@ -3840,16 +3883,6 @@ File: gpgme.info,  Node: Manipulating Keys,  Next: Generating Keys,  Prev: Infor
  -- Function: gpgme_error_t gpgme_op_setexpire_start (gpgme_ctx_t CTX,
           gpgme_key_t KEY, unsigned long EXPIRES, const char *SUBFPRS,
           unsigned int FLAGS);
-
-     SINCE: 1.14.1
-
-     The function ‘gpgme_op_setexpire_start’ initiates a
-     ‘gpgme_op_setexpire’ operation; see there for details.  It must be
-     completed by calling ‘gpgme_wait’ on the context.  *Note Waiting
-     For Completion::.
-
- -- Function: gpgme_error_t gpgme_op_revuid_start (gpgme_ctx_t CTX,
-          gpgme_key_t KEY, const char *USERID, unsigned int FLAGS);
 
      SINCE: 1.14.1
 
@@ -4459,6 +4492,16 @@ or-ed together.
      This may not be combined with ‘GPGME_EXPORT_MODE_EXTERN’.  For
      X.509 the export format is PKCS#8.
 
+‘GPGME_EXPORT_MODE_SECRET_SUBKEY’
+     SINCE: 1.17.0
+
+     If this bit is set, then a secret subkey is exported.  The subkey
+     to export must be specified with fingerprint pattern with an
+     appended exclamation mark.  This is currently only allowed for
+     OpenPGP keys.  This flag may not be combined with
+     ‘GPGME_EXPORT_MODE_EXTERN’.  This flag is not supported by the
+     export functions that take an array of keys.
+
 ‘GPGME_EXPORT_MODE_RAW’
      SINCE: 1.6.0
 
@@ -4472,10 +4515,6 @@ or-ed together.
      If this flag is used with ‘GPGME_EXPORT_MODE_SECRET’ for an X.509
      key the export format will be changed to PKCS#12 which also
      includes the certificate.  This flag may not be used with OpenPGP.
-
-‘GPGME_EXPORT_MODE_NOUID’
-     SINCE: 1.12.0 - experimental Do not export user ids.  Works only
-     with certain gpg version.
 
  -- Function: gpgme_error_t gpgme_op_export (gpgme_ctx_t CTX,
           const char *PATTERN, gpgme_export_mode_t MODE,
@@ -4600,9 +4639,9 @@ Importing keys means the same as running ‘gpg’ with the command
      retrieved with ‘gpgme_op_import_result’.
 
      The function returns the error code ‘GPG_ERR_NO_ERROR’ if the
-     import was completed successfully, ‘GPG_ERR_INV_VALUE’ if KEYDATA
-     if CTX or KEYDATA is not a valid pointer, and ‘GPG_ERR_NO_DATA’ if
-     KEYDATA is an empty data buffer.
+     import was completed successfully, ‘GPG_ERR_INV_VALUE’ if CTX or
+     KEYDATA is not a valid pointer, and ‘GPG_ERR_NO_DATA’ if KEYDATA is
+     an empty data buffer.
 
  -- Function: gpgme_error_t gpgme_op_import_start (gpgme_ctx_t CTX,
           gpgme_data_t KEYDATA)
@@ -4642,8 +4681,8 @@ Importing keys means the same as running ‘gpg’ with the command
      The function returns the error code ‘GPG_ERR_NO_ERROR’ if the
      import was completed successfully, ‘GPG_ERR_INV_VALUE’ if CTX is
      not a valid pointer, ‘GPG_ERR_CONFLICT’ if the key listing mode
-     does not match, and ‘GPG_ERR_NO_DATA’ if no keys are considered for
-     export.
+     does not match, and ‘GPG_ERR_NO_DATA’ if no keys were considered
+     for import.
 
  -- Function: gpgme_error_t gpgme_op_import_keys_start (gpgme_ctx_t CTX,
           gpgme_key_t *KEYS)
@@ -4654,10 +4693,40 @@ Importing keys means the same as running ‘gpg’ with the command
      ‘gpgme_wait’ on the context.  *Note Waiting For Completion::.
 
      The function returns the error code ‘GPG_ERR_NO_ERROR’ if the
-     import was completed successfully, ‘GPG_ERR_INV_VALUE’ if KEYDATA
-     if CTX or KEYDATA is not a valid pointer, ‘GPG_ERR_CONFLICT’ if the
-     key listing mode does not match, and ‘GPG_ERR_NO_DATA’ if no keys
-     are considered for export.
+     import was started successfully, ‘GPG_ERR_INV_VALUE’ if CTX is not
+     a valid pointer, ‘GPG_ERR_CONFLICT’ if the key listing mode does
+     not match, and ‘GPG_ERR_NO_DATA’ if no keys were considered for
+     import.
+
+ -- Function: gpgme_error_t gpgme_op_receive_keys (gpgme_ctx_t CTX,
+          const char *KEYIDS[])
+     SINCE: 1.17.0
+
+     The function ‘gpgme_op_receive_keys’ adds the keys described by the
+     ‘NULL’ terminated array KEYIDS to the key ring of the crypto engine
+     used by CTX.  It is used to retrieve and import keys from an
+     external source.  This function currently works only for OpenPGP.
+
+     After the operation completed successfully, the result can be
+     retrieved with ‘gpgme_op_import_result’.
+
+     The function returns the error code ‘GPG_ERR_NO_ERROR’ if the
+     import was completed successfully, ‘GPG_ERR_INV_VALUE’ if CTX is
+     not a valid pointer, and ‘GPG_ERR_NO_DATA’ if no keys were
+     considered for import.
+
+ -- Function: gpgme_error_t gpgme_op_receive_keys_start
+          (gpgme_ctx_t CTX, const char *KEYIDS[])
+     SINCE: 1.17.0
+
+     The function ‘gpgme_op_receive_keys_start’ initiates a
+     ‘gpgme_op_receive_keys’ operation.  It can be completed by calling
+     ‘gpgme_wait’ on the context.  *Note Waiting For Completion::.
+
+     The function returns the error code ‘GPG_ERR_NO_ERROR’ if the
+     import was started successfully, ‘GPG_ERR_INV_VALUE’ if CTX is not
+     a valid pointer, and ‘GPG_ERR_NO_DATA’ if no keys were considered
+     for import.
 
  -- Data type: gpgme_import_status_t
      This is a pointer to a structure used to store a part of the result
@@ -4670,7 +4739,9 @@ Importing keys means the same as running ‘gpg’ with the command
           list, or ‘NULL’ if this is the last element.
 
      ‘char *fpr’
-          This is the fingerprint of the key that was considered.
+          This is the fingerprint of the key that was considered, or
+          ‘NULL’ if the fingerprint of the key is not known, e.g.
+          because the key to import was encrypted and decryption failed.
 
      ‘gpgme_error_t result’
           If the import was not successful, this is the error value that
@@ -7247,55 +7318,4 @@ indicated by a C:, server responses by C::
          S: OK
          C: ENCRYPT
          S: OK
-
-
-File: gpgme.info,  Node: UI Server Sign,  Next: UI Server Decrypt,  Prev: UI Server Encrypt,  Up: UI Server Protocol
-
-A.2 UI Server: Sign a Message
-=============================
-
-The server needs to implement opaque signing as well as detached
-signing.  Due to the nature of OpenPGP messages it is always required to
-send the entire message to the server; sending just the hash is not
-possible.  The following two commands are required to set the input and
-output file descriptors:
-
- -- Command: INPUT FD=N
-     Set the file descriptor for the message to be signed to N.  The
-     message send to the server is binary encoded.  For details on the
-     file descriptor, see the description of ‘INPUT’ in the ‘ENCRYPT’
-     section.
-
- -- Command: OUTPUT FD=N [--binary]
-     Set the file descriptor to be used for the output.  The output is
-     either the complete signed message or in case of a detached
-     signature just that detached signature.  If the option ‘--binary’
-     is given the output shall be in binary format; if not given, the
-     output for OpenPGP needs to be ASCII armored and for CMS Base-64
-     encoded.  For details on the file descriptor, see the ‘INPUT’
-     command.
-
-To allow the server the selection of a non-default signing key the
-client may optionally use the ‘SENDER’ command, see *note command
-SENDER::.
-
-The signing operation is then initiated by:
-
- -- Command: SIGN --protocol=NAME [--detached]
-     Sign the data set with the ‘INPUT’ command and write it to the sink
-     set by OUTPUT. NAME is the signing protocol used for the message.
-     For a description of the allowed protocols see the ‘ENCRYPT’
-     command.  With option ‘--detached’ given, a detached signature is
-     created; this is actually the usual way the command is used.
-
-The client expects the server to send at least this status information
-before the final OK response:
-
- -- Status line: MICALG STRING
-     The STRING represents the hash algorithm used to create the
-     signature.  It is used with RFC-1847 style signature messages and
-     defined by PGP/MIME (RFC-3156) and S/MIME (RFC-3851).  The GPGME
-     library has a supporting function ‘gpgme_hash_algo_name’ to return
-     the algorithm name as a string.  This string needs to be lowercased
-     and for OpenPGP prefixed with "‘pgp-’".
 

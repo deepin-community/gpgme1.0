@@ -5,6 +5,8 @@
     Copyright (c) 2004,2005 Klarälvdalens Datakonsult AB
     Copyright (c) 2016 by Bundesamt für Sicherheit in der Informationstechnik
     Software engineering by Intevation GmbH
+    Copyright (c) 2021 g10 Code GmbH
+    Software engineering by Ingo Klöcker <dev@ingo-kloecker.de>
 
     QGpgME is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -37,6 +39,7 @@
 #endif
 
 #include "job.h"
+#include "job_p.h"
 
 #include "keylistjob.h"
 #include "listallkeysjob.h"
@@ -58,19 +61,43 @@
 #include "downloadjob.h"
 #include "deletejob.h"
 #include "refreshkeysjob.h"
+#include "addexistingsubkeyjob.h"
 #include "adduseridjob.h"
 #include "specialjob.h"
 #include "keyformailboxjob.h"
+#include "wkdlookupjob.h"
 #include "wkspublishjob.h"
 #include "tofupolicyjob.h"
 #include "threadedjobmixin.h"
 #include "quickjob.h"
 #include "gpgcardjob.h"
+#include "receivekeysjob.h"
+#include "revokekeyjob.h"
+#include "setprimaryuseridjob.h"
 
 #include <QCoreApplication>
 #include <QDebug>
 
 #include <gpg-error.h>
+
+#include <unordered_map>
+
+namespace
+{
+typedef std::unordered_map<const QGpgME::Job*, std::unique_ptr<QGpgME::JobPrivate>> JobPrivateHash;
+Q_GLOBAL_STATIC(JobPrivateHash, d_func)
+}
+
+void QGpgME::setJobPrivate(const Job *job, std::unique_ptr<JobPrivate> d)
+{
+    auto &ref = d_func()->operator[](job);
+    ref = std::move(d);
+}
+
+QGpgME::JobPrivate *QGpgME::getJobPrivate(const Job *job)
+{
+    return d_func()->operator[](job).get();
+}
 
 QGpgME::Job::Job(QObject *parent)
     : QObject(parent)
@@ -82,6 +109,7 @@ QGpgME::Job::Job(QObject *parent)
 
 QGpgME::Job::~Job()
 {
+    ::d_func()->erase(this);
 }
 
 QString QGpgME::Job::auditLogAsHtml() const
@@ -129,6 +157,7 @@ make_job_subclass(KeyGenerationJob)
 make_job_subclass(AbstractImportJob)
 make_job_subclass_ext(ImportJob, AbstractImportJob)
 make_job_subclass_ext(ImportFromKeyserverJob, AbstractImportJob)
+make_job_subclass_ext(ReceiveKeysJob, AbstractImportJob)
 make_job_subclass(ExportJob)
 make_job_subclass(ChangeExpiryJob)
 make_job_subclass(ChangeOwnerTrustJob)
@@ -136,13 +165,17 @@ make_job_subclass(ChangePasswdJob)
 make_job_subclass(DownloadJob)
 make_job_subclass(DeleteJob)
 make_job_subclass(RefreshKeysJob)
+make_job_subclass(AddExistingSubkeyJob)
 make_job_subclass(AddUserIDJob)
 make_job_subclass(SpecialJob)
 make_job_subclass(KeyForMailboxJob)
+make_job_subclass(WKDLookupJob)
 make_job_subclass(WKSPublishJob)
 make_job_subclass(TofuPolicyJob)
 make_job_subclass(QuickJob)
 make_job_subclass(GpgCardJob)
+make_job_subclass(RevokeKeyJob)
+make_job_subclass(SetPrimaryUserIDJob)
 
 #undef make_job_subclass
 
@@ -169,10 +202,15 @@ make_job_subclass(GpgCardJob)
 #include "downloadjob.moc"
 #include "deletejob.moc"
 #include "refreshkeysjob.moc"
+#include "addexistingsubkeyjob.moc"
 #include "adduseridjob.moc"
 #include "specialjob.moc"
 #include "keyformailboxjob.moc"
+#include "wkdlookupjob.moc"
 #include "wkspublishjob.moc"
 #include "tofupolicyjob.moc"
 #include "quickjob.moc"
 #include "gpgcardjob.moc"
+#include "receivekeysjob.moc"
+#include "revokekeyjob.moc"
+#include "setprimaryuseridjob.moc"

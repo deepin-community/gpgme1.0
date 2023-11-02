@@ -106,9 +106,13 @@ class GpgmeWrapper(object):
         set_func = getattr(gpgme, "{}set_{}".format(self._cprefix, key))
 
         def get(slf):
+            if not slf.wrapped:
+                return False
             return bool(get_func(slf.wrapped))
 
         def set_(slf, value):
+            if not slf.wrapped:
+                return
             set_func(slf.wrapped, bool(value))
 
         p = property(get, set_, doc="{} flag".format(key))
@@ -135,6 +139,8 @@ class GpgmeWrapper(object):
         if self._errorcheck(name):
 
             def _funcwrap(slf, *args):
+                if not slf.wrapped:
+                    return None
                 result = func(slf.wrapped, *args)
                 if slf._callback_excinfo:
                     gpgme.gpg_raise_callback_exception(slf)
@@ -142,6 +148,8 @@ class GpgmeWrapper(object):
         else:
 
             def _funcwrap(slf, *args):
+                if not slf.wrapped:
+                    return None
                 result = func(slf.wrapped, *args)
                 if slf._callback_excinfo:
                     gpgme.gpg_raise_callback_exception(slf)
@@ -332,8 +340,7 @@ class Context(GpgmeWrapper):
         finally:
             if passphrase is not None:
                 self.pinentry_mode = old_pinentry_mode
-                if old_passphrase_cb:
-                    self.set_passphrase_cb(*old_passphrase_cb[1:])
+                gpgme.gpg_set_passphrase_cb(self, old_passphrase_cb)
 
         result = self.op_encrypt_result()
         assert not result.invalid_recipients
@@ -426,8 +433,7 @@ class Context(GpgmeWrapper):
         finally:
             if passphrase is not None:
                 self.pinentry_mode = old_pinentry_mode
-                if old_passphrase_cb:
-                    self.set_passphrase_cb(*old_passphrase_cb[1:])
+                gpgme.gpg_set_passphrase_cb(self, old_passphrase_cb)
 
         result = self.op_decrypt_result()
 
@@ -851,8 +857,7 @@ class Context(GpgmeWrapper):
         finally:
             if util.is_a_string(passphrase):
                 self.pinentry_mode = old_pinentry_mode
-                if old_passphrase_cb:
-                    self.set_passphrase_cb(*old_passphrase_cb[1:])
+                gpgme.gpg_set_passphrase_cb(self, old_passphrase_cb)
 
         return self.op_genkey_result()
 
@@ -934,8 +939,7 @@ class Context(GpgmeWrapper):
         finally:
             if util.is_a_string(passphrase):
                 self.pinentry_mode = old_pinentry_mode
-                if old_passphrase_cb:
-                    self.set_passphrase_cb(*old_passphrase_cb[1:])
+                gpgme.gpg_set_passphrase_cb(self, old_passphrase_cb)
 
         return self.op_genkey_result()
 
@@ -1102,6 +1106,8 @@ class Context(GpgmeWrapper):
     @property
     def signers(self):
         """Keys used for signing"""
+        if not self.wrapped:
+            return None
         return [self.signers_enum(i) for i in range(self.signers_count())]
 
     @signers.setter
@@ -1137,6 +1143,8 @@ class Context(GpgmeWrapper):
     @property
     def home_dir(self):
         """Engine's home directory"""
+        if not self.wrapped:
+            return None
         return self.engine_info.home_dir
 
     @home_dir.setter
@@ -1182,7 +1190,7 @@ class Context(GpgmeWrapper):
         return self
 
     def __exit__(self, type, value, tb):
-        self.__del__()
+        return False
 
     def op_keylist_all(self, *args, **kwargs):
         self.op_keylist_start(*args, **kwargs)
@@ -1520,7 +1528,7 @@ class Data(GpgmeWrapper):
         return self
 
     def __exit__(self, type, value, tb):
-        self.__del__()
+        return False
 
     def _free_datacbs(self):
         self._data_cbs = None

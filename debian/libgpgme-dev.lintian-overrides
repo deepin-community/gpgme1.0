@@ -1,3 +1,0 @@
-# this has been litigated upstream and i do not see it getting fixed.
-# please see https://bugs.debian.org/659168 and https://dev.gnupg.org/T1414
-libgpgme-dev: old-style-config-script usr/bin/gpgme-config

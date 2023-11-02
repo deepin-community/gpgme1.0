@@ -14,6 +14,8 @@ https://www.python.org/dev/peps/pep-0394/#recommendation :
 >
 > - Changing python shebangs to python3 when Python 3.x is
 >   supported.
+
+Forwarded: not-needed
 ---
  lang/python/examples/assuan.py                   | 2 +-
  lang/python/examples/decryption-filter.py        | 2 +-

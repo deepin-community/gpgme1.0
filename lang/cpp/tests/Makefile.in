@@ -107,10 +107,11 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 noinst_PROGRAMS = run-getkey$(EXEEXT) run-keylist$(EXEEXT) \
-	run-verify$(EXEEXT)
+	run-verify$(EXEEXT) $(am__EXEEXT_1)
 subdir = lang/cpp/tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/m4/ax_gcc_func_attribute.m4 \
 	$(top_srcdir)/m4/ax_pkg_swig.m4 \
 	$(top_srcdir)/m4/ax_python_devel.m4 \
 	$(top_srcdir)/m4/glib-2.0.m4 $(top_srcdir)/m4/glibc21.m4 \
@@ -128,6 +129,7 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/build-aux/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/conf/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+@HAVE_W32_SYSTEM_FALSE@am__EXEEXT_1 = run-wkdlookup$(EXEEXT)
 PROGRAMS = $(noinst_PROGRAMS)
 am_run_getkey_OBJECTS = run-getkey.$(OBJEXT)
 run_getkey_OBJECTS = $(am_run_getkey_OBJECTS)
@@ -148,6 +150,13 @@ run_verify_OBJECTS = $(am_run_verify_OBJECTS)
 run_verify_LDADD = $(LDADD)
 run_verify_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
 	../../../src/libgpgme.la
+am__run_wkdlookup_SOURCES_DIST = run-wkdlookup.cpp
+@HAVE_W32_SYSTEM_FALSE@am_run_wkdlookup_OBJECTS =  \
+@HAVE_W32_SYSTEM_FALSE@	run-wkdlookup.$(OBJEXT)
+run_wkdlookup_OBJECTS = $(am_run_wkdlookup_OBJECTS)
+run_wkdlookup_LDADD = $(LDADD)
+run_wkdlookup_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
+	../../../src/libgpgme.la
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -164,7 +173,8 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/conf
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/run-getkey.Po \
-	./$(DEPDIR)/run-keylist.Po ./$(DEPDIR)/run-verify.Po
+	./$(DEPDIR)/run-keylist.Po ./$(DEPDIR)/run-verify.Po \
+	./$(DEPDIR)/run-wkdlookup.Po
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
@@ -185,9 +195,9 @@ am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
 SOURCES = $(run_getkey_SOURCES) $(run_keylist_SOURCES) \
-	$(run_verify_SOURCES)
+	$(run_verify_SOURCES) $(run_wkdlookup_SOURCES)
 DIST_SOURCES = $(run_getkey_SOURCES) $(run_keylist_SOURCES) \
-	$(run_verify_SOURCES)
+	$(run_verify_SOURCES) $(am__run_wkdlookup_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -265,6 +275,7 @@ GPGME_CONFIG_AVAIL_LANG = @GPGME_CONFIG_AVAIL_LANG@
 GPGME_CONFIG_CFLAGS = @GPGME_CONFIG_CFLAGS@
 GPGME_CONFIG_HOST = @GPGME_CONFIG_HOST@
 GPGME_CONFIG_LIBS = @GPGME_CONFIG_LIBS@
+GPGME_CPP_CFLAGS = @GPGME_CPP_CFLAGS@
 GPGME_QTTEST_CFLAGS = @GPGME_QTTEST_CFLAGS@
 GPGME_QTTEST_LIBS = @GPGME_QTTEST_LIBS@
 GPGME_QT_CFLAGS = @GPGME_QT_CFLAGS@
@@ -427,6 +438,9 @@ AM_CPPFLAGS = -I$(top_srcdir)/lang/cpp/src -I$(top_builddir)/src \
 run_getkey_SOURCES = run-getkey.cpp
 run_keylist_SOURCES = run-keylist.cpp
 run_verify_SOURCES = run-verify.cpp
+@HAVE_W32_SYSTEM_FALSE@run_wkdlookup_SOURCES = run-wkdlookup.cpp
+@HAVE_W32_SYSTEM_FALSE@programs_unix = run-wkdlookup
+@HAVE_W32_SYSTEM_TRUE@programs_unix = 
 all: all-am
 
 .SUFFIXES:
@@ -482,6 +496,10 @@ run-verify$(EXEEXT): $(run_verify_OBJECTS) $(run_verify_DEPENDENCIES) $(EXTRA_ru
 	@rm -f run-verify$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(run_verify_OBJECTS) $(run_verify_LDADD) $(LIBS)
 
+run-wkdlookup$(EXEEXT): $(run_wkdlookup_OBJECTS) $(run_wkdlookup_DEPENDENCIES) $(EXTRA_run_wkdlookup_DEPENDENCIES) 
+	@rm -f run-wkdlookup$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(run_wkdlookup_OBJECTS) $(run_wkdlookup_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -491,6 +509,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-getkey.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-keylist.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-verify.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-wkdlookup.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -653,6 +672,7 @@ distclean: distclean-am
 		-rm -f ./$(DEPDIR)/run-getkey.Po
 	-rm -f ./$(DEPDIR)/run-keylist.Po
 	-rm -f ./$(DEPDIR)/run-verify.Po
+	-rm -f ./$(DEPDIR)/run-wkdlookup.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -701,6 +721,7 @@ maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/run-getkey.Po
 	-rm -f ./$(DEPDIR)/run-keylist.Po
 	-rm -f ./$(DEPDIR)/run-verify.Po
+	-rm -f ./$(DEPDIR)/run-wkdlookup.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

@@ -71,9 +71,6 @@ class TestVarious: public QGpgMETest
 {
     Q_OBJECT
 
-Q_SIGNALS:
-    void asyncDone();
-
 private Q_SLOTS:
     void testDN()
     {
@@ -137,9 +134,7 @@ private Q_SLOTS:
 
         auto ctx = Context::createForProtocol(key.protocol());
         QVERIFY (ctx);
-        TestPassphraseProvider provider;
-        ctx->setPassphraseProvider(&provider);
-        ctx->setPinentryMode(Context::PinentryLoopback);
+        hookUpPassphraseProvider(ctx);
 
         QVERIFY(!ctx->addUid(key, uid));
         delete ctx;
@@ -190,9 +185,7 @@ private Q_SLOTS:
 
         auto ctx = Context::createForProtocol(key.protocol());
         QVERIFY (ctx);
-        TestPassphraseProvider provider;
-        ctx->setPassphraseProvider(&provider);
-        ctx->setPinentryMode(Context::PinentryLoopback);
+        hookUpPassphraseProvider(ctx);
 
         // change expiration of the main key
         QVERIFY(!ctx->setExpire(key, 1000));
@@ -230,7 +223,7 @@ private Q_SLOTS:
         std::vector<Subkey> primaryKey;
         primaryKey.push_back(key.subkey(0));
         const auto err = ctx->setExpire(key, 3000, primaryKey);
-        QCOMPARE(err.code(), GPG_ERR_NOT_FOUND);
+        QCOMPARE(err.code(), static_cast<int>(GPG_ERR_NOT_FOUND));
         delete ctx;
     }
 
@@ -259,12 +252,7 @@ private Q_SLOTS:
         // Create the job
         auto job = std::unique_ptr<SignKeyJob>{openpgp()->signKeyJob()};
         QVERIFY(job);
-
-        // Hack in the passphrase provider
-        auto jobCtx = Job::context(job.get());
-        TestPassphraseProvider provider;
-        jobCtx->setPassphraseProvider(&provider);
-        jobCtx->setPinentryMode(Context::PinentryLoopback);
+        hookUpPassphraseProvider(job.get());
 
         // Setup the job
         job->setExportable(true);
@@ -319,12 +307,7 @@ private Q_SLOTS:
         // Create the job
         auto job = std::unique_ptr<SignKeyJob>{openpgp()->signKeyJob()};
         QVERIFY(job);
-
-        // Hack in the passphrase provider
-        auto jobCtx = Job::context(job.get());
-        TestPassphraseProvider provider;
-        jobCtx->setPassphraseProvider(&provider);
-        jobCtx->setPinentryMode(Context::PinentryLoopback);
+        hookUpPassphraseProvider(job.get());
 
         // Setup the job
         job->setExportable(true);
@@ -345,8 +328,6 @@ private Q_SLOTS:
                     }
                 });
 
-        QTest::ignoreMessage(QtWarningMsg, "Expiration of certification has been changed to QDate(\"2106-02-06\")");
-
         job->start(target);
         QSignalSpy spy{this, &TestVarious::asyncDone};
         QVERIFY(spy.wait(QSIGNALSPY_TIMEOUT));
@@ -355,8 +336,16 @@ private Q_SLOTS:
         target.update();
         const auto keySignature = target.userID(0).signature(target.userID(0).numSignatures() - 1);
         QVERIFY(!keySignature.neverExpires());
-        const auto expirationDate = QDateTime::fromSecsSinceEpoch(keySignature.expirationTime()).date();
-        QCOMPARE(expirationDate, QDate(2106, 2, 6));  // expiration date is capped at 2106-02-06
+        const auto expirationDate = QDateTime::fromSecsSinceEpoch(uint_least32_t(keySignature.expirationTime())).date();
+        // expiration date is capped at 2106-02-05; we also allow 2106-02-04 as expiration date because for locations that use DST
+        // the expiration date may be 2106-02-04-23:xx:xx (in local non-DST time) if the current time is 00:xx::xx (in local DST time)
+        const auto expectedExpirationRange = std::make_pair(QDate{2106, 2, 4}, QDate{2106, 2, 5});
+        QVERIFY2(expirationDate >= expectedExpirationRange.first,
+                 ("\n   Actual  : " + expirationDate.toString(Qt::ISODate).toLatin1() +
+                  "\n   Expected: " + expectedExpirationRange.first.toString(Qt::ISODate).toLatin1()).constData());
+        QVERIFY2(expirationDate <= expectedExpirationRange.second,
+                 ("\n   Actual  : " + expirationDate.toString(Qt::ISODate).toLatin1() +
+                  "\n   Expected: " + expectedExpirationRange.second.toString(Qt::ISODate).toLatin1()).constData());
     }
 
     void testVersion()

@@ -38,6 +38,8 @@
 #include "job.h"
 #include "qgpgme_export.h"
 
+#include <QtCore/QStringList>
+
 #include <vector>
 
 namespace GpgME
@@ -45,8 +47,6 @@ namespace GpgME
 class Error;
 class Key;
 }
-
-class QStringList;
 
 namespace QGpgME
 {
@@ -61,7 +61,7 @@ namespace QGpgME
    RefreshKeysJob instance will have scheduled its own destruction
    with a call to QObject::deleteLater().
 
-   After result() is emitted, the KeyListJob will schedule it's own
+   After result() is emitted, the job will schedule it's own
    destruction by calling QObject::deleteLater().
 */
 class QGPGME_EXPORT RefreshKeysJob : public Job
@@ -73,21 +73,22 @@ public:
     ~RefreshKeysJob();
 
     /**
-      Starts the keylist operation. \a pattern is a list of patterns
+      Starts the refresh operation. \a pattern is a list of patterns
       used to restrict the list of keys returned. Empty patterns are
       ignored. If \a pattern is empty or contains only empty strings,
-      all keys are returned (however, the backend is free to truncate
-      the result and should do so; when this happens, it will be
-      reported by the reult object).
+      all keys are refreshed.
 
-      If \a secretOnly is true, only keys for which the secret key is
-      also available are returned. Use this if you need to select a
-      key for signing.
+      Only implemented for S/MIME.
     */
     virtual GpgME::Error start(const QStringList &patterns) = 0;
 
+    /**
+      Starts a refresh of the \a keys.
+    */
+    virtual GpgME::Error start(const std::vector<GpgME::Key> &keys) = 0;
+
 Q_SIGNALS:
-    void result(const GpgME::Error &error);
+    void result(const GpgME::Error &result);
 };
 
 }

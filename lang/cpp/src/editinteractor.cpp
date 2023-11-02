@@ -29,6 +29,7 @@
 #include "editinteractor.h"
 #include "callbacks.h"
 #include "error.h"
+#include "util.h"
 
 #include <gpgme.h>
 
@@ -100,7 +101,7 @@ public:
                 std::fprintf(ei->debug, "EditInteractor: %u -> nextState( %s, %s ) -> %u\n",
                              oldState, status_to_string(status), args ? args : "<null>", ei->state);
             }
-            if (err) {
+            if (err || err.isCanceled()) {
                 ei->state = oldState;
                 goto error;
             }
@@ -153,7 +154,7 @@ public:
         }
 
     error:
-        if (err) {
+        if (err || err.isCanceled()) {
             ei->error = err;
             ei->state = EditInteractor::ErrorState;
         }
@@ -254,6 +255,20 @@ Error status_to_error(unsigned int status)
 void EditInteractor::setDebugChannel(std::FILE *debug)
 {
     d->debug = debug;
+}
+
+GpgME::Error EditInteractor::parseStatusError(const char *args)
+{
+    Error err;
+
+    const auto fields = split(args, ' ');
+    if (fields.size() >= 2) {
+        err = Error{static_cast<unsigned int>(std::stoul(fields[1]))};
+    } else {
+        err = Error::fromCode(GPG_ERR_GENERAL);
+    }
+
+    return err;
 }
 
 static const char *const status_strings[] = {

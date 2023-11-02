@@ -92,6 +92,7 @@ host_triplet = @host@
 subdir = lang/qt/src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/m4/ax_gcc_func_attribute.m4 \
 	$(top_srcdir)/m4/ax_pkg_swig.m4 \
 	$(top_srcdir)/m4/ax_python_devel.m4 \
 	$(top_srcdir)/m4/glib-2.0.m4 $(top_srcdir)/m4/glibc21.m4 \
@@ -146,21 +147,26 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 libqgpgme_la_DEPENDENCIES = ../../cpp/src/libgpgmepp.la \
 	../../../src/libgpgme.la
 am__objects_1 = dataprovider.lo debug.lo job.lo multideletejob.lo \
-	qgpgmeadduseridjob.lo qgpgmebackend.lo \
-	qgpgmechangeexpiryjob.lo qgpgmechangeownertrustjob.lo \
-	qgpgmechangepasswdjob.lo qgpgmedecryptjob.lo \
-	qgpgmedecryptverifyjob.lo qgpgmedeletejob.lo \
-	qgpgmedownloadjob.lo qgpgmeencryptjob.lo qgpgmeexportjob.lo \
-	qgpgmeimportfromkeyserverjob.lo qgpgmeimportjob.lo \
-	qgpgmekeygenerationjob.lo qgpgmekeylistjob.lo \
-	qgpgmelistallkeysjob.lo qgpgmenewcryptoconfig.lo \
-	qgpgmerefreshkeysjob.lo qgpgmesecretkeyexportjob.lo \
-	qgpgmesignencryptjob.lo qgpgmesignjob.lo qgpgmesignkeyjob.lo \
+	qgpgmeadduseridjob.lo qgpgmeaddexistingsubkeyjob.lo \
+	qgpgmebackend.lo qgpgmechangeexpiryjob.lo \
+	qgpgmechangeownertrustjob.lo qgpgmechangepasswdjob.lo \
+	qgpgmedecryptjob.lo qgpgmedecryptverifyjob.lo \
+	qgpgmedeletejob.lo qgpgmedownloadjob.lo qgpgmeencryptjob.lo \
+	qgpgmeexportjob.lo qgpgmeimportfromkeyserverjob.lo \
+	qgpgmeimportjob.lo qgpgmekeygenerationjob.lo \
+	qgpgmekeylistjob.lo qgpgmelistallkeysjob.lo \
+	qgpgmenewcryptoconfig.lo qgpgmereceivekeysjob.lo \
+	qgpgmerefreshsmimekeysjob.lo qgpgmerevokekeyjob.lo \
+	qgpgmesetprimaryuseridjob.lo qgpgmesignencryptjob.lo \
+	qgpgmesignjob.lo qgpgmesignkeyjob.lo \
 	qgpgmeverifydetachedjob.lo qgpgmeverifyopaquejob.lo \
-	threadedjobmixin.lo qgpgmekeyformailboxjob.lo qgpgme_debug.lo \
+	qgpgmewkdlookupjob.lo threadedjobmixin.lo \
+	qgpgmekeyformailboxjob.lo qgpgme_debug.lo \
 	qgpgmetofupolicyjob.lo qgpgmequickjob.lo \
 	defaultkeygenerationjob.lo qgpgmewkspublishjob.lo \
-	qgpgmegpgcardjob.lo dn.lo cryptoconfig.lo
+	qgpgmegpgcardjob.lo changeexpiryjob.lo encryptjob.lo \
+	importjob.lo signencryptjob.lo dn.lo cryptoconfig.lo \
+	wkdlookupresult.lo util.lo
 am__objects_2 =
 am_libqgpgme_la_OBJECTS = $(am__objects_1) $(am__objects_2) \
 	$(am__objects_2)
@@ -189,11 +195,13 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/conf
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/cryptoconfig.Plo \
-	./$(DEPDIR)/dataprovider.Plo ./$(DEPDIR)/debug.Plo \
-	./$(DEPDIR)/defaultkeygenerationjob.Plo ./$(DEPDIR)/dn.Plo \
-	./$(DEPDIR)/job.Plo ./$(DEPDIR)/multideletejob.Plo \
-	./$(DEPDIR)/qgpgme_debug.Plo \
+am__depfiles_remade = ./$(DEPDIR)/changeexpiryjob.Plo \
+	./$(DEPDIR)/cryptoconfig.Plo ./$(DEPDIR)/dataprovider.Plo \
+	./$(DEPDIR)/debug.Plo ./$(DEPDIR)/defaultkeygenerationjob.Plo \
+	./$(DEPDIR)/dn.Plo ./$(DEPDIR)/encryptjob.Plo \
+	./$(DEPDIR)/importjob.Plo ./$(DEPDIR)/job.Plo \
+	./$(DEPDIR)/multideletejob.Plo ./$(DEPDIR)/qgpgme_debug.Plo \
+	./$(DEPDIR)/qgpgmeaddexistingsubkeyjob.Plo \
 	./$(DEPDIR)/qgpgmeadduseridjob.Plo \
 	./$(DEPDIR)/qgpgmebackend.Plo \
 	./$(DEPDIR)/qgpgmechangeexpiryjob.Plo \
@@ -214,15 +222,20 @@ am__depfiles_remade = ./$(DEPDIR)/cryptoconfig.Plo \
 	./$(DEPDIR)/qgpgmelistallkeysjob.Plo \
 	./$(DEPDIR)/qgpgmenewcryptoconfig.Plo \
 	./$(DEPDIR)/qgpgmequickjob.Plo \
-	./$(DEPDIR)/qgpgmerefreshkeysjob.Plo \
-	./$(DEPDIR)/qgpgmesecretkeyexportjob.Plo \
+	./$(DEPDIR)/qgpgmereceivekeysjob.Plo \
+	./$(DEPDIR)/qgpgmerefreshsmimekeysjob.Plo \
+	./$(DEPDIR)/qgpgmerevokekeyjob.Plo \
+	./$(DEPDIR)/qgpgmesetprimaryuseridjob.Plo \
 	./$(DEPDIR)/qgpgmesignencryptjob.Plo \
 	./$(DEPDIR)/qgpgmesignjob.Plo ./$(DEPDIR)/qgpgmesignkeyjob.Plo \
 	./$(DEPDIR)/qgpgmetofupolicyjob.Plo \
 	./$(DEPDIR)/qgpgmeverifydetachedjob.Plo \
 	./$(DEPDIR)/qgpgmeverifyopaquejob.Plo \
+	./$(DEPDIR)/qgpgmewkdlookupjob.Plo \
 	./$(DEPDIR)/qgpgmewkspublishjob.Plo \
-	./$(DEPDIR)/threadedjobmixin.Plo
+	./$(DEPDIR)/signencryptjob.Plo \
+	./$(DEPDIR)/threadedjobmixin.Plo ./$(DEPDIR)/util.Plo \
+	./$(DEPDIR)/wkdlookupresult.Plo
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
@@ -344,6 +357,7 @@ GPGME_CONFIG_AVAIL_LANG = @GPGME_CONFIG_AVAIL_LANG@
 GPGME_CONFIG_CFLAGS = @GPGME_CONFIG_CFLAGS@
 GPGME_CONFIG_HOST = @GPGME_CONFIG_HOST@
 GPGME_CONFIG_LIBS = @GPGME_CONFIG_LIBS@
+GPGME_CPP_CFLAGS = @GPGME_CPP_CFLAGS@
 GPGME_QTTEST_CFLAGS = @GPGME_QTTEST_CFLAGS@
 GPGME_QTTEST_LIBS = @GPGME_QTTEST_LIBS@
 GPGME_QT_CFLAGS = @GPGME_QT_CFLAGS@
@@ -517,32 +531,39 @@ top_srcdir = @top_srcdir@
 lib_LTLIBRARIES = libqgpgme.la
 EXTRA_DIST = QGpgmeConfig.cmake.in.in QGpgmeConfigVersion.cmake.in \
              qgpgme_debug.h qgpgme_version.h.in \
-             QGpgmeConfig.cmake.in.in
+             QGpgmeConfig-w32.cmake.in.in
 
 qgpgme_sources = \
     dataprovider.cpp \
     debug.cpp \
     job.cpp multideletejob.cpp qgpgmeadduseridjob.cpp \
+    qgpgmeaddexistingsubkeyjob.cpp \
     qgpgmebackend.cpp qgpgmechangeexpiryjob.cpp qgpgmechangeownertrustjob.cpp \
     qgpgmechangepasswdjob.cpp qgpgmedecryptjob.cpp \
     qgpgmedecryptverifyjob.cpp qgpgmedeletejob.cpp qgpgmedownloadjob.cpp \
     qgpgmeencryptjob.cpp qgpgmeexportjob.cpp qgpgmeimportfromkeyserverjob.cpp \
     qgpgmeimportjob.cpp qgpgmekeygenerationjob.cpp qgpgmekeylistjob.cpp \
     qgpgmelistallkeysjob.cpp qgpgmenewcryptoconfig.cpp \
-    qgpgmerefreshkeysjob.cpp \
-    qgpgmesecretkeyexportjob.cpp qgpgmesignencryptjob.cpp \
+    qgpgmereceivekeysjob.cpp \
+    qgpgmerefreshsmimekeysjob.cpp \
+    qgpgmerevokekeyjob.cpp \
+    qgpgmesetprimaryuseridjob.cpp \
+    qgpgmesignencryptjob.cpp \
     qgpgmesignjob.cpp qgpgmesignkeyjob.cpp qgpgmeverifydetachedjob.cpp \
-    qgpgmeverifyopaquejob.cpp threadedjobmixin.cpp \
+    qgpgmeverifyopaquejob.cpp qgpgmewkdlookupjob.cpp threadedjobmixin.cpp \
     qgpgmekeyformailboxjob.cpp qgpgme_debug.cpp \
     qgpgmetofupolicyjob.cpp qgpgmequickjob.cpp \
     defaultkeygenerationjob.cpp qgpgmewkspublishjob.cpp \
-    qgpgmegpgcardjob.cpp \
-    dn.cpp cryptoconfig.cpp
+    qgpgmegpgcardjob.cpp changeexpiryjob.cpp encryptjob.cpp importjob.cpp \
+    signencryptjob.cpp \
+    dn.cpp cryptoconfig.cpp wkdlookupresult.cpp \
+    util.cpp
 
 
 # If you add one here make sure that you also add one in camelcase
 qgpgme_headers = \
     abstractimportjob.h \
+    addexistingsubkeyjob.h \
     adduseridjob.h \
     changeexpiryjob.h \
     changeownertrustjob.h \
@@ -562,6 +583,9 @@ qgpgme_headers = \
     qgpgme_export.h \
     qgpgmenewcryptoconfig.h \
     quickjob.h \
+    receivekeysjob.h \
+    revokekeyjob.h \
+    setprimaryuseridjob.h \
     specialjob.h \
     signjob.h \
     signkeyjob.h \
@@ -578,11 +602,14 @@ qgpgme_headers = \
     verifydetachedjob.h \
     defaultkeygenerationjob.h \
     tofupolicyjob.h \
+    wkdlookupjob.h \
+    wkdlookupresult.h \
     wkspublishjob.h \
     gpgcardjob.h \
     dn.h
 
 camelcase_headers = \
+    AddExistingSubkeyJob \
     AddUserIDJob \
     AbstractImportJob \
     ChangeExpiryJob \
@@ -602,6 +629,9 @@ camelcase_headers = \
     Protocol \
     QGpgMENewCryptoConfig \
     QuickJob \
+    ReceiveKeysJob \
+    RevokeKeyJob \
+    SetPrimaryUserIDJob \
     SpecialJob \
     SignJob \
     SignKeyJob \
@@ -618,6 +648,8 @@ camelcase_headers = \
     VerifyDetachedJob \
     KeyForMailboxJob \
     DefaultKeyGenerationJob \
+    WKDLookupJob \
+    WKDLookupResult \
     WKSPublishJob \
     TofuPolicyJob \
     GpgCardJob
@@ -625,6 +657,8 @@ camelcase_headers = \
 private_qgpgme_headers = \
     qgpgme_export.h \
     protocol_p.h \
+    job_p.h \
+    qgpgmeaddexistingsubkeyjob.h \
     qgpgmeadduseridjob.h \
     qgpgmebackend.h \
     qgpgmechangeexpiryjob.h \
@@ -641,22 +675,27 @@ private_qgpgme_headers = \
     qgpgmekeygenerationjob.h \
     qgpgmekeylistjob.h \
     qgpgmelistallkeysjob.h \
-    qgpgmerefreshkeysjob.h \
-    qgpgmesecretkeyexportjob.h \
+    qgpgmereceivekeysjob.h \
+    qgpgmerefreshsmimekeysjob.h \
+    qgpgmerevokekeyjob.h \
+    qgpgmesetprimaryuseridjob.h \
     qgpgmesignencryptjob.h \
     qgpgmesignjob.h \
     qgpgmesignkeyjob.h \
     qgpgmeverifydetachedjob.h \
     qgpgmeverifyopaquejob.h \
+    qgpgmewkdlookupjob.h \
     qgpgmekeyformailboxjob.h \
     qgpgmewkspublishjob.h \
     qgpgmetofupolicyjob.h \
     qgpgmegpgcardjob.h \
     qgpgmequickjob.h \
-    threadedjobmixin.h
+    threadedjobmixin.h \
+    util.h
 
 qgpgme_moc_sources = \
     abstractimportjob.moc \
+    addexistingsubkeyjob.moc \
     adduseridjob.moc \
     changeexpiryjob.moc \
     changeownertrustjob.moc \
@@ -675,6 +714,7 @@ qgpgme_moc_sources = \
     keylistjob.moc \
     listallkeysjob.moc \
     multideletejob.moc \
+    qgpgmeaddexistingsubkeyjob.moc \
     qgpgmeadduseridjob.moc \
     qgpgmechangeexpiryjob.moc \
     qgpgmechangeownertrustjob.moc \
@@ -690,23 +730,30 @@ qgpgme_moc_sources = \
     qgpgmekeygenerationjob.moc \
     qgpgmekeylistjob.moc \
     qgpgmelistallkeysjob.moc \
-    qgpgmerefreshkeysjob.moc \
-    qgpgmesecretkeyexportjob.moc \
+    qgpgmereceivekeysjob.moc \
+    qgpgmerefreshsmimekeysjob.moc \
+    qgpgmerevokekeyjob.moc \
+    qgpgmesetprimaryuseridjob.moc \
     qgpgmesignencryptjob.moc \
     qgpgmesignjob.moc \
     qgpgmesignkeyjob.moc \
     qgpgmeverifydetachedjob.moc \
     qgpgmeverifyopaquejob.moc \
+    qgpgmewkdlookupjob.moc \
     qgpgmewkspublishjob.moc \
     tofupolicyjob.moc \
     qgpgmetofupolicyjob.moc \
+    receivekeysjob.moc \
     refreshkeysjob.moc \
+    revokekeyjob.moc \
+    setprimaryuseridjob.moc \
     signencryptjob.moc \
     signjob.moc \
     signkeyjob.moc \
     specialjob.moc \
     verifydetachedjob.moc \
     verifyopaquejob.moc \
+    wkdlookupjob.moc \
     keyformailboxjob.moc \
     wkspublishjob.moc \
     qgpgmekeyformailboxjob.moc \
@@ -828,14 +875,18 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/changeexpiryjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cryptoconfig.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dataprovider.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/debug.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/defaultkeygenerationjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dn.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/encryptjob.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/importjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/job.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/multideletejob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgme_debug.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmeaddexistingsubkeyjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmeadduseridjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmebackend.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmechangeexpiryjob.Plo@am__quote@ # am--include-marker
@@ -856,16 +907,22 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmelistallkeysjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmenewcryptoconfig.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmequickjob.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmerefreshkeysjob.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmesecretkeyexportjob.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmereceivekeysjob.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmerefreshsmimekeysjob.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmerevokekeyjob.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmesetprimaryuseridjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmesignencryptjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmesignjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmesignkeyjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmetofupolicyjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmeverifydetachedjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmeverifyopaquejob.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmewkdlookupjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qgpgmewkspublishjob.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/signencryptjob.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/threadedjobmixin.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wkdlookupresult.Plo@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -1096,14 +1153,18 @@ clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/cryptoconfig.Plo
+		-rm -f ./$(DEPDIR)/changeexpiryjob.Plo
+	-rm -f ./$(DEPDIR)/cryptoconfig.Plo
 	-rm -f ./$(DEPDIR)/dataprovider.Plo
 	-rm -f ./$(DEPDIR)/debug.Plo
 	-rm -f ./$(DEPDIR)/defaultkeygenerationjob.Plo
 	-rm -f ./$(DEPDIR)/dn.Plo
+	-rm -f ./$(DEPDIR)/encryptjob.Plo
+	-rm -f ./$(DEPDIR)/importjob.Plo
 	-rm -f ./$(DEPDIR)/job.Plo
 	-rm -f ./$(DEPDIR)/multideletejob.Plo
 	-rm -f ./$(DEPDIR)/qgpgme_debug.Plo
+	-rm -f ./$(DEPDIR)/qgpgmeaddexistingsubkeyjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmeadduseridjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmebackend.Plo
 	-rm -f ./$(DEPDIR)/qgpgmechangeexpiryjob.Plo
@@ -1124,16 +1185,22 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/qgpgmelistallkeysjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmenewcryptoconfig.Plo
 	-rm -f ./$(DEPDIR)/qgpgmequickjob.Plo
-	-rm -f ./$(DEPDIR)/qgpgmerefreshkeysjob.Plo
-	-rm -f ./$(DEPDIR)/qgpgmesecretkeyexportjob.Plo
+	-rm -f ./$(DEPDIR)/qgpgmereceivekeysjob.Plo
+	-rm -f ./$(DEPDIR)/qgpgmerefreshsmimekeysjob.Plo
+	-rm -f ./$(DEPDIR)/qgpgmerevokekeyjob.Plo
+	-rm -f ./$(DEPDIR)/qgpgmesetprimaryuseridjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmesignencryptjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmesignjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmesignkeyjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmetofupolicyjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmeverifydetachedjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmeverifyopaquejob.Plo
+	-rm -f ./$(DEPDIR)/qgpgmewkdlookupjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmewkspublishjob.Plo
+	-rm -f ./$(DEPDIR)/signencryptjob.Plo
 	-rm -f ./$(DEPDIR)/threadedjobmixin.Plo
+	-rm -f ./$(DEPDIR)/util.Plo
+	-rm -f ./$(DEPDIR)/wkdlookupresult.Plo
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1181,14 +1248,18 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/cryptoconfig.Plo
+		-rm -f ./$(DEPDIR)/changeexpiryjob.Plo
+	-rm -f ./$(DEPDIR)/cryptoconfig.Plo
 	-rm -f ./$(DEPDIR)/dataprovider.Plo
 	-rm -f ./$(DEPDIR)/debug.Plo
 	-rm -f ./$(DEPDIR)/defaultkeygenerationjob.Plo
 	-rm -f ./$(DEPDIR)/dn.Plo
+	-rm -f ./$(DEPDIR)/encryptjob.Plo
+	-rm -f ./$(DEPDIR)/importjob.Plo
 	-rm -f ./$(DEPDIR)/job.Plo
 	-rm -f ./$(DEPDIR)/multideletejob.Plo
 	-rm -f ./$(DEPDIR)/qgpgme_debug.Plo
+	-rm -f ./$(DEPDIR)/qgpgmeaddexistingsubkeyjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmeadduseridjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmebackend.Plo
 	-rm -f ./$(DEPDIR)/qgpgmechangeexpiryjob.Plo
@@ -1209,16 +1280,22 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/qgpgmelistallkeysjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmenewcryptoconfig.Plo
 	-rm -f ./$(DEPDIR)/qgpgmequickjob.Plo
-	-rm -f ./$(DEPDIR)/qgpgmerefreshkeysjob.Plo
-	-rm -f ./$(DEPDIR)/qgpgmesecretkeyexportjob.Plo
+	-rm -f ./$(DEPDIR)/qgpgmereceivekeysjob.Plo
+	-rm -f ./$(DEPDIR)/qgpgmerefreshsmimekeysjob.Plo
+	-rm -f ./$(DEPDIR)/qgpgmerevokekeyjob.Plo
+	-rm -f ./$(DEPDIR)/qgpgmesetprimaryuseridjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmesignencryptjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmesignjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmesignkeyjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmetofupolicyjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmeverifydetachedjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmeverifyopaquejob.Plo
+	-rm -f ./$(DEPDIR)/qgpgmewkdlookupjob.Plo
 	-rm -f ./$(DEPDIR)/qgpgmewkspublishjob.Plo
+	-rm -f ./$(DEPDIR)/signencryptjob.Plo
 	-rm -f ./$(DEPDIR)/threadedjobmixin.Plo
+	-rm -f ./$(DEPDIR)/util.Plo
+	-rm -f ./$(DEPDIR)/wkdlookupresult.Plo
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

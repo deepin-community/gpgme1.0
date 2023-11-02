@@ -1,6 +1,11 @@
-0001-avoid-identifying-as-beta.patch
-0004-drop-python2-support.patch
-0006-Ship-python-examples-with-python3-in-shebang-line.patch
-0004-core-Fix-use-after-free-issue-in-test.patch
-0005-Make-sure-expiration-time-is-interpreted-as-unsigned.patch
-0006-Avoid-the-hardcoded-list-of-Python-versions.patch
+0001-Remove-upstream-git-fanciness.patch
+0002-drop-python2-support.patch
+0003-Ship-python-examples-with-python3-in-shebang-line.patch
+0004-Avoid-the-hardcoded-list-of-Python-versions.patch
+0007-lang-python-tests-Fix-FTBFS-caused-by-missing-PYTHON.patch
+0010-build-python-Don-t-use-gpg-error-config-gpgme-config.patch
+0013-python-Fix-configure-generating-setup.py.patch
+0015-build-Prefer-gpgrt-config-when-available.patch
+0016-gpgme.m4-Include-_AM_PATH_GPGRT_CONFIG-implementatio.patch
+0017-doc-Update-documentation-for-gpgme.pc-and-pkg-config.patch
+0020-python3-setuptools.diff

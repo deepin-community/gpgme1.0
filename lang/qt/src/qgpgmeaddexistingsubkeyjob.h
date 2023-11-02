@@ -1,10 +1,9 @@
 /*
-    qgpgmesecretkeyexportjob.h
+    qgpgmeaddexistingsubkeyjob.h
 
     This file is part of qgpgme, the Qt API binding for gpgme
-    Copyright (c) 2004 Klarälvdalens Datakonsult AB
-    Copyright (c) 2016 by Bundesamt für Sicherheit in der Informationstechnik
-    Software engineering by Intevation GmbH
+    Copyright (c) 2022 g10 Code GmbH
+    Software engineering by Ingo Klöcker <dev@ingo-kloecker.de>
 
     QGpgME is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -32,51 +31,38 @@
     your version.
 */
 
-#ifndef __QGPGME_QGPGMESECRETKEYEXPORTJOB_H__
-#define __QGPGME_QGPGMESECRETKEYEXPORTJOB_H__
+#ifndef __QGPGME_QGPGMEADDEXISTINGSUBKEYJOB_H__
+#define __QGPGME_QGPGMEADDEXISTINGSUBKEYJOB_H__
 
-#include "exportjob.h"
-#ifdef BUILDING_QGPGME
-# include "context.h"
-#else
-#include "gpgme++/context.h"
-#endif
-#include <QProcess>
-
-namespace GpgME
-{
-class Data;
-}
+#include "threadedjobmixin.h"
+#include "addexistingsubkeyjob.h"
 
 namespace QGpgME
 {
 
-class QGpgMESecretKeyExportJob : public ExportJob
+class QGpgMEAddExistingSubkeyJob
+#ifdef Q_MOC_RUN
+    : public AddExistingSubkeyJob
+#else
+    : public _detail::ThreadedJobMixin<AddExistingSubkeyJob>
+#endif
 {
     Q_OBJECT
+#ifdef Q_MOC_RUN
+public Q_SLOTS:
+    void slotFinished();
+#endif
 public:
-    QGpgMESecretKeyExportJob(bool armour, const QString &charset);
-    ~QGpgMESecretKeyExportJob();
+    explicit QGpgMEAddExistingSubkeyJob(GpgME::Context *context);
+    ~QGpgMEAddExistingSubkeyJob();
 
-    /* from ExportJob */
-    GpgME::Error start(const QStringList &patterns) Q_DECL_OVERRIDE;
+    /* from AddExistingSubkeyJob */
+    GpgME::Error start(const GpgME::Key &key, const GpgME::Subkey &subkey) override;
 
-private Q_SLOTS:
-    /* from Job */
-    void slotCancel() Q_DECL_OVERRIDE;
-
-    void slotStdout();
-    void slotStderr();
-    void slotProcessExited(int exitCode, QProcess::ExitStatus exitStatus);
-
-private:
-    QProcess *mProcess;
-    QByteArray mKeyData;
-    GpgME::Error mError;
-    bool mArmour;
-    QString mCharset;
+    /* from AddExistingSubkeyJob */
+    GpgME::Error  exec(const GpgME::Key &key, const GpgME::Subkey &subkey) override;
 };
 
 }
 
-#endif // __QGPGME_QGPGMESECRETKEYEXPORTJOB_H__
+#endif // __QGPGME_QGPGMEADDEXISTINGSUBKEYJOB_H__

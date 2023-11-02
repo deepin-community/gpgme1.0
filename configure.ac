@@ -19,7 +19,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
 # (Process this file with autoconf to produce a configure script.)
-AC_PREREQ([2.59])
+AC_PREREQ([2.69])
 min_automake_version="1.14"
 
 # To build a release you need to create a tag with the version number
@@ -31,7 +31,7 @@ min_automake_version="1.14"
 # for the LT versions.
 m4_define([mym4_package],[gpgme])
 m4_define([mym4_major], [1])
-m4_define([mym4_minor], [16])
+m4_define([mym4_minor], [18])
 m4_define([mym4_micro], [0])
 
 # Below is m4 magic to extract and compute the git revision number,
@@ -53,19 +53,19 @@ AC_INIT([mym4_package],[mym4_version],[https://bugs.gnupg.org])
 #   (Interfaces added:			AGE++)
 #   (Interfaces removed:		AGE=0)
 #
-LIBGPGME_LT_CURRENT=36
-LIBGPGME_LT_AGE=25
+LIBGPGME_LT_CURRENT=38
+LIBGPGME_LT_AGE=27
 LIBGPGME_LT_REVISION=0
 
 # If there is an ABI break in gpgmepp or qgpgme also bump the
 # version in IMPORTED_LOCATION in the GpgmeppConfig-w32.cmake.in.in
 
-LIBGPGMEPP_LT_CURRENT=19
-LIBGPGMEPP_LT_AGE=13
+LIBGPGMEPP_LT_CURRENT=21
+LIBGPGMEPP_LT_AGE=15
 LIBGPGMEPP_LT_REVISION=0
 
-LIBQGPGME_LT_CURRENT=13
-LIBQGPGME_LT_AGE=6
+LIBQGPGME_LT_CURRENT=16
+LIBQGPGME_LT_AGE=1
 LIBQGPGME_LT_REVISION=0
 ################################################
 
@@ -96,8 +96,8 @@ VERSION_MICRO=mym4_micro
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR(src/gpgme.h.in)
-AC_CONFIG_HEADER(conf/config.h)
+AC_CONFIG_SRCDIR([src/gpgme.h.in])
+AC_CONFIG_HEADERS([conf/config.h])
 AM_INIT_AUTOMAKE([serial-tests dist-bzip2 no-dist-gzip])
 AM_MAINTAINER_MODE
 AC_CANONICAL_HOST
@@ -331,8 +331,6 @@ for language in $enabled_languages; do
     fi
 done
 
-
-
 # Enable C++ 11 if cpp language is requested
 LIST_MEMBER("cpp", $enabled_languages)
 if test "$found" = "1"; then
@@ -353,6 +351,16 @@ if test "$found" = "1"; then
         fi
     fi
 fi
+
+# Check whether compiler supports visibility attribute (if cpp language is enabled)
+LIST_MEMBER("cpp", $enabled_languages)
+if test "$found" = "1"; then
+    AX_GCC_FUNC_ATTRIBUTE(visibility)
+    if test "$ax_cv_have_func_attribute_visibility" = "yes"; then
+        GPGME_CPP_CFLAGS="$GPGME_CPP_CFLAGS -fvisibility=hidden"
+    fi
+fi
+AC_SUBST(GPGME_CPP_CFLAGS)
 
 # Check that if qt is enabled cpp also is enabled
 LIST_MEMBER("qt", $enabled_languages)
@@ -394,6 +402,16 @@ if test "$found" = "1"; then
         fi
     fi
 fi
+
+# Check if compiler supports visibility attribute (if qt is enabled)
+LIST_MEMBER("qt", $enabled_languages)
+if test "$found" = "1"; then
+    AX_GCC_FUNC_ATTRIBUTE(visibility)
+    if test "$ax_cv_have_func_attribute_visibility" = "yes"; then
+        GPGME_QT_CFLAGS="$GPGME_QT_CFLAGS -fvisibility=hidden"
+    fi
+fi
+
 AM_CONDITIONAL([HAVE_DOXYGEN],
                [test -n "$DOXYGEN"])
 if test -n "$GRAPHVIZ"; then
@@ -538,11 +556,12 @@ AM_CONDITIONAL(RUN_G13_TESTS, test "$run_g13_test" = "yes")
 
 # Checks for header files.
 AC_CHECK_HEADERS_ONCE([locale.h sys/select.h sys/uio.h argp.h stdint.h
-                       unistd.h sys/time.h sys/types.h sys/stat.h])
+                       unistd.h poll.h sys/time.h sys/types.h sys/stat.h])
 
 
 # Type checks.
 AC_C_INLINE
+AC_C_FLEXIBLE_ARRAY_MEMBER
 AC_CHECK_SIZEOF(unsigned int)
 AC_SYS_LARGEFILE
 AC_TYPE_OFF_T
@@ -705,6 +724,9 @@ AM_PATH_GPG_ERROR("$NEED_GPG_ERROR_VERSION",
 AC_DEFINE(GPG_ERR_SOURCE_DEFAULT, GPG_ERR_SOURCE_GPGME,
           [The default error source for GPGME.])
 
+AM_CONDITIONAL(USE_GPGRT_CONFIG, [test -n "$GPGRT_CONFIG" \
+                                  -a "$ac_cv_path_GPG_ERROR_CONFIG" = no])
+
 # And for libassuan.
 have_libassuan=no
 AM_PATH_LIBASSUAN("$NEED_LIBASSUAN_API:$NEED_LIBASSUAN_VERSION",
@@ -720,7 +742,7 @@ fi
 #
 
 # Check for getgid etc
-AC_CHECK_FUNCS(getgid getegid closefrom)
+AC_CHECK_FUNCS(getgid getegid closefrom nanosleep)
 
 
 # Replacement functions.

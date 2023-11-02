@@ -1,3 +1,145 @@
+Noteworthy changes in version 1.18.0 (2022-08-10)
+-------------------------------------------------
+
+ * New keylist mode to force refresh via external methods.  [T5951]
+
+ * The keylist operations now create an import result to report the
+   result of the locate keylist modes.  [T5951]
+
+ * core: Return BAD_PASSPHRASE error code on symmetric decryption
+   failure.  [T5939]
+
+ * cpp, qt: Do not export internal symbols anymore.  [T5906]
+
+ * cpp, qt: Support revocation of own OpenPGP keys.  [T5904]
+
+ * qt: The file name of (signed and) encrypted data can now be set.  [T6056]
+
+ * cpp, qt: Support setting the primary user ID.  [T5938]
+
+ * python: Fix segv(NULL) when inspecting contect after exeception.  [T6060]
+
+ * Interface changes relative to the 1.17.1 release:
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ GPGME_KEYLIST_MODE_FORCE_EXTERN            NEW.
+ GPGME_KEYLIST_MODE_LOCATE_EXTERNAL         NEW.
+ cpp: RevocationReason                      NEW.
+ cpp: GpgRevokeKeyEditInteractor            NEW.
+ cpp: Result::setError                      NEW.
+ cpp: KeyListMode::ForceExtern              NEW.
+ cpp: KeyListMode::LocateExternal           NEW.
+ cpp: KeyListMode::KeyListModeMask          NEW.
+ cpp: ImportResult::mergeWith               NEW.
+ cpp: KeyListModeSaver                      NEW.
+ cpp: Context::setPrimaryUid                NEW.
+ cpp: Context::startSetPrimaryUid           NEW.
+ qt: RevokeKeyJob                           NEW.
+ qt: Protocol::revokeKeyJob                 NEW.
+ qt: EncryptJob::setFileName                NEW.
+ qt: EncryptJob::fileName                   NEW.
+ qt: SignEncryptJob::setFileName            NEW.
+ qt: SignEncryptJob::fileName               NEW.
+ qt: SetPrimaryUserIDJob                    NEW.
+ qt: Protocol::setPrimaryUserIDJob          NEW.
+
+ [c=C38/A27/R0 cpp=C21/A15/R0 qt=C16/A1/R0]
+
+ Release-info: https://dev.gnupg.org/T6128
+
+
+Noteworthy changes in version 1.17.1 (2022-03-06)
+-------------------------------------------------
+
+ * qt: Fix a bug in the ABI compatibility of 1.17.0.  [T5834]
+
+ [c=C37/A26/R0 cpp=C20/A14/R0 qt=C15/A0/R0]
+
+ Release-info: https://dev.gnupg.org/T5872
+
+
+Noteworthy changes in version 1.17.0 (2022-02-07)
+-------------------------------------------------
+
+ * New context flag "key-origin".  [#5733]
+
+ * New context flag "import-filter".  [#5739]
+
+ * New export mode to export secret subkeys.  [#5757]
+
+ * Detect errors during the export of secret keys.  [#5766]
+
+ * New function gpgme_op_receive_keys to import keys from a keyserver
+   without first running a key listing.  [#5808]
+
+ * Detect bad passphrase error in certificate import.  [T5713]
+
+ * Allow setting --key-origin when importing keys.  [T5733]
+
+ * Support components "keyboxd", "gpg-agent", "scdaemon", "dirmngr",
+   "pinentry", and "socketdir" in gpgme_get_dirinfo.  [T5727,T5613]
+
+ * Under Unix use poll(2) instead of select(2), when available.
+   [T2385]
+
+ * Do not use --flat_namespace when linking for macOS.  [T5610]
+
+ * Fix results returned by gpgme_data_* functions.  [T5481]
+
+ * Support closefrom also for glibc.  [rM4b64774b6d]
+
+ * cpp,qt: Add support for export of secret keys and secret subkeys.
+   [#5757]
+
+ * cpp,qt: Support for adding existing subkeys to other keys.  [#5770]
+
+ * qt: Extend ChangeExpiryJob to change expiration of primary key
+   and of subkeys at the same time.  [#4717]
+
+ * qt: Support WKD lookup without implicit import.  [#5728]
+
+ * qt: Allow specifying an import filter when importing keys.  [#5739]
+
+ * qt: Expect UTF-8 on stderr on Windows.  [rM8fe1546282]
+
+ * qt: Allow retrieving the default value of a config entry.  [T5515]
+
+ * Interface changes relative to the 1.16.0 release:
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ gpgme_op_receive_keys                      NEW.
+ gpgme_op_receive_keys_start                NEW.
+ qt: Protocol::secretSubkeyExportJob        NEW.
+ cpp: Context::exportSecretSubkeys          NEW.
+ cpp: Context::startSecretSubkeyExport      NEW.
+ qt: Protocol::secretKeyExportJob      CHANGED: Param 'charset' is ignored.
+ cpp: Context::exportKeys                   NEW.
+ cpp: Context::startKeyExport               NEW.
+ cpp: Context::exportSecretKeys             NEW.
+ cpp: Context::startSecretKeyExport         NEW.
+ cpp: GpgAddExistingSubkeyEditInteractor    NEW.
+ GPGME_EXPORT_MODE_SECRET_SUBKEY            NEW.
+ gpgme_set_ctx_flag                    EXTENDED: New flag 'key-origin'.
+ gpgme_set_ctx_flag                    EXTENDED: New flag 'import-filter'.
+ qt: ChangeExpiryJob::Option                NEW.
+ qt: ChangeExpiryJob::Options               NEW.
+ qt: ChangeExpiryJob::setOptions            NEW.
+ qt: ChangeExpiryJob::options               NEW.
+ qt: CryptoConfigEntry::defaultValue        NEW.
+ qt: WKDLookupJob                           NEW.
+ qt: WKDLookupResult                        NEW.
+ qt: Protocol::wkdLookupJob                 NEW.
+ qt: ImportJob::setKeyOrigin                NEW.
+ qt: ImportJob::keyOrigin                   NEW.
+ qt: ImportJob::keyOriginUrl                NEW.
+ qt: setImportFilter                        NEW.
+ qt: importFilter                           NEW.
+ qt: AddExistingSubkeyJob                   NEW.
+ qt: Protocol::addExistingSubkeyJob         NEW.
+
+ [c=C37/A26/R0 cpp=C20/A14/R0 qt=C14/A7/R0]
+
+ Release-info: https://dev.gnupg.org/T5819
+
+
 Noteworthy changes in version 1.16.0 (2021-06-24)
 -------------------------------------------------
 

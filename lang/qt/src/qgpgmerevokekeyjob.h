@@ -1,10 +1,9 @@
 /*
-    qgpgmerefreshkeysjob.h
+    qgpgmerevokekeyjob.h
 
     This file is part of qgpgme, the Qt API binding for gpgme
-    Copyright (c) 2004 Klarälvdalens Datakonsult AB
-    Copyright (c) 2016 by Bundesamt für Sicherheit in der Informationstechnik
-    Software engineering by Intevation GmbH
+    Copyright (c) 2022 g10 Code GmbH
+    Software engineering by Ingo Klöcker <dev@ingo-kloecker.de>
 
     QGpgME is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -32,49 +31,40 @@
     your version.
 */
 
-#ifndef __QGPGME_QGPGMEREFRESHKEYSJOB_H__
-#define __QGPGME_QGPGMEREFRESHKEYSJOB_H__
+#ifndef __QGPGME_QGPGMEREVOKEKEYJOB_H__
+#define __QGPGME_QGPGMEREVOKEKEYJOB_H__
 
-#include "refreshkeysjob.h"
-#ifdef BUILDING_QGPGME
-# include "context.h"
-#else
-#include "gpgme++/context.h"
-#endif
-
-#include <QStringList>
-#include <QProcess>
+#include "threadedjobmixin.h"
+#include "revokekeyjob.h"
 
 namespace QGpgME
 {
 
-class QGpgMERefreshKeysJob : public RefreshKeysJob
+class QGpgMERevokeKeyJob
+#ifdef Q_MOC_RUN
+    : public RevokeKeyJob
+#else
+    : public _detail::ThreadedJobMixin<RevokeKeyJob>
+#endif
 {
     Q_OBJECT
+#ifdef Q_MOC_RUN
+public Q_SLOTS:
+    void slotFinished();
+#endif
 public:
-    QGpgMERefreshKeysJob();
-    ~QGpgMERefreshKeysJob();
+    explicit QGpgMERevokeKeyJob(GpgME::Context *context);
+    ~QGpgMERevokeKeyJob() override;
 
-    /* from RefreshKeysJob */
-    GpgME::Error start(const QStringList &patterns) Q_DECL_OVERRIDE;
+    GpgME::Error start(const GpgME::Key &key,
+                       GpgME::RevocationReason reason = GpgME::RevocationReason::Unspecified,
+                       const std::vector<std::string> &description = {}) override;
 
-private Q_SLOTS:
-    /* from Job */
-    void slotCancel() Q_DECL_OVERRIDE;
-
-    void slotStatus(QProcess *, const QString &, const QStringList &);
-    void slotStderr();
-    void slotProcessExited(int exitCode, QProcess::ExitStatus exitStatus);
-
-private:
-    GpgME::Error startAProcess();
-
-private:
-    QProcess *mProcess;
-    GpgME::Error mError;
-    QStringList mPatternsToDo;
+    GpgME::Error  exec(const GpgME::Key &key,
+                       GpgME::RevocationReason reason = GpgME::RevocationReason::Unspecified,
+                       const std::vector<std::string> &description = {}) override;
 };
 
 }
 
-#endif // __QGPGME_QGPGMEREFRESHKEYSJOB_H__
+#endif // __QGPGME_QGPGMEREVOKEKEYJOB_H__

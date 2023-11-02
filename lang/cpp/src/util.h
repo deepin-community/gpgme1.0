@@ -1,8 +1,10 @@
 /*
-  util.h - some inline helper functions
+  util.h - some internal helpers
   Copyright (C) 2004 Klarälvdalens Datakonsult AB
   2016 Bundesamt für Sicherheit in der Informationstechnik
   Software engineering by Intevation GmbH
+  Copyright (c) 2022 g10 Code GmbH
+  Software engineering by Ingo Klöcker <dev@ingo-kloecker.de>
 
   This file is part of GPGME++.
 
@@ -87,19 +89,15 @@ static inline gpgme_keylist_mode_t add_to_gpgme_keylist_mode_t(unsigned int oldm
     if (newmodes & GpgME::WithSecret) {
         oldmode |= GPGME_KEYLIST_MODE_WITH_SECRET;
     }
+    if (newmodes & GpgME::ForceExtern) {
+        oldmode |= GPGME_KEYLIST_MODE_FORCE_EXTERN;
+    }
 #ifndef NDEBUG
-    if (newmodes & ~(GpgME::Local |
-                     GpgME::Extern |
-                     GpgME::Signatures |
-                     GpgME::SignatureNotations |
-                     GpgME::Validate |
-                     GpgME::Ephemeral |
-                     GpgME::WithTofu |
-                     GpgME::WithKeygrip |
-                     GpgME::WithSecret)) {
+    if (newmodes & ~(GpgME::KeyListModeMask)) {
         //std::cerr << "GpgME::Context: keylist mode must be one of Local, "
         //"Extern, Signatures, SignatureNotations, Validate, Ephemeral, WithTofu, "
-        //"WithKeygrip, WithSecret, or a combination thereof!" << std::endl;
+        //"WithKeygrip, WithSecret, ForceExtern, or a combination thereof!"
+        //<< std::endl;
     }
 #endif
     return static_cast<gpgme_keylist_mode_t>(oldmode);
@@ -135,6 +133,9 @@ static inline unsigned int convert_from_gpgme_keylist_mode_t(unsigned int mode)
     if (mode & GPGME_KEYLIST_MODE_VALIDATE) {
         result |= GpgME::Validate;
     }
+    if (mode & GPGME_KEYLIST_MODE_FORCE_EXTERN) {
+        result |= GpgME::ForceExtern;
+    }
 #ifndef NDEBUG
     if (mode & ~(GPGME_KEYLIST_MODE_LOCAL |
                  GPGME_KEYLIST_MODE_EXTERN |
@@ -144,7 +145,8 @@ static inline unsigned int convert_from_gpgme_keylist_mode_t(unsigned int mode)
                  GPGME_KEYLIST_MODE_WITH_TOFU |
                  GPGME_KEYLIST_MODE_WITH_KEYGRIP |
                  GPGME_KEYLIST_MODE_EPHEMERAL |
-                 GPGME_KEYLIST_MODE_VALIDATE)) {
+                 GPGME_KEYLIST_MODE_VALIDATE |
+                 GPGME_KEYLIST_MODE_FORCE_EXTERN)) {
         //std::cerr << "GpgME: WARNING: gpgme_get_keylist_mode() returned an unknown flag!" << std::endl;
     }
 #endif // NDEBUG
@@ -174,5 +176,39 @@ static inline gpgme_sig_notation_flags_t  add_to_gpgme_sig_notation_flags_t(unsi
     }
     return static_cast<gpgme_sig_notation_flags_t>(result);
 }
+
+static inline std::vector<std::string> split(const std::string &text, char delimiter)
+{
+    std::vector<std::string> result;
+    if (!text.empty()) {
+        std::istringstream stream{text};
+        std::string line;
+        while (std::getline(stream, line, delimiter)) {
+            result.push_back(line);
+        }
+    }
+    return result;
+}
+
+/**
+ * Adapter for passing a vector of strings as NULL-terminated array of
+ * const char* to the C-interface of gpgme.
+ */
+class StringsToCStrings
+{
+public:
+    explicit StringsToCStrings(const std::vector<std::string> &v);
+    ~StringsToCStrings() = default;
+
+    StringsToCStrings(const StringsToCStrings &) = delete;
+    StringsToCStrings &operator=(const StringsToCStrings &) = delete;
+    StringsToCStrings(StringsToCStrings &&) = delete;
+    StringsToCStrings &operator=(StringsToCStrings &&) = delete;
+
+    const char **c_strs() const;
+private:
+    const std::vector<std::string> m_strings;
+    mutable std::vector<const char *> m_cstrings;
+};
 
 #endif // __GPGMEPP_UTIL_H__

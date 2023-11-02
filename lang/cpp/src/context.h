@@ -31,6 +31,7 @@
 #include "verificationresult.h" // for Signature::Notation
 
 #include <memory>
+#include <string>
 #include <vector>
 #include <utility>
 #include <iosfwd>
@@ -62,6 +63,17 @@ class GPGMEPP_EXPORT Context
     explicit Context(gpgme_ctx_t);
 public:
     //using GpgME::Protocol;
+
+    /// RAII-style class for saving/restoring the key list mode.
+    class GPGMEPP_EXPORT KeyListModeSaver
+    {
+    public:
+        explicit KeyListModeSaver(Context *ctx);
+        ~KeyListModeSaver();
+    private:
+        Context *mCtx;
+        unsigned int mKeyListMode;
+    };
 
     //
     // Creation and destruction:
@@ -189,18 +201,35 @@ public:
         ExportSecret = 16,
         ExportRaw = 32,
         ExportPKCS12 = 64,
-        ExportNoUID = 128,
+        ExportNoUID = 128, // obsolete; has no effect
         ExportSSH = 256,
+        ExportSecretSubkey = 512,
     };
 
     GpgME::Error exportPublicKeys(const char *pattern, Data &keyData);
-    GpgME::Error exportPublicKeys(const char *pattern, Data &keyData, unsigned int flags);
+    GpgME::Error exportPublicKeys(const char *pattern, Data &keyData, unsigned int mode);
     GpgME::Error exportPublicKeys(const char *pattern[], Data &keyData);
-    GpgME::Error exportPublicKeys(const char *pattern[], Data &keyData, unsigned int export_mode);
+    GpgME::Error exportPublicKeys(const char *pattern[], Data &keyData, unsigned int mode);
     GpgME::Error startPublicKeyExport(const char *pattern, Data &keyData);
-    GpgME::Error startPublicKeyExport(const char *pattern, Data &keyData, unsigned int flags);
+    GpgME::Error startPublicKeyExport(const char *pattern, Data &keyData, unsigned int mode);
     GpgME::Error startPublicKeyExport(const char *pattern[], Data &keyData);
-    GpgME::Error startPublicKeyExport(const char *pattern[], Data &keyData, unsigned int export_mode);
+    GpgME::Error startPublicKeyExport(const char *pattern[], Data &keyData, unsigned int mode);
+
+    GpgME::Error exportSecretKeys(const char *pattern, Data &keyData, unsigned int mode = ExportSecret);
+    GpgME::Error exportSecretKeys(const char *pattern[], Data &keyData, unsigned int mode = ExportSecret);
+    GpgME::Error startSecretKeyExport(const char *pattern, Data &keyData, unsigned int mode = ExportSecret);
+    GpgME::Error startSecretKeyExport(const char *pattern[], Data &keyData, unsigned int mode = ExportSecret);
+
+    GpgME::Error exportSecretSubkeys(const char *pattern, Data &keyData, unsigned int mode = ExportSecretSubkey);
+    GpgME::Error exportSecretSubkeys(const char *pattern[], Data &keyData, unsigned int mode = ExportSecretSubkey);
+    GpgME::Error startSecretSubkeyExport(const char *pattern, Data &keyData, unsigned int mode = ExportSecretSubkey);
+    GpgME::Error startSecretSubkeyExport(const char *pattern[], Data &keyData, unsigned int mode = ExportSecretSubkey);
+
+    // generic export functions; prefer using the specific public/secret key export functions
+    GpgME::Error exportKeys(const char *pattern, Data &keyData, unsigned int mode = ExportDefault);
+    GpgME::Error exportKeys(const char *pattern[], Data &keyData, unsigned int mode = ExportDefault);
+    GpgME::Error startKeyExport(const char *pattern, Data &keyData, unsigned int mode = ExportDefault);
+    GpgME::Error startKeyExport(const char *pattern[], Data &keyData, unsigned int mode = ExportDefault);
 
     //
     // Key Import
@@ -208,8 +237,10 @@ public:
 
     ImportResult importKeys(const Data &data);
     ImportResult importKeys(const std::vector<Key> &keys);
+    ImportResult importKeys(const std::vector<std::string> &keyIds);
     GpgME::Error startKeyImport(const Data &data);
     GpgME::Error startKeyImport(const std::vector<Key> &keys);
+    GpgME::Error startKeyImport(const std::vector<std::string> &keyIds);
     ImportResult importResult() const;
 
     //
@@ -263,6 +294,9 @@ public:
 
     Error revUid(const Key &key, const char *userid);
     Error startRevUid(const Key &key, const char *userid);
+
+    Error setPrimaryUid(const Key &key, const char *userid);
+    Error startSetPrimaryUid(const Key &key, const char *userid);
 
     Error createSubkey(const Key &key, const char *algo,
                        unsigned long reserved = 0,

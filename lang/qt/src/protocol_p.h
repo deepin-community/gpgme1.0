@@ -5,6 +5,8 @@
     Copyright (c) 2004,2005 Klarälvdalens Datakonsult AB
     Copyright (c) 2016 by Bundesamt für Sicherheit in der Informationstechnik
     Software engineering by Intevation GmbH
+    Copyright (c) 2022 by g10 Code GmbH
+    Software engineering by Ingo Klöcker <dev@ingo-kloecker.de>
 
     QGpgME is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -40,9 +42,8 @@
 #include "qgpgmelistallkeysjob.h"
 #include "qgpgmedecryptjob.h"
 #include "qgpgmedecryptverifyjob.h"
-#include "qgpgmerefreshkeysjob.h"
+#include "qgpgmerefreshsmimekeysjob.h"
 #include "qgpgmedeletejob.h"
-#include "qgpgmesecretkeyexportjob.h"
 #include "qgpgmedownloadjob.h"
 #include "qgpgmesignencryptjob.h"
 #include "qgpgmeencryptjob.h"
@@ -56,11 +57,16 @@
 #include "qgpgmechangeexpiryjob.h"
 #include "qgpgmechangeownertrustjob.h"
 #include "qgpgmechangepasswdjob.h"
+#include "qgpgmeaddexistingsubkeyjob.h"
 #include "qgpgmeadduseridjob.h"
 #include "qgpgmekeyformailboxjob.h"
+#include "qgpgmewkdlookupjob.h"
 #include "qgpgmewkspublishjob.h"
 #include "qgpgmetofupolicyjob.h"
 #include "qgpgmequickjob.h"
+#include "qgpgmereceivekeysjob.h"
+#include "qgpgmerevokekeyjob.h"
+#include "qgpgmesetprimaryuseridjob.h"
 
 namespace
 {
@@ -230,6 +236,19 @@ public:
         return new QGpgME::QGpgMEImportFromKeyserverJob(context);
     }
 
+    QGpgME::ReceiveKeysJob *receiveKeysJob() const override
+    {
+        if (mProtocol != GpgME::OpenPGP) {
+            return nullptr;
+        }
+
+        GpgME::Context *context = GpgME::Context::createForProtocol(mProtocol);
+        if (!context) {
+            return nullptr;
+        }
+        return new QGpgME::QGpgMEReceiveKeysJob{context};
+    }
+
     QGpgME::ExportJob *publicKeyExportJob(bool armor) const Q_DECL_OVERRIDE
     {
         GpgME::Context *context = GpgME::Context::createForProtocol(mProtocol);
@@ -241,24 +260,35 @@ public:
         return new QGpgME::QGpgMEExportJob(context);
     }
 
-    QGpgME::ExportJob *secretKeyExportJob(bool armor, const QString &charset) const Q_DECL_OVERRIDE
+    QGpgME::ExportJob *secretKeyExportJob(bool armor, const QString &) const Q_DECL_OVERRIDE
     {
-        if (mProtocol != GpgME::CMS) { // fixme: add support for gpg, too
+        GpgME::Context *context = GpgME::Context::createForProtocol(mProtocol);
+        if (!context) {
             return nullptr;
         }
 
-        // this operation is not supported by gpgme, so we have to call gpgsm ourselves:
-        return new QGpgME::QGpgMESecretKeyExportJob(armor, charset);
+        context->setArmor(armor);
+        return new QGpgME::QGpgMEExportJob(context, GpgME::Context::ExportSecret);
+    }
+
+    QGpgME::ExportJob *secretSubkeyExportJob(bool armor) const Q_DECL_OVERRIDE
+    {
+        GpgME::Context *context = GpgME::Context::createForProtocol(mProtocol);
+        if (!context) {
+            return nullptr;
+        }
+
+        context->setArmor(armor);
+        return new QGpgME::QGpgMEExportJob(context, GpgME::Context::ExportSecretSubkey);
     }
 
     QGpgME::RefreshKeysJob *refreshKeysJob() const Q_DECL_OVERRIDE
     {
-        if (mProtocol != GpgME::CMS) { // fixme: add support for gpg, too
+        if (mProtocol != GpgME::CMS) {
             return nullptr;
         }
 
-        // this operation is not supported by gpgme, so we have to call gpgsm ourselves:
-        return new QGpgME::QGpgMERefreshKeysJob();
+        return new QGpgME::QGpgMERefreshSMIMEKeysJob;
     }
 
     QGpgME::DownloadJob *downloadJob(bool armor) const Q_DECL_OVERRIDE
@@ -357,6 +387,19 @@ public:
         return new QGpgME::QGpgMEChangeOwnerTrustJob(context);
     }
 
+    QGpgME:: AddExistingSubkeyJob *addExistingSubkeyJob() const override
+    {
+        if (mProtocol != GpgME::OpenPGP) {
+            return nullptr;    // only supported by gpg
+        }
+
+        GpgME::Context *context = GpgME::Context::createForProtocol(mProtocol);
+        if (!context) {
+            return nullptr;
+        }
+        return new QGpgME::QGpgMEAddExistingSubkeyJob{context};
+    }
+
     QGpgME::AddUserIDJob *addUserIDJob() const Q_DECL_OVERRIDE
     {
         if (mProtocol != GpgME::OpenPGP) {
@@ -379,7 +422,7 @@ public:
         if (!context) {
             return nullptr;
         }
-        context->setKeyListMode(GpgME::Extern | GpgME::Local | GpgME::Signatures | GpgME::Validate);
+        context->setKeyListMode(GpgME::Locate | GpgME::Signatures | GpgME::Validate);
         return new QGpgME::QGpgMEKeyListJob(context);
     }
 
@@ -390,6 +433,18 @@ public:
             return nullptr;
         }
         return new QGpgME::QGpgMEKeyForMailboxJob(context);
+    }
+
+    QGpgME::WKDLookupJob *wkdLookupJob() const Q_DECL_OVERRIDE
+    {
+        if (mProtocol != GpgME::OpenPGP) {
+            return nullptr;
+        }
+        auto context = GpgME::Context::createForEngine(GpgME::AssuanEngine);
+        if (!context) {
+            return nullptr;
+        }
+        return new QGpgME::QGpgMEWKDLookupJob(context.release());
     }
 
     QGpgME::WKSPublishJob *wksPublishJob() const Q_DECL_OVERRIDE
@@ -426,6 +481,30 @@ public:
             return nullptr;
         }
         return new QGpgME::QGpgMEQuickJob(context);
+    }
+
+    QGpgME::RevokeKeyJob *revokeKeyJob() const Q_DECL_OVERRIDE
+    {
+        if (mProtocol != GpgME::OpenPGP) {
+            return nullptr;
+        }
+        GpgME::Context *context = GpgME::Context::createForProtocol(mProtocol);
+        if (!context) {
+            return nullptr;
+        }
+        return new QGpgME::QGpgMERevokeKeyJob(context);
+    }
+
+    QGpgME::SetPrimaryUserIDJob *setPrimaryUserIDJob() const override
+    {
+        if (mProtocol != GpgME::OpenPGP) {
+            return nullptr;
+        }
+        GpgME::Context *context = GpgME::Context::createForProtocol(mProtocol);
+        if (!context) {
+            return nullptr;
+        }
+        return new QGpgME::QGpgMESetPrimaryUserIDJob{context};
     }
 };
 

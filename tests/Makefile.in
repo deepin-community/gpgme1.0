@@ -114,10 +114,12 @@ noinst_PROGRAMS = $(am__EXEEXT_1) run-keylist$(EXEEXT) \
 	run-export$(EXEEXT) run-import$(EXEEXT) run-sign$(EXEEXT) \
 	run-verify$(EXEEXT) run-encrypt$(EXEEXT) run-identify$(EXEEXT) \
 	run-decrypt$(EXEEXT) run-genkey$(EXEEXT) run-keysign$(EXEEXT) \
-	run-tofu$(EXEEXT) run-swdb$(EXEEXT) run-threaded$(EXEEXT)
+	run-tofu$(EXEEXT) run-swdb$(EXEEXT) run-threaded$(EXEEXT) \
+	run-receive-keys$(EXEEXT)
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/m4/ax_gcc_func_attribute.m4 \
 	$(top_srcdir)/m4/ax_pkg_swig.m4 \
 	$(top_srcdir)/m4/ax_python_devel.m4 \
 	$(top_srcdir)/m4/glib-2.0.m4 $(top_srcdir)/m4/glibc21.m4 \
@@ -175,6 +177,10 @@ run_keysign_SOURCES = run-keysign.c
 run_keysign_OBJECTS = run-keysign.$(OBJEXT)
 run_keysign_LDADD = $(LDADD)
 run_keysign_DEPENDENCIES = ../src/libgpgme.la
+run_receive_keys_SOURCES = run-receive-keys.c
+run_receive_keys_OBJECTS = run-receive-keys.$(OBJEXT)
+run_receive_keys_LDADD = $(LDADD)
+run_receive_keys_DEPENDENCIES = ../src/libgpgme.la
 run_sign_SOURCES = run-sign.c
 run_sign_OBJECTS = run-sign.$(OBJEXT)
 run_sign_LDADD = $(LDADD)
@@ -184,7 +190,7 @@ run_swdb_OBJECTS = run-swdb.$(OBJEXT)
 run_swdb_LDADD = $(LDADD)
 run_swdb_DEPENDENCIES = ../src/libgpgme.la
 run_threaded_SOURCES = run-threaded.c
-run_threaded_OBJECTS = run-threaded.$(OBJEXT)
+run_threaded_OBJECTS = run_threaded-run-threaded.$(OBJEXT)
 run_threaded_DEPENDENCIES = ../src/libgpgme.la
 run_tofu_SOURCES = run-tofu.c
 run_tofu_OBJECTS = run-tofu.$(OBJEXT)
@@ -225,11 +231,11 @@ am__depfiles_remade = ./$(DEPDIR)/run-decrypt.Po \
 	./$(DEPDIR)/run-encrypt.Po ./$(DEPDIR)/run-export.Po \
 	./$(DEPDIR)/run-genkey.Po ./$(DEPDIR)/run-identify.Po \
 	./$(DEPDIR)/run-import.Po ./$(DEPDIR)/run-keylist.Po \
-	./$(DEPDIR)/run-keysign.Po ./$(DEPDIR)/run-sign.Po \
-	./$(DEPDIR)/run-swdb.Po ./$(DEPDIR)/run-threaded.Po \
+	./$(DEPDIR)/run-keysign.Po ./$(DEPDIR)/run-receive-keys.Po \
+	./$(DEPDIR)/run-sign.Po ./$(DEPDIR)/run-swdb.Po \
 	./$(DEPDIR)/run-tofu.Po ./$(DEPDIR)/run-verify.Po \
-	./$(DEPDIR)/t-data.Po ./$(DEPDIR)/t-engine-info.Po \
-	./$(DEPDIR)/t-version.Po
+	./$(DEPDIR)/run_threaded-run-threaded.Po ./$(DEPDIR)/t-data.Po \
+	./$(DEPDIR)/t-engine-info.Po ./$(DEPDIR)/t-version.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -251,12 +257,12 @@ am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = run-decrypt.c run-encrypt.c run-export.c run-genkey.c \
 	run-identify.c run-import.c run-keylist.c run-keysign.c \
-	run-sign.c run-swdb.c run-threaded.c run-tofu.c run-verify.c \
-	t-data.c t-engine-info.c t-version.c
+	run-receive-keys.c run-sign.c run-swdb.c run-threaded.c \
+	run-tofu.c run-verify.c t-data.c t-engine-info.c t-version.c
 DIST_SOURCES = run-decrypt.c run-encrypt.c run-export.c run-genkey.c \
 	run-identify.c run-import.c run-keylist.c run-keysign.c \
-	run-sign.c run-swdb.c run-threaded.c run-tofu.c run-verify.c \
-	t-data.c t-engine-info.c t-version.c
+	run-receive-keys.c run-sign.c run-swdb.c run-threaded.c \
+	run-tofu.c run-verify.c t-data.c t-engine-info.c t-version.c
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -399,6 +405,7 @@ GPGME_CONFIG_AVAIL_LANG = @GPGME_CONFIG_AVAIL_LANG@
 GPGME_CONFIG_CFLAGS = @GPGME_CONFIG_CFLAGS@
 GPGME_CONFIG_HOST = @GPGME_CONFIG_HOST@
 GPGME_CONFIG_LIBS = @GPGME_CONFIG_LIBS@
+GPGME_CPP_CFLAGS = @GPGME_CPP_CFLAGS@
 GPGME_QTTEST_CFLAGS = @GPGME_QTTEST_CFLAGS@
 GPGME_QTTEST_LIBS = @GPGME_QTTEST_LIBS@
 GPGME_QT_CFLAGS = @GPGME_QT_CFLAGS@
@@ -552,11 +559,13 @@ GNUPGHOME = $(abs_builddir)
 TESTS_ENVIRONMENT = GNUPGHOME=$(GNUPGHOME)
 EXTRA_DIST = start-stop-agent t-data-1.txt t-data-2.txt ChangeLog-2011
 AM_CPPFLAGS = -I$(top_builddir)/src @GPG_ERROR_CFLAGS@
-AM_LDFLAGS = -no-install
+@HAVE_W32_SYSTEM_FALSE@AM_LDFLAGS = -no-install
+@HAVE_W32_SYSTEM_TRUE@AM_LDFLAGS = -no-fast-install
 LDADD = ../src/libgpgme.la @GPG_ERROR_LIBS@ @LDADD_FOR_TESTS_KLUDGE@
 noinst_HEADERS = run-support.h
-run_threaded_LDADD = ../src/libgpgme.la -lpthread @GPG_ERROR_LIBS@ \
-		     @LDADD_FOR_TESTS_KLUDGE@
+run_threaded_CPPFLAGS = -I$(top_builddir)/src @GPG_ERROR_MT_CFLAGS@
+run_threaded_LDADD = ../src/libgpgme.la \
+		     @GPG_ERROR_MT_LIBS@ @LDADD_FOR_TESTS_KLUDGE@
 
 @RUN_GPG_TESTS_FALSE@gpgtests = 
 @RUN_GPG_TESTS_TRUE@gpgtests = gpg json
@@ -638,6 +647,10 @@ run-keysign$(EXEEXT): $(run_keysign_OBJECTS) $(run_keysign_DEPENDENCIES) $(EXTRA
 	@rm -f run-keysign$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(run_keysign_OBJECTS) $(run_keysign_LDADD) $(LIBS)
 
+run-receive-keys$(EXEEXT): $(run_receive_keys_OBJECTS) $(run_receive_keys_DEPENDENCIES) $(EXTRA_run_receive_keys_DEPENDENCIES) 
+	@rm -f run-receive-keys$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(run_receive_keys_OBJECTS) $(run_receive_keys_LDADD) $(LIBS)
+
 run-sign$(EXEEXT): $(run_sign_OBJECTS) $(run_sign_DEPENDENCIES) $(EXTRA_run_sign_DEPENDENCIES) 
 	@rm -f run-sign$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(run_sign_OBJECTS) $(run_sign_LDADD) $(LIBS)
@@ -684,11 +697,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-import.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-keylist.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-keysign.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-receive-keys.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-sign.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-swdb.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-threaded.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-tofu.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run-verify.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/run_threaded-run-threaded.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-data.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-engine-info.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-version.Po@am__quote@ # am--include-marker
@@ -719,6 +733,20 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+run_threaded-run-threaded.o: run-threaded.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(run_threaded_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT run_threaded-run-threaded.o -MD -MP -MF $(DEPDIR)/run_threaded-run-threaded.Tpo -c -o run_threaded-run-threaded.o `test -f 'run-threaded.c' || echo '$(srcdir)/'`run-threaded.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/run_threaded-run-threaded.Tpo $(DEPDIR)/run_threaded-run-threaded.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='run-threaded.c' object='run_threaded-run-threaded.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(run_threaded_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o run_threaded-run-threaded.o `test -f 'run-threaded.c' || echo '$(srcdir)/'`run-threaded.c
+
+run_threaded-run-threaded.obj: run-threaded.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(run_threaded_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT run_threaded-run-threaded.obj -MD -MP -MF $(DEPDIR)/run_threaded-run-threaded.Tpo -c -o run_threaded-run-threaded.obj `if test -f 'run-threaded.c'; then $(CYGPATH_W) 'run-threaded.c'; else $(CYGPATH_W) '$(srcdir)/run-threaded.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/run_threaded-run-threaded.Tpo $(DEPDIR)/run_threaded-run-threaded.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='run-threaded.c' object='run_threaded-run-threaded.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(run_threaded_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o run_threaded-run-threaded.obj `if test -f 'run-threaded.c'; then $(CYGPATH_W) 'run-threaded.c'; else $(CYGPATH_W) '$(srcdir)/run-threaded.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -1026,11 +1054,12 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/run-import.Po
 	-rm -f ./$(DEPDIR)/run-keylist.Po
 	-rm -f ./$(DEPDIR)/run-keysign.Po
+	-rm -f ./$(DEPDIR)/run-receive-keys.Po
 	-rm -f ./$(DEPDIR)/run-sign.Po
 	-rm -f ./$(DEPDIR)/run-swdb.Po
-	-rm -f ./$(DEPDIR)/run-threaded.Po
 	-rm -f ./$(DEPDIR)/run-tofu.Po
 	-rm -f ./$(DEPDIR)/run-verify.Po
+	-rm -f ./$(DEPDIR)/run_threaded-run-threaded.Po
 	-rm -f ./$(DEPDIR)/t-data.Po
 	-rm -f ./$(DEPDIR)/t-engine-info.Po
 	-rm -f ./$(DEPDIR)/t-version.Po
@@ -1087,11 +1116,12 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/run-import.Po
 	-rm -f ./$(DEPDIR)/run-keylist.Po
 	-rm -f ./$(DEPDIR)/run-keysign.Po
+	-rm -f ./$(DEPDIR)/run-receive-keys.Po
 	-rm -f ./$(DEPDIR)/run-sign.Po
 	-rm -f ./$(DEPDIR)/run-swdb.Po
-	-rm -f ./$(DEPDIR)/run-threaded.Po
 	-rm -f ./$(DEPDIR)/run-tofu.Po
 	-rm -f ./$(DEPDIR)/run-verify.Po
+	-rm -f ./$(DEPDIR)/run_threaded-run-threaded.Po
 	-rm -f ./$(DEPDIR)/t-data.Po
 	-rm -f ./$(DEPDIR)/t-engine-info.Po
 	-rm -f ./$(DEPDIR)/t-version.Po

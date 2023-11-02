@@ -1459,6 +1459,8 @@ gt_get_keylist_mode (gpgme_tool_t gt)
     modes[idx++] = "ephemeral";
   if (mode & GPGME_KEYLIST_MODE_VALIDATE)
     modes[idx++] = "validate";
+  if (mode & GPGME_KEYLIST_MODE_FORCE_EXTERN)
+    modes[idx++] = "force_extern";
   modes[idx++] = NULL;
 
   gt_write_status (gt, STATUS_KEYLIST_MODE, modes[0], modes[1], modes[2],
@@ -2200,6 +2202,8 @@ cmd_keylist_mode (assuan_context_t ctx, char *line)
 	mode |= GPGME_KEYLIST_MODE_EPHEMERAL;
       if (strstr (line, "validate"))
 	mode |= GPGME_KEYLIST_MODE_VALIDATE;
+      if (strstr (line, "force_extern"))
+	mode |= GPGME_KEYLIST_MODE_FORCE_EXTERN;
 
       return gt_set_keylist_mode (server->gt, mode);
     }
@@ -2658,7 +2662,8 @@ cmd_import (assuan_context_t ctx, char *line)
 
 
 static const char hlp_export[] =
-  "EXPORT [--extern] [--minimal] [--secret [--pkcs12] [--raw]] [<pattern>]\n"
+  "EXPORT [--extern] [--minimal]\n"
+  " [--secret [--pkcs12] [--raw]|--secret-subkey] [<pattern>]\n"
   "\n"
   "Export the keys described by PATTERN.  Write the\n"
   "the output to the object set by the last OUTPUT command.";
@@ -2688,6 +2693,8 @@ cmd_export (assuan_context_t ctx, char *line)
     mode |= GPGME_EXPORT_MODE_MINIMAL;
   if (has_option (line, "--secret"))
     mode |= GPGME_EXPORT_MODE_SECRET;
+  if (has_option (line, "--secret-subkey"))
+    mode |= GPGME_EXPORT_MODE_SECRET_SUBKEY;
   if (has_option (line, "--raw"))
     mode |= GPGME_EXPORT_MODE_RAW;
   if (has_option (line, "--pkcs12"))

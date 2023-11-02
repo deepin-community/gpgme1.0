@@ -1,3 +1,1203 @@
+2022-08-10  Werner Koch  <wk@gnupg.org>
+
+	Release 1.18.0.
+	+ commit 26ff163bd6912fa7e8cb522d0799e17095ac1efb
+
+
+	tests: Make t-edit-sign more robust.
+	+ commit 9ee74b68e688b474881768a5ae59d857397c8fbf
+	* tests/gpg/t-edit-sign.c (interact_fnc): Provide the default answer.
+
+2022-08-10  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Add missing include.
+	+ commit 5d91182c955d128c8ff7cdd29189fc3ae06201d9
+	* lang/qt/tests/t-revokekey.cpp: Include QDebug.
+
+2022-08-09  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Add job to set the primary user ID of OpenPGP keys.
+	+ commit db7d79063f57c6e0ccf382fdf1cf47d514e12f6e
+	* lang/qt/src/qgpgmesetprimaryuseridjob.cpp,
+	lang/qt/src/qgpgmesetprimaryuseridjob.h,
+	lang/qt/src/setprimaryuseridjob.h: New.
+	* lang/qt/src/protocol.h (class Protocol): Add pure virtual member
+	function setPrimaryUserIDJob.
+	* lang/qt/src/protocol_p.h (Protocol::setPrimaryUserIDJob): New.
+	* lang/qt/src/job.cpp, lang/qt/src/Makefile.am: Update accordingly.
+
+	* lang/qt/tests/t-setprimaryuserid.cpp: New.
+	* lang/qt/tests/Makefile.am: Add new test.
+
+	cpp: Add support for gpgme_op_set_uid_flag.
+	+ commit 125867f268f2a49ff060a7adc859500500b77025
+	* lang/cpp/src/context.cpp, lang/cpp/src/context.h
+	(Context::setPrimaryUid, Context::startSetPrimaryUid): New.
+
+2022-08-09  NIIBE Yutaka  <gniibe@fsij.org>
+
+	python: Don't call __del__ from __exit__ method.
+	+ commit f8d99bb9e4a7f6229c19c4fbd951ccad6fa97bde
+	* lang/python/src/core.py (Context, Data): Don't call __del__
+	from __exit__ method, as the object may be still in use.
+	* lang/python/tests/t-idiomatic.py: Fix the test.
+
+2022-08-05  NIIBE Yutaka  <gniibe@fsij.org>
+
+	python: Don't access gpgme with wrapped=None.
+	+ commit 180899c7c313335128606bfff738da00dce4f5c9
+	* lang/python/src/core.py (GpgmeWrapper, Context): Check self.wrapped
+	is valid.
+
+2022-08-05  Jasper Spaans  <jasper@startmail.com>
+
+	python: Reset passphrase callback correctly.
+	+ commit b2f224a471fecce566443bf0f0e554de6f567f4e
+	* lang/python/src/core.py (Context(GpgmeWrapper)): Reset passphrase
+	callback correctly, for encrypt, decrypt, create_key, and
+	create_subkey methods.
+
+2022-08-04  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Remove job for refreshing OpenPGP keys.
+	+ commit c3b183831db5a2a490ba49bf4804730679eb59d0
+	* lang/qt/src/qgpgmerefreshopenpgpkeysjob.cpp,
+	lang/qt/src/qgpgmerefreshopenpgpkeysjob.h,
+	lang/qt/src/refreshopenpgpkeysjob.h: Remove.
+	* lang/qt/src/Makefile.am, lang/qt/src/job.cpp: Update accordingly.
+	* lang/qt/src/protocol.h (class Protocol): Remove pure virtual member
+	function refreshOpenPGPKeysJob.
+	* lang/qt/src/protocol_p.h (Protocol::refreshOpenPGPKeysJob): Remove.
+
+	* lang/qt/tests/run-refreshkeysjob.cpp (main): Use ReceiveKeysJob for
+	OpenPGP keys.
+
+2022-07-21  NIIBE Yutaka  <gniibe@fsij.org>
+
+	build: Update config.guess and config.sub.
+	+ commit cc37447b625b45efb5c94c40461084460f03f24a
+	* build-aux/config.guess: Update from upstream.
+	* build-aux/config.sub: Ditto.
+
+	build: Fix for modern Autoconf.
+	+ commit 16020c5fd96427961734c4a8f5b2b5e901b1bb60
+	* m4/glib-2.0.m4: Use AC_RUN_IFELSE and AC_LINK_IFELSE.
+
+2022-07-05  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Allow setting the file name of signed and encrypted data.
+	+ commit 5436b309fe67dd3c4531f751d99c98128ca66e4d
+	* lang/qt/src/Makefile.am (qgpgme_sources): Add signencryptjob.cpp.
+	* lang/qt/src/signencryptjob.cpp: New.
+	* lang/qt/src/signencryptjob.h (class SignEncryptJob): Add member
+	functions setFileName, fileName.
+	* lang/qt/src/qgpgmesignencryptjob.cpp (sign_encrypt): Set file name of
+	input.
+	(sign_encrypt_qba, QGpgMESignEncryptJob::exec,
+	QGpgMESignEncryptJob::start): Pass file name to sign_encrypt resp.
+	sign_encrypt_qba.
+
+	qt: Allow setting the file name of encrypted data.
+	+ commit bc10169724d2806b38f91beff39ef637b5e52b8d
+	* lang/qt/src/Makefile.am (qgpgme_sources): Add encryptjob.cpp.
+	* lang/qt/src/encryptjob.cpp: New.
+	* lang/qt/src/encryptjob.h (class EncryptJob): Add member functions
+	setFileName, fileName.
+	* lang/qt/src/qgpgmeencryptjob.cpp (encrypt): Set file name of input.
+	(encrypt_qba, QGpgMEEncryptJob::exec, QGpgMEEncryptJob::start): Pass
+	file name to encrypt resp. encrypt_qba.
+
+2022-07-04  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Fix filename of cmake config files for w32.
+	+ commit 31423945d214292f24dd1f700cd8ab53722dd1eb
+	* lang/qt/src/Makefile.am (EXTRA_DIST): Add
+	QGpgmeConfig-w32.cmake.in.in.
+
+2022-07-04  Laurent Montel  <montel@kde.org>
+
+	qt: Add #include <QStringList> needed for building against qt6.
+	+ commit d42323f90213157a5e847bfa89bee55a29ee8df0
+	* lang/qt/src/downloadjob.h, lang/qt/src/exportjob.h,
+	lang/qt/src/keylistjob.h lang/qt/src/refreshkeysjob.h: in qt6 we need
+	to use #include <QStringList>
+
+2022-06-30  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	cpp: Remove obsolete compatibility with KF5 variants.
+	+ commit 6e45da30ae787dd45836e55d34f7aa4e001b641c
+	* lang/cpp/src/GpgmeppConfig-w32.cmake.in.in,
+	lang/cpp/src/GpgmeppConfig.cmake.in.in: Remove find_package() call.
+
+2022-06-28  NIIBE Yutaka  <gniibe@fsij.org>
+
+	build: When no gpg-error-config, not install gpgme-config.
+	+ commit 02a2f350359013bf33c3957e95c98726273ced8c
+	* configure.ac (USE_GPGRT_CONFIG): New.
+	* src/Makefile.am [USE_GPGRT_CONFIG]: Conditionalize the install
+	of gpgme-config.
+
+	build: Update gpg-error.m4.
+	+ commit aa94b4cee5aabfa9097abd4560fdf002516db82a
+	* m4/gpg-error.m4: Update from libgpg-error.
+
+2022-06-14  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	tests: Add support for clear text signatures to test runner.
+	+ commit d59cf1725755f24e79a0ce12ddc59fedc97292c6
+	* tests/run-sign.c (show_usage): Add new argument "--clear".
+	(main): Handle new argument "--clear".
+
+2022-06-10  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt,tests: Allow 1-day-offset for expiration date.
+	+ commit fd813f5c3938423137db1fcb02c3c527bd9f58c6
+	* lang/qt/tests/t-various.cpp (TestVarious::testSignKeyWithExpiration):
+	Assert that the expiration date is either 2106-02-05 or 2106-02-04.
+
+	qt: Prevent u32 overflow when calculating expiration date.
+	+ commit 7870fdbfeff47755138136dbd6648b18f6b4fc76
+	* lang/qt/src/qgpgmesignkeyjob.cpp (sign_key): Change maxAllowedDate to
+	2106-02-05. Change log-level from warning to debug.
+	* lang/qt/tests/t-various.cpp (TestVarious::testSignKeyWithExpiration):
+	Remove check for warning. Adapt assertion.
+
+2022-06-09  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	Revert "tests: Avoid problems with local time across a day boundary."
+	+ commit 918afc809d40e057266ced6dfc98a5b3e5b4d3ee
+	This reverts commit 5ba0e454a37c9b0d3badddfc2dad8bcc7c7af874.
+
+	core: Handle import status lines during keylist operation.
+	+ commit 5d19eb4ad5ad9e93c34bf9b03ed6f583c6bf8491
+	* src/keylist.c (gpgme_op_keylist_from_data_start): Call
+	_gpgme_op_import_init_result.
+
+2022-05-12  Andre Heinecke  <aheinecke@gnupg.org>
+
+	cpp: Export KeyListModeSaver.
+	+ commit f3011b5a1918dbe9d2b1316707a2c1034c847507
+	* lang/cpp/src/context.h (Context::KeyListModeSaver): Add Export.
+
+2022-05-06  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	core: Set SECRET flag of subkeys stored on smart cards.
+	+ commit f72cf726ca749a138a8950b02c51e7b3a50c6a83
+	* src/keylist.c (parse_sec_field15): Set SECRET flag.
+
+2022-05-05  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	cpp: Output more properties of a subkey.
+	+ commit 306fd9c915cbccddbd146f37ba9bd826f10d2535
+	* lang/cpp/src/key.cpp (ostream operator<< for Subkey): Fix wrong output
+	of isInvalid and isDisabled flags. Add output of key grip, card serial
+	number and the flags isSecret, isQualified, isDeVs, and isCardKey.
+
+	cpp,tests: Actually parse the --with-secret option.
+	+ commit e029fd27350fcbda1b4689bc557e996d749d78ac
+	* lang/cpp/tests/run-keylist.cpp (main): Handle --with-secret option.
+	Print error for unknown option.
+
+	qt: Revert change of result signal of RefreshKeysJob.
+	+ commit 9e8c8e448ec83c454fb310f80ce0bf9f828a7145
+	* lang/qt/src/refreshkeysjob.h (RefreshKeysJob::result): Remove optional
+	parameters auditLogAsHtml and auditLogError.
+	* lang/qt/tests/run-refreshkeysjob.cpp (main): Update accordingly.
+
+	qt: Use lambda instead of std::bind.
+	+ commit 15a4940aa73019bce002302b14aaa73312da3df4
+	* lang/qt/src/qgpgmerefreshopenpgpkeysjob.cpp
+	(QGpgMERefreshOpenPGPKeysJob::start): Replace std::bind call with a
+	lambda.
+
+2022-05-04  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Emit import result when refreshing OpenPGP keys.
+	+ commit c64a8daf507a2216611861a12f312466b0bae8b2
+	* lang/qt/src/refreshopenpgpkeysjob.h: New.
+	* lang/qt/src/Makefile.am, lang/qt/src/job.cpp: Update accordingly.
+	* lang/qt/src/qgpgmerefreshopenpgpkeysjob.h (class
+	QGpgMERefreshOpenPGPKeysJob): Derive from RefreshOpenPGPKeysJob with
+	result ImportResult. Remove unused start overload.
+	* lang/qt/src/qgpgmerefreshopenpgpkeysjob.cpp (locate_external_keys):
+	Ignore result of KeyListJob. Return import result.
+	(receive_keys): Return import result.
+	(refresh_keys): Merge the two import results and return the result.
+	* lang/qt/src/protocol.h (class Protocol): Add pure virtual member
+	function refreshOpenPGPKeysJob.
+	* lang/qt/src/protocol_p.h (Protocol::refreshKeysJob): Return nullptr
+	for OpenPGP protocol.
+	(Protocol::refreshOpenPGPKeysJob): New.
+
+	* lang/qt/tests/run-refreshkeysjob.cpp (main): Use appropriate job
+	for the protocol of the key to refresh.
+
+	cpp: Allow retrieving import result of key listing with locate mode.
+	+ commit 3519d6117332f25b601c9c0636878baf4e8cf55b
+	* lang/cpp/src/context_p.h (enum Context::Private::Operation): Add
+	value KeyListWithImport.
+	* lang/cpp/src/context.cpp (Context::startKeyListing, Context::nextKey):
+	Set lastop to KeyListWithImport if keylist mode includes Locate.
+
+	core: Handle import status lines during keylist operation.
+	+ commit f3ca57dfd7af19f9b2fd01616a81dc889707a4d3
+	* src/import.c (import_status_handler): Rename to ...
+	(_gpgme_import_status_handler): this. Make non-static.
+	(_gpgme_op_import_init_result): New.
+	(_gpgme_op_import_start, _gpgme_op_import_keys_start,
+	_gpgme_op_receive_keys_start): Call _gpgme_op_import_init_result.
+	* src/keylist.c (keylist_status_handler): Call
+	_gpgme_import_status_handler to handle import status lines.
+	(gpgme_op_keylist_start, gpgme_op_keylist_ext_start): Call
+	_gpgme_op_import_init_result.
+	* src/ops.h (_gpgme_op_import_init_result,
+	_gpgme_import_status_handler): New prototypes.
+
+	cpp: Allow merging the results of two imports.
+	+ commit d911a1536488a5645f257a48b4d9cf221c0ed6b6
+	* lang/cpp/src/importresult.h, lang/cpp/src/importresult.cpp (class
+	ImportResult): Add member function mergeWith.
+
+2022-05-02  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Apply compiler hint.
+	+ commit f1a354fd57d6cc9e34ff33ea60aa4ef0aca382a3
+	* lang/qt/tests/t-verify.cpp (VerifyTest::testSignatureKey): Use
+	reference type to prevent copying.
+
+	qt: Use GpgME::Locate alias.
+	+ commit 540e7bf3d457a78497b6b7ac33b486b3c5b50857
+	* lang/qt/src/protocol_p.h (Protocol::locateKeysJob): Use Locate alias
+	instead of Extern|Local.
+	* lang/qt/src/qgpgmekeyformailboxjob.cpp (do_work): Ditto.
+
+	qt: Add job for refreshing OpenPGP keys.
+	+ commit e12861f18c6b431b40bfa78eb6f1d149690a5fcd
+	* lang/qt/src/qgpgmerefreshopenpgpkeysjob.h,
+	lang/qt/src/qgpgmerefreshopenpgpkeysjob.cpp: New.
+	* lang/qt/src/Makefile.am: Add new files.
+	* lang/qt/src/protocol_p.h (Protocol::refreshKeysJob): Add support for
+	OpenPGP protocol.
+
+	cpp: Add RAII class for saving/restoring the key list mode.
+	+ commit 34786132fed0a776d4cd314c44ed62e29ff75328
+	* lang/cpp/src/context.h, lang/cpp/src/context.cpp (class Context):
+	Add nested class KeyListModeSaver.
+
+	qt: Add debug helper for Result classes with output stream operator.
+	+ commit 99fd565889f3d22459ff82296b206fa228a4c468
+	* lang/qt/src/util.h (toLogString): New.
+
+	qt: Factor out helper for getting the fingerprints of some keys.
+	+ commit 0c304beeaab54dc25a8572270704fd5fa90cf836
+	* lang/qt/src/util.h, lang/qt/src/util.cpp (toFingerprints): New.
+	* lang/qt/src/qgpgmerefreshsmimekeysjob.cpp: Use the helper.
+
+2022-04-29  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Fix connection to readyReadStandardOutput signal.
+	+ commit 54c4fd16d1832fcce05aa9e471a4acebff0e3269
+	* lang/qt/src/qgpgmerefreshsmimekeysjob.h,
+	lang/qt/src/qgpgmerefreshsmimekeysjob.cpp
+	(QGpgMERefreshSMIMEKeysJob::slotStderr): Remove.
+	* lang/qt/src/qgpgmerefreshsmimekeysjob.cpp
+	(QGpgMERefreshSMIMEKeysJob::startAProcess): Handle
+	readyReadStandardOutput and readyReadStandardError signals with lambdas.
+
+	qt: Add test runner for refresh job.
+	+ commit 9686258bd16707a5e1eb292262a6c28faa581c34
+	* lang/qt/tests/run-refreshkeysjob.cpp: New.
+	* lang/qt/tests/Makefile.am (run_refreshkeysjob_SOURCES): New.
+	(noinst_PROGRAMS): Add new build artifact.
+
+	qt: Make RefreshKeysJob result compatible with standard job result.
+	+ commit f4c35609257156d0e32b8dd7315011b484919f05
+	* lang/qt/src/refreshkeysjob.h (RefreshKeysJob::result): Add optional
+	parameters auditLogAsHtml and auditLogError.
+
+	qt: Allow refreshing a list of keys.
+	+ commit fd97cbaa44b8e7914089319afac1e776c9a64283
+	* lang/qt/src/refreshkeysjob.h (class RefreshKeysJob): Add pure virtual
+	member function start taking a list of keys.
+	* lang/qt/src/qgpgmerefreshsmimekeysjob.h,
+	lang/qt/src/qgpgmerefreshsmimekeysjob.cpp (class
+	QGpgMERefreshSMIMEKeysJob): Implement new member function.
+
+	qt: Minor refactoring.
+	+ commit 62e770971786f272ecc079b78b11e798ec699d77
+	* lang/qt/src/qgpgmerefreshsmimekeysjob.cpp: Use namespace QGpgME.
+
+	qt: Rename QGpgMERefreshKeysJob to QGpgMERefreshSMIMEKeysJob.
+	+ commit f47bc992ae6ca6a9043d4de5bfc10179e4676256
+	* lang/qt/src/qgpgmerefreshkeysjob.h,
+	lang/qt/src/qgpgmerefreshkeysjob.cpp: Change name to
+	* lang/qt/src/qgpgmerefreshsmimekeysjob.h,
+	lang/qt/src/qgpgmerefreshsmimekeysjob.cpp: ... this, and adapt the
+	include guard.
+	(class QGpgMERefreshKeysJob): Rename to QGpgMERefreshSMIMEKeysJob.
+	* lang/qt/src/Makefile.am: Adapt mentioned file names accordingly.
+	* lang/qt/src/protocol_p.h (Protocol::refreshKeysJob): Use renamed
+	class.
+
+2022-04-28  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	cpp,tests: Verify that requested keylist mode is used.
+	+ commit 359906c8bcde7e351540708777e3678fee0cc2c1
+	* lang/cpp/tests/run-getkey.cpp, lang/cpp/tests/run-keylist.cpp (main):
+	Check used keylist mode.
+
+2022-04-27  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	cpp: Support new keylist modes.
+	+ commit dea872f21ff77cd58bafe0966d89d6331c8d2e07
+	* lang/cpp/src/global.h (ForceExtern, LocateExternal, KeyListModeMask):
+	New.
+	* lang/cpp/src/context.cpp (operator<<): Add check.
+	* lang/cpp/src/util.h (gpgme_keylist_mode_t,
+	convert_from_gpgme_keylist_mode_t): Handle ForceExtern.
+	* lang/cpp/tests/run-getkey.cpp (show_usage, main): Add arguments
+	--force-extern and --locate-external.
+	* lang/cpp/tests/run-keylist.cpp (show_usage, main): Ditto.
+
+	core: Support --locate-external-keys command of gpg.
+	+ commit aff9aaac68450e76f84d0f9a3feabffe9e82dd7e
+	* src/gpgme.h.in (GPGME_KEYLIST_MODE_FORCE_EXTERN): New.
+	(GPGME_KEYLIST_MODE_LOCATE_EXTERNAL): New.
+	* src/gpgme.c (gpgme_set_keylist_mode): Check for invalid mode.
+	* src/engine-gpg.c (gpg_keylist_build_options): Use
+	"--locate-external-keys" instead of "--locate-keys" if flag is set.
+	* src/gpgme-json.c (op_keylist): New flag "force-extern".
+	* src/gpgme-tool.c (gt_get_keylist_mode, cmd_keylist_mode): Handle
+	new mode.
+
+2022-04-25  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Rely on the bad passphrase error reported by gpg.
+	+ commit 512f11b458d82bb8a42b5764f11e11978173f896
+	* lang/qt/src/qgpgmedecryptverifyjob.cpp (patch_decryption_result):
+	Removed.
+	(decrypt_verify): Remove usage of patch_decryption_result.
+
+	core: Return BAD_PASSPHRASE error code on symmetric decryption.
+	+ commit e21c3b559dfb59c61f789572071e72e31bb089bf
+	* src/decrypt.c (op_data_t): Add field symdecrypt_failed.
+	(parse_status_error): Handle BAD_PASSPHRASE error code.
+	(_gpgme_decrypt_status_handler): Consult new field.
+
+2022-04-22  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Report better error if decryption failed because of bad passphrase.
+	+ commit d8e5871dca9425811873058150677a158235613d
+	* lang/qt/src/qgpgmedecryptverifyjob.cpp (patch_decryption_result): New.
+	(decrypt_verify): Call patch_decryption_result.
+
+	cpp: Allow changing the error of a result.
+	+ commit 321c8a0254f4729ff1ffe56956fb049555272321
+	* lang/cpp/src/result.h (class Result): Add member function setError.
+
+2022-04-05  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	cpp: Handle canceling of an edit operation.
+	+ commit 28cdbfdccb347e1ef15f794d4afd36f9275f073c
+	* lang/cpp/src/editinteractor.cpp
+	(CallbackHelper::edit_interactor_callback_impl): Check for error _or_
+	canceled state.
+
+	cpp: Return actual error if revocation fails.
+	+ commit db532eca8ebd64536985e7a40af22e803e3b3df9
+	* lang/cpp/src/editinteractor.cpp, lang/cpp/src/editinteractor.h
+	(EditInteractor::parseStatusError): New.
+	* lang/cpp/src/gpgrevokekeyeditinteractor.cpp
+	(GpgRevokeKeyEditInteractor::Private::nextState): Handle status
+	error.
+
+	cpp: Add internal utility function for splitting strings.
+	+ commit c965b45bcd915ce92943fd4d436b5bd790f0442f
+	* lang/cpp/src/util.h (split): New.
+
+	cpp: Do not export symbols of the Private class.
+	+ commit 4beb6f419954b0df475d88bef7fc8b8065848b75
+	* lang/cpp/src/gpgrevokekeyeditinteractor.h (class
+	GpgRevokeKeyEditInteractor): Mark nested class Private as hidden.
+
+2022-04-05  NIIBE Yutaka  <gniibe@fsij.org>
+
+	core: Don't use internal __assuan functions.
+	+ commit a36d71a8e33e817b1cc2fde5d0fd476ddc6ac560
+	* configure.ac (nanosleep): Detect.
+	* src/assuan-support.c: Don't use __assuan_usleep.
+	(my_socketpair): Don't use __assuan_socketpair.
+
+	core: Don't keep using deprecated ath_ API.
+	+ commit 110a375401878b72984241c0dd84cb7fdeaae795
+	* src/posix-io.c: Don't include ath.h.
+	(_gpgme_io_read): Call read directly.
+	(_gpgme_io_write): Call write directly.
+	(_gpgme_io_waitpid): Call waitpid directly.
+	(_gpgme_io_select_select): Call select directly.
+	(_gpgme_io_recvmsg): Call recvmsg directly.
+	(_gpgme_io_sendmsg): Call sendmsg directly.
+	(_gpgme_io_connect): Call connect directly.
+	* src/assuan-support.c: Don't include ath.h.
+	(my_waitpid): Call waitpid directly.
+
+2022-03-31  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Check arguments passed to the revoke key job.
+	+ commit 7f089165e3ae42274e75e0e6fa1c45ca641f4023
+	* lang/qt/src/qgpgmerevokekeyjob.cpp (check_arguments): New.
+	(QGpgMERevokeKeyJob::start, QGpgMERevokeKeyJob::exec): Call
+	check_arguments.
+	* lang/qt/tests/t-revokekey.cpp (RevokeKeyJobTest): Add member functions
+	testErrorHandling_nullKey, testErrorHandling_invalidReason,
+	testErrorHandling_invalidDescription.
+
+2022-03-30  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt,tests: Verify reason code and description of revocation.
+	+ commit 3856ae8621bb28873123578a64eb81a4a591758e
+	* lang/qt/tests/t-revokekey.cpp (RevokeKeyJobTest::testRevokeKeyAsync,
+	RevokeKeyJobTest::testRevokeKeySync_noReasonDescription,
+	RevokeKeyJobTest::testRevokeKeySync_oneLineReasonDescription,
+	RevokeKeyJobTest::testRevokeKeySync_twoLinesReasonDescription): Call
+	verifyReason.
+	(class RevokeKeyJobTest): Add private member function verifyReason.
+
+	qt: Add job to revoke own OpenPGP keys.
+	+ commit 41297520da32081d0a34ac2799812f210b7a9335
+	* lang/qt/src/revokekeyjob.h, lang/qt/src/qgpgmerevokekeyjob.h,
+	lang/qt/src/qgpgmerevokekeyjob.cpp: New.
+	* lang/qt/src/protocol.h (class Protocol): Add pure virtual member
+	function revokeKeyJob.
+	* lang/qt/src/protocol_p.h (Protocol::revokeKeyJob): New.
+	* lang/qt/src/job.cpp, lang/qt/src/Makefile.am: Update accordingly.
+
+	* lang/qt/tests/Makefile.am (the_tests, moc_files, noinst_PROGRAMS):
+	Add new test.
+	(t_revokekey_SOURCES): New.
+	* lang/qt/tests/t-revokekey.cpp: New.
+
+	cpp: Add interactor to revoke a key.
+	+ commit d96e8a7a6bfcaad4587dd2bb648aa764b0d4e1ba
+	* lang/cpp/src/global.h (enum class RevocationReason): New.
+	* lang/cpp/src/gpgrevokekeyeditinteractor.cpp,
+	lang/cpp/src/gpgrevokekeyeditinteractor.h: New.
+	* lang/cpp/src/Makefile.am: Add new files.
+
+2022-03-28  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Set default visibility of all symbols to hidden.
+	+ commit 3b3b36a60749ea5c3b166bb1c8f3f6dda8ce6fcd
+	* configure.ac: Add -fvisibility=hidden to GPGME_QT_CFLAGS if gcc
+	supports the flag.
+
+	cpp: Set default visibility of all symbols to hidden.
+	+ commit fe588fef0963987b5624dc8c4bc73202ac2c9298
+	* configure.ac: Add -fvisibility=hidden to GPGME_CPP_CFLAGS if gcc
+	supports the flag.
+	* lang/cpp/src/Makefile.am (AM_CPPFLAGS): Add GPGME_CPP_CFLAGS.
+	* m4/ax_gcc_func_attribute.m4: New.
+
+	cpp: Put local helper function into unnamed namespace.
+	+ commit 92139e7b6b5fe84015d44d9516f3e1df7a3fc3bc
+	lang/cpp/src/context.cpp (to_auditlog_flags): Wrap in unnamed namespace.
+
+2022-03-16  NIIBE Yutaka  <gniibe@fsij.org>
+
+	core: Support keylist mode for op_keylist_from_data.
+	+ commit b2a2158384a9f048ff61ee0cebef8346055f0454
+	* src/engine-backend.h (keylist_data): Add MODE argument.
+	* src/engine-gpg.c (gpg_keylist_data): Add MODE argument.
+	* src/engine.c (_gpgme_engine_op_keylist_data): Likewise.
+	* src/engine.h (_gpgme_engine_op_keylist_data): Declaration.
+	* src/keylist.c (gpgme_op_keylist_from_data_start): Call
+	_gpgme_engine_op_keylist_data with ctx->keylist_mode.
+
+2022-03-07  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Add missing include of config.h.
+	+ commit 55861ba9ccc6b1087cb81acd93bed81fc0787208
+	* lang/qt/src/util.cpp: Include config.h.
+
+2022-03-06  Werner Koch  <wk@gnupg.org>
+
+	Post release updates.
+	+ commit f61a14f189d33ca320f6c4ee6323f1e48c46e4ea
+
+
+	Release 1.17.1.
+	+ commit ee50a38823daaa16b151a549a7dafef34bbd1e81
+	* configure.ac: Bump QT LT version to C15/A0/R0.
+
+2022-02-17  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Fix ABI compatibility with 1.16.0.
+	+ commit ad3aabdd8a64156c7e3a75d695ae1ab2c4bec841
+	* lang/qt/src/protocol.h (class Protocol): Move new virtual methods to
+	the end of the class.
+
+2022-02-07  Werner Koch  <wk@gnupg.org>
+
+	Release 1.17.0.
+	+ commit 72bb46b34f5191f672a5356e2f152e6ad9440554
+
+
+	qt: Fix build for older Qt versions.
+	+ commit 451a42f0d21c5a402d455c78d63eeaaa139e56cc
+	* lang/qt/src/util.cpp: Include <functional>.
+
+2022-02-03  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Add job to import keys given by key ids.
+	+ commit ca1c30b6fa29a7a1f18ecda14375b47893a0c1a3
+	* lang/qt/src/receivekeysjob.h, lang/qt/src/qgpgmereceivekeysjob.h,
+	lang/qt/src/qgpgmereceivekeysjob.cpp: New.
+	* lang/qt/src/protocol.h (class Protocol): Add pure virtual member
+	function receiveKeysJob.
+	* lang/qt/src/protocol_p.h (Protocol::receiveKeysJob): Implement it.
+	* lang/qt/src/job.cpp, lang/qt/src/Makefile.am: Update accordingly.
+
+	* lang/qt/tests/run-receivekeysjob.cpp: New.
+	* lang/qt/tests/Makefile.am: Add new test runner.
+
+	qt: Add helper for converting QStringList to vector of strings.
+	+ commit ec8d1ee13fce21a1f52b084212827914dfcd0db6
+	* lang/qt/src/util.h, lang/qt/src/util.cpp: New.
+	* lang/qt/src/Makefile.am (qgpgme_sources, private_qgpgme_headers):
+	Add new files.
+
+	cpp: Allow import of keys given by key ids.
+	+ commit bbaeeb5b9d5cca99c332cb88c7ae5f14e8745427
+	* lang/cpp/src/context.h (class Context): Add overloads of member
+	functions importKeys and startKeyImport
+	* lang/cpp/src/context.cpp (class Context): ... and implement them.
+
+	cpp: Add internal adapter for passing a vector of strings to gpgme.
+	+ commit 3d7810e8d940229435feb8f9811607ee831abf4b
+	* lang/cpp/src/util.h (class StringsToCStrings): New.
+	* lang/cpp/src/util.cpp: New.
+	* lang/cpp/src/Makefile.am: Add new file.
+
+	core: New function gpgme_op_receive_keys.
+	+ commit 3c2cff74b535422532e1256ee8177fa9c03eaf18
+	* src/gpgme.h.in (gpgme_op_receive_keys_start, gpgme_op_receive_keys):
+	New.
+	* src/gpgme.def, src/libgpgme.vers: Add them.
+	* src/engine-backend.h (struct engine_ops): Add arg keyids to field
+	'import'.
+	* src/engine.h, src/engine.c (_gpgme_engine_op_import): Add arg keyids.
+	* src/engine.c (_gpgme_engine_op_import): Forward new arg keyids.
+	* src/import.c: (_gpgme_op_import_start, _gpgme_op_import_keys_start):
+	Pass NULL to new arg of _gpgme_op_import_start.
+	(_gpgme_op_receive_keys_start, gpgme_op_receive_keys_start,
+	gpgme_op_receive_keys): New.
+	* src/engine-gpg.c (gpg_import): Add arg keyids. Extend check for
+	valid arguments. Build command line if keyids are given.
+	* src/engine-gpgsm.c (gpgsm_import): Add arg keyids. Return error if
+	keyids is not NULL.
+
+	tests/run-receive-keys.c: New.
+	tests/Makefile.am (noinst_PROGRAMS): Add new test runner.
+
+2022-01-17  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Remove superfluous include.
+	+ commit ec71eb1d7d9f1156cc48d1c9959b07981ecd16e5
+	* lang/qt/src/importjob.h: Remove include of QByteArray.
+
+	qt: Fix build without installed GpgME++ headers.
+	+ commit 9c03bde06be97403a8c392a3befc6c203bcdce6d
+	* lang/qt/src/importjob.h, lang/qt/src/wkdlookupresult.h: Include
+	headers of GpgME++ without "gpgme++/" prefix when building QGpgme.
+	* lang/qt/src/qgpgmeimportjob.cpp, lang/qt/src/qgpgmewkdlookupjob.cpp,
+	lang/qt/src/wkdlookupresult.cpp, lang/qt/tests/t-import.cpp: Include
+	headers of GpgME++ without "gpgme++/" prefix.
+
+2022-01-13  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	tests: Fix generation of keys without expiration.
+	+ commit e16729edcbdf2c35e3729b6d54c21b9b27250326
+	* tests/run-genkey.c (parse_expire_string): Support default expiration
+	and no expiration. Set flag for no expiration.
+	(main): Allow update of flags when generating new key.
+
+	tests: Remove unsupported option --status from usage help.
+	+ commit e4625885a851112a15636727388f11146be17f15
+	* tests/run-swdb.c (show_usage): Remove option --status.
+
+	qt: Add job to add existing subkeys to other keys.
+	+ commit 4d913a8aa5dad1327bed5987dada89e9d7c5d292
+	* lang/qt/src/addexistingsubkeyjob.h,
+	lang/qt/src/qgpgmeaddexistingsubkeyjob.cpp,
+	lang/qt/src/qgpgmeaddexistingsubkeyjob.h: New.
+	* lang/qt/src/protocol.h (class Protocol): Add pure virtual member
+	function addExistingSubkeyJob.
+	* lang/qt/src/protocol_p.h (Protocol::addExistingSubkeyJob): Implement.
+	* lang/qt/src/job.cpp, lang/qt/src/Makefile.am: Update accordingly.
+
+	* lang/qt/tests/Makefile.am (the_tests, moc_files, noinst_PROGRAMS):
+	Add new test.
+	(t_addexistingsubkey_SOURCES): New.
+	* lang/qt/tests/t-addexistingsubkey.cpp: New.
+	* lang/qt/tests/t-support.h (VERIFY_OR_RETURN_VALUE,
+	COMPARE_OR_RETURN_VALUE, VERIFY_OR_OBJECT, COMPARE_OR_OBJECT,
+	VERIFY_OR_FALSE, COMPARE_OR_FALSE): New.
+	* lang/qt/tests/t-support.h, lang/qt/tests/t-support.cpp
+	(class QQGpgMETest): New member function importSecretKeys.
+
+	qt,tests: Add helper to hook up the test passphrase provider.
+	+ commit d308910cdfb31accae7cf790a956eb2f3cc6ae71
+	* lang/qt/tests/t-support.h, lang/qt/tests/t-support.cpp
+	(class QGpgMETest): Add member function hookUpPassphraseProvider.
+	Add member mPassphraseProvider.
+	* lang/qt/tests/t-changeexpiryjob.cpp,
+	lang/qt/tests/t-encrypt.cpp,
+	lang/qt/tests/t-remarks.cpp,
+	lang/qt/tests/t-tofuinfo.cpp,
+	lang/qt/tests/t-trustsignatures.cpp,
+	lang/qt/tests/t-various.cpp: Use new helper.
+
+	qt,tests: Add asyncDone signal to base class of all tests.
+	+ commit a54402fc2d1c1364843d3c88b5b07dbb7fc007d1
+	* lang/qt/tests/t-support.h (class QGpgMETest): Add signal asyncDone.
+	* lang/qt/tests/t-changeexpiryjob.cpp,
+	lang/qt/tests/t-encrypt.cpp,
+	lang/qt/tests/t-import.cpp,
+	lang/qt/tests/t-keylist.cpp,
+	lang/qt/tests/t-keylocate.cpp,
+	lang/qt/tests/t-ownertrust.cpp,
+	lang/qt/tests/t-remarks.cpp,
+	lang/qt/tests/t-tofuinfo.cpp,
+	lang/qt/tests/t-trustsignatures.cpp,
+	lang/qt/tests/t-various.cpp,
+	lang/qt/tests/t-wkdlookup.cpp,
+	lang/qt/tests/t-wkspublish.cpp: Remove signal asyncDone from the test
+	classes.
+
+2022-01-12  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	cpp: Add interactor to add existing subkeys to other keys.
+	+ commit a4dcb17486bb42890ffe6453eeb2c6f301dc1fae
+	* lang/cpp/src/gpgaddexistingsubkeyeditinteractor.cpp,
+	lang/cpp/src/gpgaddexistingsubkeyeditinteractor.h: New.
+	* lang/cpp/src/Makefile.am: Add new files.
+
+2022-01-10  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	core: Return an error for secret key export operations.
+	+ commit a527bd7cf58563d07c89bec458c8967ab1b3e60f
+	src/export.c (export_status_handler): Handle "export_keys.secret".
+
+2022-01-04  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Add factory function for secret subkey export job.
+	+ commit 04723a6e96be77dbc43bf71c54e268424a1823ba
+	* lang/qt/src/protocol.h (class Protocol): Add member function
+	secretSubkeyExportJob.
+	* lang/qt/src/protocol_p.h (Protocol::secretSubkeyExportJob): Implement.
+
+	* lang/qt/tests/run-exportjob.cpp (showUsageAndExitWithCode): Print
+	new option.
+	(createExportJob): Create secret subkey export job if requested.
+	(main): New option --secret-subkey.
+
+	cpp: Allow export of secret subkeys.
+	+ commit e5c7fc3e022841be8f68fad8b9b64dd601b89ba7
+	* lang/cpp/src/context.h (enum Context::ExportMode): Add value
+	ExportSecretSubkey.
+	(class Context): Add member functions exportSecretSubkeys and
+	startSecretSubkeyExport.
+	* lang/cpp/src/context.cpp (Context::exportPublicKeys,
+	Context::startPublicKeyExport): Return error if ExportSecretSubkey
+	mode flag is set.
+	(Context::exportSecretSubkeys, Context::startSecretSubkeyExport):
+	Implement.
+
+	qt: Remove obsolete QGpgMESecretKeyExportJob.
+	+ commit 88ad37ea96e4645a9e23aac9eae0d8da747559b8
+	* lang/qt/src/Makefile.am: Remove all occurrences of
+	qgpgmesecretkeyexportjob.*.
+	* lang/qt/src/qgpgmesecretkeyexportjob.cpp,
+	lang/qt/src/qgpgmesecretkeyexportjob.h: Remove.
+
+	qt: Use QGpgMEExportJob also for export of secret keys.
+	+ commit 4e80563fabfdf1d1c136d65252e5353fdd1e9092
+	* lang/qt/src/protocol.h (Protocol::secretKeyExportJob): Document
+	charset argument as ignored.
+	* lang/qt/src/protocol_p.h (Protocol::secretKeyExportJob): Use
+	QGpgMEExportJob instead of QGpgMESecretKeyExportJob.
+	* lang/qt/src/qgpgmeexportjob.h (class QGpgMEExportJob): Add c'tor
+	taking an export mode. Add member m_exportMode. Rename member m_flags to
+	m_additionalExportModeFlags.
+	(QGpgMEExportJob::~QGpgMEExportJob): Mark as override.
+	* lang/qt/src/qgpgmeexportjob.cpp (QGpgMEExportJob::QGpgMEExportJob):
+	Delegate to new c'tor. Implement new c'tor.
+	(QGpgMEExportJob::~QGpgMEExportJob): Use default.
+	(export_qba): Rename argument flags to mode.
+	(QGpgMEExportJob::start): Pass combination of export mode and additional
+	mode flags to export_qba.
+	(QGpgMEExportJob::setExportFlags): Adapt to renaming of member.
+
+	* lang/qt/tests/run-exportjob.cpp: New.
+
+	cpp: Allow export of secret keys.
+	+ commit 3da06d1096ee29d70656f07edcabc3bc4351104e
+	* lang/cpp/src/context.h (class Context): New member functions
+	exportSecretKeys, startSecretKeyExport, exportKeys, startKeyExport.
+	(Context::exportPublicKeys, Context::startPublicKeyExport): Rename
+	argument flags/export_mode to mode.
+	* lang/cpp/src/context.cpp (Context::exportPublicKeys): Return error if
+	ExportSecret mode flag is set. Call exportKeys().
+	(Context::startPublicKeyExport): Return error if
+	ExportSecret mode flag is set. Call startKeyExport().
+	(Context::exportSecretKeys, Context::startSecretKeyExport,
+	Context::exportKeys, Context::startKeyExport): Implement.
+
+	cpp: Mark ExportNoUID flag as obsolete.
+	+ commit 4888191014c24d5954685814e06c9ff0ee38739f
+	* lang/cpp/src/context.h (enum Context::ExportMode): Mark value
+	ExportNoUID as obsolete
+
+	core: Add new option --secret-subkey to help texts.
+	+ commit 2752e81f892568a9725fdd8d6a997a1cc80d2f88
+	* src/gpgme-tool.c (hlp_export): Add new option.
+	* tests/run-export.c (show_usage): Print new option.
+
+	cpp: Remove obsolete workaround.
+	+ commit fa5f1b57cc12f9305d112f11c2c2d95751ed1a25
+	* lang/cpp/src/context.cpp (Context::startKeyListing,
+	Context::exportPublicKeys, Context::startPublicKeyExport): Remove
+	workaround.
+
+	core: New export mode to export secret subkeys.
+	+ commit 0e19c4879193ed7fa61ad5d488f237b2b5b5d1d7
+	* src/gpgme.h.in (GPGME_EXPORT_MODE_SECRET_SUBKEY): New.
+	* src/export.c (check_mode): Allow new mode and check for invalid
+	combinations.
+	(export_keys_start): Return error if new mode flag is set.
+	* src/engine-gpg.c (export_common): Implement.
+	* src/gpgme-tool.c (cmd_export): New option --secret-subkey.
+	* tests/run-export.c (main): New option --secret-subkey.
+
+	doc: Remove documentation of obsolete export mode flag.
+	+ commit 414bbdd53c380018621a2a5800e9a9c46869a56e
+	* doc/gpgme.texi: Remove GPGME_EXPORT_MODE_NOUID.
+
+	core: Check for unsupported export mode flags.
+	+ commit c710af223cc2476d5f4d46c00d8e0521f6c13211
+	src/engine-gpgsm.c (gpgsm_export, gpgsm_export_ext): Return error if an
+	unsupported mode flag is set.
+
+	core: Check for combination of ssh mode with other mode flags.
+	+ commit c0581adabe7f5f63c0b96dac449790aa6ac4c291
+	* src/export.c (check_mode): Return error if ssh mode is combined with
+	another mode flag.
+
+	core: Factor out the check for valid export mode flags.
+	+ commit 326857511587fa7878757d3884f91bf7eb86771c
+	* src/export.c (check_mode): New.
+	(export_start, export_ext_start): Call check_mode.
+
+2021-12-22  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Detect an import error caused by a wrong password.
+	+ commit 82f43455e9412d8b4792b35371e0b6704a619d07
+	* lang/qt/src/qgpgmeimportjob.cpp (import_qba): Check import statuses of
+	import result for bad passphrase errors.
+
+	qt,tests: Add test runner for testing the import job.
+	+ commit f99451e20fd2f84ac653aa6021a475026a9d4dc9
+	* lang/qt/tests/Makefile.am (run_importjob_SOURCES): New.
+	(noinst_PROGRAMS): Add run-importjob.
+	* lang/qt/tests/run-importjob.cpp: New.
+
+	cpp: Check fpr of import status for NULL.
+	+ commit 300776f39165da068757864e9cb3029f06f3be5b
+	* lang/cpp/src/importresult.cpp (GpgME::ImportResult::Private): Check
+	fpr for NULL.
+
+	core: Detect bad passphrase error on certificate import.
+	+ commit 305d8668ca724982c50fe4e05315c48a20cc33e5
+	* src/import.c (gpgme_op_import_result): Check fpr for NULL.
+	(parse_error): New.
+	(import_status_handler): Handle error status line.
+
+	* doc/gpgme.texi (gpgme_import_status_t): Mention that fpr can be NULL.
+
+	* tests/gpg/t-import.c (check_result): Check fpr for NULL.
+	* tests/run-threaded.c (delete_impres): Check fpr for NULL.
+
+2021-12-22  NIIBE Yutaka  <gniibe@fsij.org>
+
+	build: Update for newer autoconf.
+	+ commit 0636e229d7edfcb0a357ffcce62079488be32495
+	* configure.ac (AC_PREREQ): Require >= 2.69.
+	(AC_CONFIG_HEADERS): Use it instead of AC_CONFIG_HEADER.
+
+2021-12-15  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Allow specifying an import filter when importing keys.
+	+ commit 619579bb172579d766956b5d1690d18934fd5986
+	* lang/qt/src/importjob.cpp (struct ImportJobPrivate): Add member
+	m_importFilter.
+	* lang/qt/src/importjob.cpp, lang/qt/src/importjob.h (class ImportJob):
+	Add member functions setImportFilter and importFilter.
+	* lang/qt/src/qgpgmeimportjob.cpp (import_qba): Add arg importFilter
+	and adjust the callers. Set import filter context flag.
+
+	* lang/qt/tests/t-import.cpp (ImportTest): Add member function
+	testImportWithImportFilter.
+
+	qt: Avoid test failure when test is run multiple times.
+	+ commit 3e81a4a336e093d075f83afe3e1bd26493e64cac
+	* lang/qt/tests/t-import.cpp (ImportTest): Add member tempGpgHome and
+	member function initTestCase.
+	(keyFpr, keyData): Move to ImportTest::testImportWithKeyOrigin.
+
+	qt: Fix erroneous reuse of JobPrivate objects.
+	+ commit 3c770013d7233cb0a803251af54c0a2c1fb61e35
+	* lang/qt/src/job.cpp (Job::~Job): Destroy JobPrivate object belonging
+	to destroyed job.
+
+2021-12-14  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	core: Allow setting import filters when importing keys.
+	+ commit d35d44efaf72f90ee4f92af8382c4bcb9982da3f
+	* src/context.h (struct gpgme_context): New field import_filter.
+	* src/engine-backend.h (struct engine_ops): Add arg import_filter to
+	field 'import'.
+	* src/engine-gpg.c (gpg_import): Add arg import_filter and pass option
+	--import-filter with argument value to gpg. Adjust all callers.
+	* src/engine-gpgsm.c (gpgsm_import): Add dummy arg import_filter.
+	* src/gpgme.c (gpgme_release): Free 'import_filter'.
+	(gpgme_set_ctx_flag, gpgme_get_ctx_flag): New flag "import-filter".
+
+	* tests/run-import.c (main): Add option --import-filter.
+
+	qt: Add pattern used for WKD lookup to result.
+	+ commit af820811ec7d0818f988cd728d745cede88ab45f
+	* lang/qt/src/qgpgmewkdlookupjob.cpp (run_wkd_get): Change type of
+	arg email.
+	(lookup_keys): Add pattern to result.
+	* lang/qt/src/wkdlookupresult.h (class WKDLookupResult): Add arg
+	pattern to c'tors. Add member function pattern.
+	* lang/qt/src/wkdlookupresult.cpp (class WKDLookupResult::Private):
+	Add field pattern.
+	(WKDLookupResult::WKDLookupResult): Pass pattern to pimpl.
+	(WKDLookupResult::pattern): New.
+
+	* lang/qt/tests/t-wkdlookup.cpp (testWKDLookupAsync, testWKDLookupSync,
+	testLookupWithNoResultAsync): Check pattern.
+
+	core: Set --key-origin option only if supported by gpg.
+	+ commit fd680254dae58a6bf6fb83688bf7c849257688a4
+	* src/engine-gpg.c (gpg_import): Do not pass --key-origin option to
+	gpg if gpg is too old.
+
+	qt: Allow setting key origin when importing keys.
+	+ commit fd6bec617d8fb6ddcbc622a5d8cf94594a7d5520
+	* lang/qt/src/Makefile.am (qgpgme_sources): Add importjob.cpp.
+	* lang/qt/src/importjob.cpp: New.
+	* lang/qt/src/importjob.h (class ImportJob): Add member functions
+	setKeyOrigin, keyOrigin, keyOriginUrl.
+	* lang/qt/src/qgpgmeimportjob.cpp (originToString): New.
+	(import_qba): Set key origin context flag.
+	(QGpgMEImportJob::start, QGpgMEImportJob::exec): Add options to call
+	of import_qba.
+
+	* lang/qt/tests/Makefile.am (the_tests, moc_files, noinst_PROGRAMS):
+	Add new test.
+	(t_import_SOURCES): New.
+	* lang/qt/tests/t-import.cpp: New.
+
+	qt,tests: Skip WKD lookup tests by default.
+	+ commit 3a43d9dc67970db323c3e49eb964d52c4eb3ac6c
+	* lang/qt/tests/t-support.cpp, lang/qt/tests/t-support.h
+	(class QGpgMETest): Add member function doOnlineTests.
+	* lang/qt/tests/t-wkdlookup.cpp (testWKDLookupAsync, testWKDLookupSync,
+	testLookupWithNoResultAsync): Skip tests if online tests are not
+	enabled.
+
+2021-12-13  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	core: Allow specifiying a key origin when importing keys.
+	+ commit 60880adafa93e1a1e8e9fecf03c14d56bbd55345
+	* src/context.h (struct gpgme_context): New field key_origin.
+	* src/engine-backend.h (struct engine_ops): Add arg key_origin to
+	field 'import'.
+	* src/engine-gpg.c (gpg_import): Add arg key_origin and pass option
+	--key-origin with argument value to gpg. Adjust all callers.
+	* src/engine-gpgsm.c (gpgsm_import): Add dummy arg key_origin.
+	* src/gpgme.c (gpgme_release): Free 'key_origin'.
+	(gpgme_set_ctx_flag, gpgme_get_ctx_flag): New flag "key-origin".
+
+	* tests/run-import.c (main): Add option --key-origin.
+	* tests/gpg/t-import.c (main): Set and verify key origin.
+
+	qt: Support WKD lookup without implicit import.
+	+ commit ed7e7df2e14feb443e84d87e518ff61b1f7aa6d8
+	* lang/qt/src/Makefile.am (qgpgme_sources): Add qgpgmewkdlookupjob.cpp,
+	wkdlookupresult.cpp.
+	(qgpgme_headers): Add wkdlookupjob.h, wkdlookupresult.h.
+	(camelcase_headers): Add WKDLookupJob, WKDLookupResult.
+	(private_qgpgme_headers): Add qgpgmewkdlookupjob.h.
+	(qgpgme_moc_sources): Add qgpgmewkdlookupjob.moc, wkdlookupjob.moc.
+	* lang/qt/src/job.cpp: Define c'tor and d'tor of WKDLookupJob.
+	* lang/qt/src/protocol.h (Protocol::wkdLookupJob): New.
+	* lang/qt/src/protocol_p.h (Protocol::wkdLookupJob): New.
+	* lang/qt/src/qgpgmewkdlookupjob.cpp, lang/qt/src/qgpgmewkdlookupjob.h,
+	lang/qt/src/wkdlookupjob.h, lang/qt/src/wkdlookupresult.cpp,
+	lang/qt/src/wkdlookupresult.h: New.
+
+	* lang/qt/tests/Makefile.am (EXTRA_DIST): Add final.test.
+	(the_tests): New.
+	(TESTS): Remove all t-*. Add $(the_tests) and final.test.
+	(moc_files): Add t-wkdlookup.moc.
+	(t_wkdlookup_SOURCES): New.
+	(noinst_PROGRAMS): Add t-wkdlookup.
+	* lang/qt/tests/final.test: New.
+	* lang/qt/tests/t-support.h (QTest::toString): New template
+	specialization for std::string.
+	* lang/qt/tests/t-wkdlookup.cpp: New.
+
+	qt: Fix example for using the asynchronous job API.
+	+ commit 0e70a2313afbbaaec6859a1edb478587ff82a6b5
+	* lang/qt/src/protocol.h (class Protocol): Fix API documentation.
+
+2021-12-10  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	cpp,tests: Add test runner for doing a WKD lookup without import.
+	+ commit f3177d3ee0a1d30e15f33ff226b5e4c96b7610db
+	* lang/cpp/tests/Makefile.am (run_wkdlookup_SOURCES, programs_unix):
+	New.
+	(noinst_PROGRAMS): Add $(programs_unix).
+	* lang/cpp/tests/run-wkdlookup.cpp: New.
+
+	cpp: Add new supported components to API docs of dirInfo()
+	+ commit 5f1ba40116199cd77987c3c2797d600f6df018c2
+	lang/cpp/src/global.h: Update API doc of dirInfo().
+
+	core: Support all components with dirinfo()
+	+ commit 0ac3679a74505b782388402b3743ee65c271340f
+	* src/dirinfo.c (WANT_KEYBOXD_NAME, WANT_AGENT_NAME, WANT_SCDAEMON_NAME,
+	WANT_DIRMNGR_NAME, WANT_PINENTRY_NAME): New.
+	(dirinfo): Add fields keyboxd_name, agent_name, scdaemon_name,
+	dirmngr_name, pinentry_name.
+	(parse_output): Support "keyboxd", "gpg-agent", "scdaemon", "dirmngr",
+	"pinentry".
+	(get_gpgconf_item): Return new components.
+
+	tests/t-engine-info.c (main): Add new components to the output.
+
+2021-12-07  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	cpp: Return engine info for engine used by the context.
+	+ commit 0eddc867c31dd7239a1a9c4196bf8dc1372ea4b1
+	lang/cpp/src/context.cpp (Context::engineInfo()): Return engine info
+	for protocol of context.
+
+	cpp: Factor out common code of GpgME::engineInfo() overloads.
+	+ commit 1a1e9145877a60632346ae3ab68b1ae9d722a867
+	* lang/cpp/src/context.cpp (get_engine_info, get_static_engine_info):
+	New.
+	(GpgME::engineInfo(GpgME::Protocol), GpgME::engineInfo(GpgME::Engine)):
+	Use get_static_engine_info().
+
+2021-11-25  Werner Koch  <wk@gnupg.org>
+
+	core: Make the gpgconf option parsing of string types more robust.
+	+ commit b8b49c11e95fd978a8a2eed23f191d087ab056da
+	* src/engine-gpgconf.c (gpgconf_parse_option): Skip the string
+	indicator if it is not the empty string.
+
+	tests: Silence libtool warning on Windows.
+	+ commit 43de18a292b29436783127bd6c275817f0cd86b7
+	* tests/Makefile.am (AM_LDFLAGS): Use --no-fast-install on Windows.
+
+	core: Support dirinfo("socketdir")
+	+ commit eb37d6469e722ae5ff187962c216474b5ec476de
+	* src/dirinfo.c (WANT_SOCKETDIR): New.
+	(dirinfo): Add field socketdir.
+	(parse_output): Support "socketdir".
+	(get_gpgconf_item): Return socketdir.
+
+	* tests/t-engine-info.c (main): Add socketdir to the output.
+
+	* src/w32-util.c (_gpgme_create_process_utf8): Fix indentation.
+
+2021-11-25  NIIBE Yutaka  <gniibe@fsij.org>
+
+	posix: Use poll instead, when available, removing use of select.
+	+ commit 8148237cb4ae20755c06a44d71761c7030973c3d
+	* configure.ac (HAVE_POLL_H): Add the check.
+	* src/ath.c [!HAVE_POLL_H] (ath_select): Enable conditionally.
+	* src/posix-io.c [HAVE_POLL_H] (_gpgme_io_select_poll): Use poll.
+	* tests/gpg/t-cancel.c [HAVE_POLL_H] (do_select): Use poll.
+	* tests/gpg/t-eventloop.c [HAVE_POLL_H] (do_select): Use poll.
+
+2021-11-12  NIIBE Yutaka  <gniibe@fsij.org>
+
+	gpgme.pc: Fix library dependency and use of includedir, libdir.
+	+ commit 4583ab77e5af3f0da5b307a169d07b58dddf652f
+	* src/gpgme.pc.in (Require): Move gpg-error, libassuan to...
+	(Requires.private): ... here.
+	(Cflags): Add -I${includedir}.
+	(Libs): Add -L${libdir}.
+
+2021-11-12  NIIBE Yutaka  <gniibe@fsij.org>
+	    Ben Kibbey  <bjk@luxsci.net>
+
+	tests: Build using GPG_ERROR_MT_LIBS for thread use.
+	+ commit 1cedac2bba246ff411843aaef10ca8ea0a0756cf
+	* tests/gpg/Makefile.am (WITH_THREAD_CPPFLAGS): New.
+	(WITH_THREAD_LDADD): New.
+	(t_thread1_CPPFLAGS, t_thread_keylist_CPPFLAGS)
+	(t_thread_keylist_verify_CPPFLAGS)
+	(t_cancel_CPPFLAGS): Use WITH_THREAD_CPPFLAGS.
+	(t_thread1_LDADD, t_thread_keylist_LDADD)
+	(t_thread_keylist_verify_LDADD)
+	(t_cancel_LDADD): Use WITH_THREAD_LDADD.
+
+2021-11-11  NIIBE Yutaka  <gniibe@fsij.org>
+
+	tests: Use GPG_ERROR_MT_LIBS for a test with threads.
+	+ commit 8cd2fe7b3de4abd2331bcb637b7e2c26ce4faa29
+	* tests/Makefile.am (run_threaded_CPPFLAGS): New.
+	(run_threaded_LDADD): Replace GPG_ERROR_LIBS to GPG_ERROR_MT_LIBS.
+
+2021-11-10  NIIBE Yutaka  <gniibe@fsij.org>
+
+	libtool: Link without -flat_namespace for macOS.
+	+ commit 50daf3d75d666d34fecc0dbecc31c51a7989eda3
+	* m4/libtool.m4: Not setting 10.0 to MACOSX_DEPLOYMENT_TARGET when not
+	defined.  Only specify -flat_namespace to linker for specific
+	(older) versions and hosts.
+
+2021-09-13  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Fix build against Qt 5.9.
+	+ commit ab9bca09eb869b2013c85fee232f1e62aed925f6
+	* lang/qt/tests/t-keylist.cpp (KeyListTest::testListAllKeysSync):
+	Ensure same type for both arguments of QCOMPARE.
+	* lang/qt/tests/t-various.cpp (TestVarious::testSetExpire):
+	Ensure same type for both arguments of QCOMPARE.
+
+2021-08-27  Werner Koch  <wk@gnupg.org>
+
+	build: Fix make distcheck problem.
+	+ commit aaf448b1e81e7421e539ac2deb9dc9d3d1459016
+	* tests/start-stop-agent: Use -f with rm.  Also use cat instead of cp.
+
+2021-08-27  Andre Heinecke  <aheinecke@gnupg.org>
+
+	qt: Expect UTF-8 on stderr on Windows.
+	+ commit 8fe15462829b5049137b3f631564b72c4f63c5e2
+	* lang/qt/src/threadedjobmixin.cpp (stringFromGpgOutput): Expect
+	UTF-8.
+
+	Add missing files for distribution.
+	+ commit bc774104bbf461805f875c2bfd2d02aa6dd0945d
+	* lang/qt/src/Makefile.am (private_qgpgme_headers): Add job_p.h
+	* tests/gpg/Makefile.am (EXTRA_DIST): Add gpg.conf.in
+
+2021-08-13  NIIBE Yutaka  <gniibe@fsij.org>
+
+	core: Use flexible array member if compiler has support.
+	+ commit 3c1c98a43413e429459ca7d3615659f8149534b8
+	* configure.ac (AC_C_FLEXIBLE_ARRAY_MEMBER): Add.
+	* src/engine-gpg.c (struct arg_and_data_s): Use FLEXIBLE_ARRAY_MEMBER.
+	(_add_arg): Use offsetof instead of sizeof.
+	(add_data): Likewise.
+
+2021-08-03  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	core: Fix results returned by gpgme_data_* functions.
+	+ commit 7cfc93193d535ec5037e48b86544e1b4dbf949f6
+	src/debug.h (TRACE_SYSRES_OFF_T, _trace_sysres_off_t,
+	TRACE_SYSRES_SSIZE_T, _trace_sysres_ssize_t): New.
+	src/data.c (gpgme_data_read, gpgme_data_write, gpgme_data_seek): Use
+	appropriate new tracing macros instead of casting the results to int.
+
+2021-07-27  Jiri Kucera  <sanczes@gmail.com>
+
+	core: Support closefrom also for glibc.
+	+ commit 4b64774b6d13ffa4f59dddf947a97d61bcfa2f2e
+	* src/posix-io.c (_gpgme_io_spawn): Use glibc's closefrom.
+
+2021-07-08  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	core: Ensure gpg.conf for tests is recreated if necessary.
+	+ commit a5662a801fc11a533fb3b1a69a17e119064972a3
+	* tests/gpg/gpg.conf.in: New.
+	* tests/gpg/Makefile.am (gpg.conf): Copy gpg.conf.in instead of using
+	echo to fill gpg.conf.
+
+	Make sure expiration time is interpreted as unsigned number.
+	+ commit 6a79e90dedc19877ae1c520fed875b57089a5425
+	* lang/qt/tests/t-various.cpp (testSignKeyWithExpiration): Convert
+	expiration time to uint_least32_t.
+
+2021-06-29  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Allow retrieving the default value of a config entry.
+	+ commit 12006a782900687a7f0158a3f931528cfc5ff451
+	* lang/qt/src/cryptoconfig.cpp, lang/qt/src/cryptoconfig.h
+	(CryptoConfigEntry::defaultValue): New.
+	* lang/qt/src/qgpgmenewcryptoconfig.cpp,
+	lang/qt/src/qgpgmenewcryptoconfig.h
+	(QGpgMENewCryptoConfigEntry::defaultValue): New.
+	* lang/qt/tests/t-config.cpp (CryptoConfigTest::testDefault()):
+	Add test of CryptoConfigEntry::defaultValue(). Port away from deprecated
+	CryptoConfig::entry overload.
+
+2021-06-28  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	Update NEWS.
+	+ commit d8638ed0aa5bf7f970787155a35d37a4f5d320f8
+	* NEWS: Add changes of ChangeExpiryJob.
+
+	qt: Fix filenames in copyright headers.
+	+ commit 9d2b876093c25f604d9efe2775143c8f0361916d
+	* lang/qt/src/qgpgmechangeownertrustjob.h,
+	lang/qt/tests/t-trustsignatures.cpp: Use correct filenames.
+
+	qt: Add test for ChangeExpiryJob.
+	+ commit 801acd89b234fcd7226f3fb39ec01634460cfa50
+	* lang/qt/tests/Makefile.am (TESTS, moc_files, noinst_PROGRAMS): Add
+	new test.
+	(t_changeexpiryjob_SOURCES): New.
+	* lang/qt/tests/t-changeexpiryjob.cpp: New.
+
+	qt: Allow changing expiration date of primary key and all subkeys.
+	+ commit 144d580607dd0b70bb20542e2f457153b9cc4ecb
+	* lang/qt/src/Makefile.am (qgpgme_sources): Add changeexpiryjob.cpp.
+	* lang/qt/src/changeexpiryjob.cpp: New.
+	* lang/qt/src/changeexpiryjob.h (enum ChangeExpiryJob::Option,
+	typedef ChangeExpiryJob::Options, ChangeExpiryJob::setOptions,
+	ChangeExpiryJob::options): New.
+	* lang/qt/src/qgpgmechangeexpiryjob.cpp (change_expiry): Update the
+	expiration date of primary key and/or some/all subkeys.
+	(QGpgMEChangeExpiryJob::start): Add options to call of change_expiry.
+	(ChangeExpiryJob::start): Moved implementation to changeexpiryjob.cpp.
+
+	qt: Add mechanism for missing d-pointer in Job.
+	+ commit 3503816570a19352e4b8a81d1cd0f3a9337b8c55
+	* lang/qt/src/job_p.h: New.
+	* lang/qt/src/job.cpp (typedef JobPrivateHash, d_func, setJobPrivate,
+	getJobPrivate): New.
+
+2021-06-26  Ingo Klöcker  <dev@ingo-kloecker.de>
+
+	qt: Remove superfluous trailing ';'
+	+ commit ade95b25ce473a3c9ebcb77b7bd76a2fa6ed2805
+	lang/qt/src/signkeyjob.h (class SignKeyJob): Remove trailing ';' from
+	inline implemented member functions
+
+	core: Fix use-after-free issue in test.
+	+ commit 81a33ea5e1b86d586b956e893a5b25c4cd41c969
+	* tests/gpg/t-edit-sign.c (sign_key, verify_key_signature): New.
+	(main): Factored out signing and verifying the result.
+
 2021-06-24  Werner Koch  <wk@gnupg.org>
 
 	Release 1.16.0.

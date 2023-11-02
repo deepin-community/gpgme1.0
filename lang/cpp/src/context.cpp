@@ -50,6 +50,7 @@
 
 #include <gpgme.h>
 
+#include <functional>
 #include <istream>
 #include <numeric>
 #ifndef NDEBUG
@@ -192,6 +193,19 @@ Error Error::fromCode(unsigned int err, unsigned int src)
 std::ostream &operator<<(std::ostream &os, const Error &err)
 {
     return os << "GpgME::Error(" << err.encodedError() << " (" << err.asString() << "))";
+}
+
+Context::KeyListModeSaver::KeyListModeSaver(Context *ctx)
+    : mCtx{ctx}
+    , mKeyListMode{ctx ? ctx->keyListMode() : 0}
+{
+}
+
+Context::KeyListModeSaver::~KeyListModeSaver()
+{
+    if (mCtx) {
+        mCtx->setKeyListMode(mKeyListMode);
+    }
 }
 
 Context::Context(gpgme_ctx_t ctx) : d(new Private(ctx))
@@ -462,9 +476,33 @@ Error Context::setLocale(int cat, const char *val)
     return Error(d->lasterr = gpgme_set_locale(d->ctx, cat, val));
 }
 
+static GpgME::EngineInfo get_engine_info(gpgme_engine_info_t engineInfos, gpgme_protocol_t protocol)
+{
+    if (!engineInfos) {
+        return EngineInfo{};
+    }
+
+    for (gpgme_engine_info_t i = engineInfos ; i ; i = i->next) {
+        if (i->protocol == protocol) {
+            return EngineInfo{i};
+        }
+    }
+
+    return EngineInfo{};
+}
+
+static GpgME::EngineInfo get_static_engine_info(gpgme_protocol_t protocol)
+{
+    gpgme_engine_info_t ei = nullptr;
+    if (gpgme_get_engine_info(&ei)) {
+        return EngineInfo{};
+    }
+    return get_engine_info(ei, protocol);
+}
+
 EngineInfo Context::engineInfo() const
 {
-    return EngineInfo(gpgme_ctx_get_engine_info(d->ctx));
+    return get_engine_info(gpgme_ctx_get_engine_info(d->ctx), gpgme_get_protocol(d->ctx));
 }
 
 Error Context::setEngineFileName(const char *filename)
@@ -497,25 +535,25 @@ const char *Context::getSender ()
 
 Error Context::startKeyListing(const char *pattern, bool secretOnly)
 {
-    d->lastop = Private::KeyList;
+    d->lastop = (((keyListMode() & GpgME::Locate) == GpgME::Locate)
+                 ? Private::KeyListWithImport
+                 : Private::KeyList);
     return Error(d->lasterr = gpgme_op_keylist_start(d->ctx, pattern, int(secretOnly)));
 }
 
 Error Context::startKeyListing(const char *patterns[], bool secretOnly)
 {
-    d->lastop = Private::KeyList;
-#ifndef HAVE_GPGME_EXT_KEYLIST_MODE_EXTERNAL_NONBROKEN
-    if (!patterns || !patterns[0] || !patterns[1]) {
-        // max. one pattern -> use the non-ext version
-        return startKeyListing(patterns ? patterns[0] : nullptr, secretOnly);
-    }
-#endif
+    d->lastop = (((keyListMode() & GpgME::Locate) == GpgME::Locate)
+                 ? Private::KeyListWithImport
+                 : Private::KeyList);
     return Error(d->lasterr = gpgme_op_keylist_ext_start(d->ctx, patterns, int(secretOnly), 0));
 }
 
 Key Context::nextKey(GpgME::Error &e)
 {
-    d->lastop = Private::KeyList;
+    d->lastop = (((keyListMode() & GpgME::Locate) == GpgME::Locate)
+                 ? Private::KeyListWithImport
+                 : Private::KeyList);
     gpgme_key_t key = nullptr;
     e = Error(d->lasterr = gpgme_op_keylist_next(d->ctx, &key));
     return Key(key, false);
@@ -564,48 +602,67 @@ KeyGenerationResult Context::keyGenerationResult() const
     }
 }
 
-Error Context::exportPublicKeys(const char *pattern, Data &keyData, unsigned int flags)
+Error Context::exportKeys(const char *pattern, Data &keyData, unsigned int mode)
 {
     d->lastop = Private::Export;
     Data::Private *const dp = keyData.impl();
-    return Error(d->lasterr = gpgme_op_export(d->ctx, pattern, flags, dp ? dp->data : nullptr));
+    return Error(d->lasterr = gpgme_op_export(d->ctx, pattern, mode, dp ? dp->data : nullptr));
 }
 
-Error Context::exportPublicKeys(const char *patterns[], Data &keyData, unsigned int flags)
+Error Context::exportKeys(const char *patterns[], Data &keyData, unsigned int mode)
 {
     d->lastop = Private::Export;
-#ifndef HAVE_GPGME_EXT_KEYLIST_MODE_EXTERNAL_NONBROKEN
-    if (!patterns || !patterns[0] || !patterns[1]) {
-        // max. one pattern -> use the non-ext version
-        return exportPublicKeys(patterns ? patterns[0] : nullptr, keyData, flags);
+    Data::Private *const dp = keyData.impl();
+    return Error(d->lasterr = gpgme_op_export_ext(d->ctx, patterns, mode, dp ? dp->data : nullptr));
+}
+
+Error Context::startKeyExport(const char *pattern, Data &keyData, unsigned int mode)
+{
+    d->lastop = Private::Export;
+    Data::Private *const dp = keyData.impl();
+    return Error(d->lasterr = gpgme_op_export_start(d->ctx, pattern, mode, dp ? dp->data : nullptr));
+}
+
+Error Context::startKeyExport(const char *patterns[], Data &keyData, unsigned int mode)
+{
+    d->lastop = Private::Export;
+    Data::Private *const dp = keyData.impl();
+    return Error(d->lasterr = gpgme_op_export_ext_start(d->ctx, patterns, mode, dp ? dp->data : nullptr));
+}
+
+Error Context::exportPublicKeys(const char *pattern, Data &keyData, unsigned int mode)
+{
+    if (mode & (ExportSecret | ExportSecretSubkey)) {
+        return Error::fromCode(GPG_ERR_INV_FLAG);
     }
-#endif
-    Data::Private *const dp = keyData.impl();
-    return Error(d->lasterr = gpgme_op_export_ext(d->ctx, patterns, flags, dp ? dp->data : nullptr));
+    return exportKeys(pattern, keyData, mode);
 }
 
-Error Context::startPublicKeyExport(const char *pattern, Data &keyData, unsigned int flags)
+Error Context::exportPublicKeys(const char *patterns[], Data &keyData, unsigned int mode)
 {
-    d->lastop = Private::Export;
-    Data::Private *const dp = keyData.impl();
-    return Error(d->lasterr = gpgme_op_export_start(d->ctx, pattern, flags, dp ? dp->data : nullptr));
-}
-
-Error Context::startPublicKeyExport(const char *patterns[], Data &keyData, unsigned int flags)
-{
-    d->lastop = Private::Export;
-#ifndef HAVE_GPGME_EXT_KEYLIST_MODE_EXTERNAL_NONBROKEN
-    if (!patterns || !patterns[0] || !patterns[1]) {
-        // max. one pattern -> use the non-ext version
-        return startPublicKeyExport(patterns ? patterns[0] : nullptr, keyData, flags);
+    if (mode & (ExportSecret | ExportSecretSubkey)) {
+        return Error::fromCode(GPG_ERR_INV_FLAG);
     }
-#endif
-    Data::Private *const dp = keyData.impl();
-    return Error(d->lasterr = gpgme_op_export_ext_start(d->ctx, patterns, flags, dp ? dp->data : nullptr));
+    return exportKeys(patterns, keyData, mode);
 }
 
+Error Context::startPublicKeyExport(const char *pattern, Data &keyData, unsigned int mode)
+{
+    if (mode & (ExportSecret | ExportSecretSubkey)) {
+        return Error::fromCode(GPG_ERR_INV_FLAG);
+    }
+    return startKeyExport(pattern, keyData, mode);
+}
 
-/* Same as above but without flags  */
+Error Context::startPublicKeyExport(const char *patterns[], Data &keyData, unsigned int mode)
+{
+    if (mode & (ExportSecret | ExportSecretSubkey)) {
+        return Error::fromCode(GPG_ERR_INV_FLAG);
+    }
+    return startKeyExport(patterns, keyData, mode);
+}
+
+/* Same as above but without mode  */
 Error Context::exportPublicKeys(const char *pattern, Data &keyData)
 {
     return exportPublicKeys(pattern, keyData, 0);
@@ -624,6 +681,58 @@ Error Context::startPublicKeyExport(const char *pattern, Data &keyData)
 Error Context::startPublicKeyExport(const char *patterns[], Data &keyData)
 {
     return startPublicKeyExport(patterns, keyData, 0);
+}
+
+Error Context::exportSecretKeys(const char *pattern, Data &keyData, unsigned int mode)
+{
+    if (mode & ExportSecretSubkey) {
+        return Error::fromCode(GPG_ERR_INV_FLAG);
+    }
+    return exportKeys(pattern, keyData, mode|ExportSecret);
+}
+
+Error Context::exportSecretKeys(const char *patterns[], Data &keyData, unsigned int mode)
+{
+    if (mode & ExportSecretSubkey) {
+        return Error::fromCode(GPG_ERR_INV_FLAG);
+    }
+    return exportKeys(patterns, keyData, mode|ExportSecret);
+}
+
+Error Context::startSecretKeyExport(const char *pattern, Data &keyData, unsigned int mode)
+{
+    if (mode & ExportSecretSubkey) {
+        return Error::fromCode(GPG_ERR_INV_FLAG);
+    }
+    return startKeyExport(pattern, keyData, mode|ExportSecret);
+}
+
+Error Context::startSecretKeyExport(const char *patterns[], Data &keyData, unsigned int mode)
+{
+    if (mode & ExportSecretSubkey) {
+        return Error::fromCode(GPG_ERR_INV_FLAG);
+    }
+    return startKeyExport(patterns, keyData, mode|ExportSecret);
+}
+
+Error Context::exportSecretSubkeys(const char *pattern, Data &keyData, unsigned int mode)
+{
+    return exportKeys(pattern, keyData, mode|ExportSecretSubkey);
+}
+
+Error Context::exportSecretSubkeys(const char *patterns[], Data &keyData, unsigned int mode)
+{
+    return exportKeys(patterns, keyData, mode|ExportSecretSubkey);
+}
+
+Error Context::startSecretSubkeyExport(const char *pattern, Data &keyData, unsigned int mode)
+{
+    return startKeyExport(pattern, keyData, mode|ExportSecretSubkey);
+}
+
+Error Context::startSecretSubkeyExport(const char *patterns[], Data &keyData, unsigned int mode)
+{
+    return startKeyExport(patterns, keyData, mode|ExportSecretSubkey);
 }
 
 ImportResult Context::importKeys(const Data &data)
@@ -708,6 +817,22 @@ Error Context::startKeyImport(const std::vector<Key> &kk)
     Error err = Error(d->lasterr = gpgme_op_import_keys_start(d->ctx, keys));
     delete[] keys;
     return err;
+}
+
+ImportResult Context::importKeys(const std::vector<std::string> &keyIds)
+{
+    d->lastop = Private::Import;
+    const StringsToCStrings keyids{keyIds};
+    d->lasterr = gpgme_op_receive_keys(d->ctx, keyids.c_strs());
+    return ImportResult(d->ctx, Error(d->lasterr));
+}
+
+Error Context::startKeyImport(const std::vector<std::string> &keyIds)
+{
+    d->lastop = Private::Import;
+    const StringsToCStrings keyids{keyIds};
+    d->lasterr = gpgme_op_receive_keys_start(d->ctx, keyids.c_strs());
+    return Error(d->lasterr);
 }
 
 ImportResult Context::importResult() const
@@ -1048,6 +1173,7 @@ Error Context::startCombinedDecryptionAndVerification(const Data &cipherText, Da
     return startCombinedDecryptionAndVerification(cipherText, plainText, DecryptNone);
 }
 
+namespace {
 unsigned int to_auditlog_flags(unsigned int flags)
 {
     unsigned int result = 0;
@@ -1061,6 +1187,7 @@ unsigned int to_auditlog_flags(unsigned int flags)
         result |= GPGME_AUDITLOG_DIAG;
     }
     return result;
+}
 }
 
 Error Context::startGetAuditLog(Data &output, unsigned int flags)
@@ -1514,6 +1641,16 @@ Error Context::startRevUid(const Key &k, const char *userid)
                  k.impl(), userid, 0));
 }
 
+Error Context::setPrimaryUid(const Key &k, const char *userid)
+{
+    return Error(d->lasterr = gpgme_op_set_uid_flag(d->ctx, k.impl(), userid, "primary", nullptr));
+}
+
+Error Context::startSetPrimaryUid(const Key &k, const char *userid)
+{
+    return Error(d->lasterr = gpgme_op_set_uid_flag_start(d->ctx, k.impl(), userid, "primary", nullptr));
+}
+
 Error Context::createSubkey(const Key &k, const char *algo,
                             unsigned long reserved,
                             unsigned long expires,
@@ -1741,6 +1878,7 @@ std::ostream &operator<<(std::ostream &os, KeyListMode mode)
     CHECK(WithTofu);
     CHECK(WithKeygrip);
     CHECK(WithSecret);
+    CHECK(ForceExtern);
 #undef CHECK
     return os << ')';
 }
@@ -1794,20 +1932,7 @@ GpgME::Error GpgME::setDefaultLocale(int cat, const char *val)
 
 GpgME::EngineInfo GpgME::engineInfo(GpgME::Protocol proto)
 {
-    gpgme_engine_info_t ei = nullptr;
-    if (gpgme_get_engine_info(&ei)) {
-        return EngineInfo();
-    }
-
-    const gpgme_protocol_t p = proto == CMS ? GPGME_PROTOCOL_CMS : GPGME_PROTOCOL_OpenPGP ;
-
-    for (gpgme_engine_info_t i = ei ; i ; i = i->next) {
-        if (i->protocol == p) {
-            return EngineInfo(i);
-        }
-    }
-
-    return EngineInfo();
+    return get_static_engine_info(proto == CMS ? GPGME_PROTOCOL_CMS : GPGME_PROTOCOL_OpenPGP);
 }
 
 const char *GpgME::dirInfo(const char *what)
@@ -1845,20 +1970,7 @@ static gpgme_protocol_t engine2protocol(const GpgME::Engine engine)
 
 GpgME::EngineInfo GpgME::engineInfo(GpgME::Engine engine)
 {
-    gpgme_engine_info_t ei = nullptr;
-    if (gpgme_get_engine_info(&ei)) {
-        return EngineInfo();
-    }
-
-    const gpgme_protocol_t p = engine2protocol(engine);
-
-    for (gpgme_engine_info_t i = ei ; i ; i = i->next) {
-        if (i->protocol == p) {
-            return EngineInfo(i);
-        }
-    }
-
-    return EngineInfo();
+    return get_static_engine_info(engine2protocol(engine));
 }
 
 GpgME::Error GpgME::checkEngine(GpgME::Engine engine)

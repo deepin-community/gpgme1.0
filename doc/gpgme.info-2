@@ -19,8 +19,8 @@ END-INFO-DIR-ENTRY
 
    This file documents the GPGME library.
 
-   This is Edition 1.15.2-beta35, last updated 13 December 2019, of ‘The
-‘GnuPG Made Easy’ Reference Manual’, for Version 1.15.2-beta35.
+   This is Edition 1.18.0, last updated 3 February 2022, of ‘The ‘GnuPG
+Made Easy’ Reference Manual’, for Version 1.18.0.
 
    Copyright © 2002–2008, 2010, 2012–2018 g10 Code GmbH.
 
@@ -34,6 +34,57 @@ END-INFO-DIR-ENTRY
 WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 Public License for more details.
+
+
+File: gpgme.info,  Node: UI Server Sign,  Next: UI Server Decrypt,  Prev: UI Server Encrypt,  Up: UI Server Protocol
+
+A.2 UI Server: Sign a Message
+=============================
+
+The server needs to implement opaque signing as well as detached
+signing.  Due to the nature of OpenPGP messages it is always required to
+send the entire message to the server; sending just the hash is not
+possible.  The following two commands are required to set the input and
+output file descriptors:
+
+ -- Command: INPUT FD=N
+     Set the file descriptor for the message to be signed to N.  The
+     message send to the server is binary encoded.  For details on the
+     file descriptor, see the description of ‘INPUT’ in the ‘ENCRYPT’
+     section.
+
+ -- Command: OUTPUT FD=N [--binary]
+     Set the file descriptor to be used for the output.  The output is
+     either the complete signed message or in case of a detached
+     signature just that detached signature.  If the option ‘--binary’
+     is given the output shall be in binary format; if not given, the
+     output for OpenPGP needs to be ASCII armored and for CMS Base-64
+     encoded.  For details on the file descriptor, see the ‘INPUT’
+     command.
+
+To allow the server the selection of a non-default signing key the
+client may optionally use the ‘SENDER’ command, see *note command
+SENDER::.
+
+The signing operation is then initiated by:
+
+ -- Command: SIGN --protocol=NAME [--detached]
+     Sign the data set with the ‘INPUT’ command and write it to the sink
+     set by OUTPUT. NAME is the signing protocol used for the message.
+     For a description of the allowed protocols see the ‘ENCRYPT’
+     command.  With option ‘--detached’ given, a detached signature is
+     created; this is actually the usual way the command is used.
+
+The client expects the server to send at least this status information
+before the final OK response:
+
+ -- Status line: MICALG STRING
+     The STRING represents the hash algorithm used to create the
+     signature.  It is used with RFC-1847 style signature messages and
+     defined by PGP/MIME (RFC-3156) and S/MIME (RFC-3851).  The GPGME
+     library has a supporting function ‘gpgme_hash_algo_name’ to return
+     the algorithm name as a string.  This string needs to be lowercased
+     and for OpenPGP prefixed with "‘pgp-’".
 
 
 File: gpgme.info,  Node: UI Server Decrypt,  Next: UI Server Verify,  Prev: UI Server Sign,  Up: UI Server Protocol
@@ -2603,7 +2654,7 @@ Function and Data Index
 * gpgme_encrypt_result_t:                Encrypting a Plaintext.
                                                               (line 241)
 * gpgme_engine_check_version:            Engine Version Check.
-                                                              (line  67)
+                                                              (line  82)
 * gpgme_engine_info_t:                   Engine Information.  (line   6)
 * gpgme_error:                           Error Values.        (line  65)
 * gpgme_error_from_errno:                Error Values.        (line  89)
@@ -2642,7 +2693,7 @@ Function and Data Index
                                                               (line  25)
 * gpgme_genkey_result_t:                 Generating Keys.     (line 381)
 * gpgme_get_armor:                       ASCII Armor.         (line  13)
-* gpgme_get_ctx_flag:                    Context Flags.       (line 141)
+* gpgme_get_ctx_flag:                    Context Flags.       (line 153)
 * gpgme_get_dirinfo:                     Engine Version Check.
                                                               (line   6)
 * gpgme_get_engine_info:                 Engine Information.  (line  46)
@@ -2651,7 +2702,7 @@ Function and Data Index
 * gpgme_get_io_cbs:                      Registering I/O Callbacks.
                                                               (line  44)
 * gpgme_get_key:                         Listing Keys.        (line 178)
-* gpgme_get_keylist_mode:                Key Listing Mode.    (line 103)
+* gpgme_get_keylist_mode:                Key Listing Mode.    (line 124)
 * gpgme_get_offline:                     Offline Mode.        (line  31)
 * gpgme_get_passphrase_cb:               Passphrase Callback. (line  63)
 * gpgme_get_pinentry_mode:               Pinentry Mode.       (line  18)
@@ -2674,8 +2725,8 @@ Function and Data Index
 * gpgme_get_textmode:                    Text Mode.           (line  20)
 * gpgme_hash_algo_name:                  Hash Algorithms.     (line  30)
 * gpgme_hash_algo_t:                     Hash Algorithms.     (line  10)
-* gpgme_import_result_t:                 Importing Keys.      (line 118)
-* gpgme_import_status_t:                 Importing Keys.      (line  80)
+* gpgme_import_result_t:                 Importing Keys.      (line 150)
+* gpgme_import_status_t:                 Importing Keys.      (line 110)
 * gpgme_interact_cb_t:                   Advanced Key Editing.
                                                               (line  11)
 * gpgme_invalid_key_t:                   Crypto Operations.   (line  10)
@@ -2747,12 +2798,12 @@ Function and Data Index
                                                               (line 274)
 * gpgme_op_encrypt_start:                Encrypting a Plaintext.
                                                               (line 113)
-* gpgme_op_export:                       Exporting Keys.      (line  59)
-* gpgme_op_export_ext:                   Exporting Keys.      (line  92)
-* gpgme_op_export_ext_start:             Exporting Keys.      (line 114)
-* gpgme_op_export_keys:                  Exporting Keys.      (line 126)
-* gpgme_op_export_keys_start:            Exporting Keys.      (line 153)
-* gpgme_op_export_start:                 Exporting Keys.      (line  80)
+* gpgme_op_export:                       Exporting Keys.      (line  65)
+* gpgme_op_export_ext:                   Exporting Keys.      (line  98)
+* gpgme_op_export_ext_start:             Exporting Keys.      (line 120)
+* gpgme_op_export_keys:                  Exporting Keys.      (line 132)
+* gpgme_op_export_keys_start:            Exporting Keys.      (line 159)
+* gpgme_op_export_start:                 Exporting Keys.      (line  86)
 * gpgme_op_genkey:                       Generating Keys.     (line 304)
 * gpgme_op_genkey_result:                Generating Keys.     (line 418)
 * gpgme_op_genkey_start:                 Generating Keys.     (line 369)
@@ -2763,7 +2814,7 @@ Function and Data Index
                                                               (line  18)
 * gpgme_op_import_keys:                  Importing Keys.      (line  35)
 * gpgme_op_import_keys_start:            Importing Keys.      (line  65)
-* gpgme_op_import_result:                Importing Keys.      (line 174)
+* gpgme_op_import_result:                Importing Keys.      (line 206)
 * gpgme_op_import_start:                 Importing Keys.      (line  24)
 * gpgme_op_interact:                     Advanced Key Editing.
                                                               (line  23)
@@ -2785,11 +2836,12 @@ Function and Data Index
                                                               (line  68)
 * gpgme_op_query_swdb_result:            Checking for updates.
                                                               (line  80)
+* gpgme_op_receive_keys:                 Importing Keys.      (line  80)
+* gpgme_op_receive_keys_start:           Importing Keys.      (line  97)
 * gpgme_op_revsig:                       Signing Keys.        (line  89)
 * gpgme_op_revsig_start:                 Signing Keys.        (line 124)
 * gpgme_op_revuid:                       Generating Keys.     (line 224)
-* gpgme_op_revuid_start:                 Manipulating Keys.   (line  58)
-* gpgme_op_revuid_start <1>:             Generating Keys.     (line 252)
+* gpgme_op_revuid_start:                 Generating Keys.     (line 252)
 * gpgme_op_setexpire:                    Manipulating Keys.   (line  15)
 * gpgme_op_setexpire_start:              Manipulating Keys.   (line  47)
 * gpgme_op_set_uid_flag_start:           Generating Keys.     (line 293)

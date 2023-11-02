@@ -103,7 +103,7 @@ gpgme_op_import_result (gpgme_ctx_t ctx)
       while (impstat)
 	{
 	  TRACE_LOG  ("import[%i] for %s = 0x%x (%s)",
-		      i, impstat->fpr, impstat->status,
+		      i, impstat->fpr ? impstat->fpr : "null", impstat->status,
                       gpgme_strerror (impstat->result));
 	  impstat = impstat->next;
 	  i++;
@@ -223,8 +223,51 @@ parse_import_res (char *args, gpgme_import_result_t result)
 }
 
 
+/* Parses an error on a status line and adds a corresponding import status.
+   Currently, only supports "import.parsep12 11".  */
 static gpgme_error_t
-import_status_handler (void *priv, gpgme_status_code_t code, char *args)
+parse_error (char *args, gpgme_import_status_t *import_status)
+{
+  gpgme_import_status_t import;
+  char *tail;
+  long int nr;
+
+  tail = strchr (args, ' ');
+  if (!tail)
+    return 0;
+
+  *tail = '\0';
+  if (strcmp( args, "import.parsep12" ))
+    return 0;
+
+  args = tail + 1;
+
+  gpg_err_set_errno (0);
+  nr = strtol (args, &tail, 0);
+  if (errno || args == tail || !(*tail == ' ' || !*tail))
+    {
+      /* The crypto backend does not behave.  */
+      return trace_gpg_error (GPG_ERR_INV_ENGINE);
+    }
+  if (nr != GPG_ERR_BAD_PASSPHRASE)
+    return 0;
+
+  import = malloc (sizeof (*import));
+  if (!import)
+    return gpg_error_from_syserror ();
+  import->next = NULL;
+
+  import->result = gpg_error (GPG_ERR_BAD_PASSPHRASE);
+  import->status = 0;
+  import->fpr = 0;
+
+  *import_status = import;
+  return 0;
+}
+
+
+gpgme_error_t
+_gpgme_import_status_handler (void *priv, gpgme_status_code_t code, char *args)
 {
   gpgme_ctx_t ctx = (gpgme_ctx_t) priv;
   gpgme_error_t err;
@@ -252,6 +295,15 @@ import_status_handler (void *priv, gpgme_status_code_t code, char *args)
       err = parse_import_res (args, &opd->result);
       break;
 
+    case GPGME_STATUS_ERROR:
+      err = parse_error (args, opd->lastp);
+      if (err)
+        return err;
+
+      if (*opd->lastp)
+        opd->lastp = &(*opd->lastp)->next;
+      break;
+
     default:
       break;
     }
@@ -259,30 +311,45 @@ import_status_handler (void *priv, gpgme_status_code_t code, char *args)
 }
 
 
-static gpgme_error_t
-_gpgme_op_import_start (gpgme_ctx_t ctx, int synchronous, gpgme_data_t keydata)
+gpgme_error_t
+_gpgme_op_import_init_result (gpgme_ctx_t ctx)
 {
   gpgme_error_t err;
   void *hook;
   op_data_t opd;
-
-  err = _gpgme_op_reset (ctx, synchronous);
-  if (err)
-    return err;
 
   err = _gpgme_op_data_lookup (ctx, OPDATA_IMPORT, &hook,
 			       sizeof (*opd), release_op_data);
   opd = hook;
   if (err)
     return err;
+
   opd->lastp = &opd->result.imports;
+  return 0;
+}
+
+
+static gpgme_error_t
+_gpgme_op_import_start (gpgme_ctx_t ctx, int synchronous, gpgme_data_t keydata)
+{
+  gpgme_error_t err;
+
+  err = _gpgme_op_reset (ctx, synchronous);
+  if (err)
+    return err;
+
+  err = _gpgme_op_import_init_result (ctx);
+  if (err)
+    return err;
 
   if (!keydata)
     return gpg_error (GPG_ERR_NO_DATA);
 
-  _gpgme_engine_set_status_handler (ctx->engine, import_status_handler, ctx);
+  _gpgme_engine_set_status_handler (ctx->engine, _gpgme_import_status_handler,
+                                    ctx);
 
-  return _gpgme_engine_op_import (ctx->engine, keydata, NULL);
+  return _gpgme_engine_op_import (ctx->engine, keydata, NULL, NULL,
+                                  ctx->import_filter, ctx->key_origin);
 }
 
 
@@ -327,20 +394,15 @@ _gpgme_op_import_keys_start (gpgme_ctx_t ctx, int synchronous,
                              gpgme_key_t *keys)
 {
   gpgme_error_t err;
-  void *hook;
-  op_data_t opd;
   int idx, firstidx, nkeys;
 
   err = _gpgme_op_reset (ctx, synchronous);
   if (err)
     return err;
 
-  err = _gpgme_op_data_lookup (ctx, OPDATA_IMPORT, &hook,
-			       sizeof (*opd), release_op_data);
-  opd = hook;
+  err = _gpgme_op_import_init_result (ctx);
   if (err)
     return err;
-  opd->lastp = &opd->result.imports;
 
   if (!keys)
     return gpg_error (GPG_ERR_NO_DATA);
@@ -363,9 +425,11 @@ _gpgme_op_import_keys_start (gpgme_ctx_t ctx, int synchronous,
   if (!nkeys)
     return gpg_error (GPG_ERR_NO_DATA);
 
-  _gpgme_engine_set_status_handler (ctx->engine, import_status_handler, ctx);
+  _gpgme_engine_set_status_handler (ctx->engine, _gpgme_import_status_handler,
+                                    ctx);
 
-  return _gpgme_engine_op_import (ctx->engine, NULL, keys);
+  return _gpgme_engine_op_import (ctx->engine, NULL, keys, NULL,
+                                  ctx->import_filter, ctx->key_origin);
 }
 
 
@@ -432,6 +496,90 @@ gpgme_op_import_keys (gpgme_ctx_t ctx, gpgme_key_t *keys)
     }
 
   err = _gpgme_op_import_keys_start (ctx, 1, keys);
+  if (!err)
+    err = _gpgme_wait_one (ctx);
+  return TRACE_ERR (err);
+}
+
+
+static gpgme_error_t
+_gpgme_op_receive_keys_start (gpgme_ctx_t ctx, int synchronous, const char *keyids[])
+{
+  gpgme_error_t err;
+
+  err = _gpgme_op_reset (ctx, synchronous);
+  if (err)
+    return err;
+
+  err = _gpgme_op_import_init_result (ctx);
+  if (err)
+    return err;
+
+  if (!keyids || !*keyids)
+    return gpg_error (GPG_ERR_NO_DATA);
+
+  _gpgme_engine_set_status_handler (ctx->engine, _gpgme_import_status_handler,
+                                    ctx);
+
+  return _gpgme_engine_op_import (ctx->engine, NULL, NULL, keyids,
+                                  ctx->import_filter, ctx->key_origin);
+}
+
+
+/* Asynchronous version of gpgme_op_receive_keys.  */
+gpgme_error_t
+gpgme_op_receive_keys_start (gpgme_ctx_t ctx, const char *keyids[])
+{
+  gpgme_error_t err;
+
+  TRACE_BEG (DEBUG_CTX, "gpgme_op_receive_keys_start", ctx, "");
+
+  if (!ctx)
+    return TRACE_ERR (gpg_error (GPG_ERR_INV_VALUE));
+
+  if (_gpgme_debug_trace () && keyids)
+    {
+      int i = 0;
+
+      while (keyids[i] && *keyids[i])
+	{
+	  TRACE_LOG  ("keyids[%i] = %s", i, keyids[i]);
+	  i++;
+	}
+    }
+
+  err = _gpgme_op_receive_keys_start (ctx, 1, keyids);
+  return TRACE_ERR (err);
+}
+
+
+/* Retrieve the keys from the array KEYIDS from a keyserver and import
+   them into the keyring.
+
+   KEYIDS is a NULL terminated array of .  The result
+   is the usual import result structure.  */
+gpgme_error_t
+gpgme_op_receive_keys (gpgme_ctx_t ctx, const char *keyids[])
+{
+  gpgme_error_t err;
+
+  TRACE_BEG (DEBUG_CTX, "gpgme_op_receive_keys", ctx, "");
+
+  if (!ctx)
+    return TRACE_ERR (gpg_error (GPG_ERR_INV_VALUE));
+
+  if (_gpgme_debug_trace () && keyids)
+    {
+      int i = 0;
+
+      while (keyids[i] && *keyids[i])
+	{
+	  TRACE_LOG  ("keyids[%i] = %s", i, keyids[i]);
+	  i++;
+	}
+    }
+
+  err = _gpgme_op_receive_keys_start (ctx, 1, keyids);
   if (!err)
     err = _gpgme_wait_one (ctx);
   return TRACE_ERR (err);

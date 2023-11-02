@@ -1,0 +1,40 @@
+From: NIIBE Yutaka <gniibe@fsij.org>
+Date: Wed, 2 Nov 2022 10:08:52 +0900
+Subject: build: Prefer gpgrt-config when available.
+
+* src/gpgme.m4: Overriding the decision by --with-gpgme-prefix,
+use gpgrt-config gpgme when gpgrt-config is available.
+
+--
+
+This may offer better migration.
+
+GnuPG-bug-id: 5034
+Signed-off-by: NIIBE Yutaka <gniibe@fsij.org>
+(cherry picked from commit 9f55dceca0cf2926d14cb4a70bd0cdc454d89f03)
+---
+ src/gpgme.m4 | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/gpgme.m4 b/src/gpgme.m4
+index c749a5d..09a282d 100644
+--- a/src/gpgme.m4
++++ b/src/gpgme.m4
+@@ -9,7 +9,7 @@
+ # WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
+ # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ #
+-# Last-changed: 2020-11-20
++# Last-changed: 2022-11-02
+ 
+ 
+ AC_DEFUN([_AM_PATH_GPGME_CONFIG],
+@@ -37,7 +37,7 @@ AC_DEFUN([_AM_PATH_GPGME_CONFIG],
+   fi
+ 
+   use_gpgrt_config=""
+-  if test x"${GPGME_CONFIG}" = x -a x"$GPGRT_CONFIG" != x -a "$GPGRT_CONFIG" != "no"; then
++  if test x"$GPGRT_CONFIG" != x -a "$GPGRT_CONFIG" != "no"; then
+     if $GPGRT_CONFIG gpgme --exists; then
+       GPGME_CONFIG="$GPGRT_CONFIG gpgme"
+       AC_MSG_NOTICE([Use gpgrt-config as gpgme-config])

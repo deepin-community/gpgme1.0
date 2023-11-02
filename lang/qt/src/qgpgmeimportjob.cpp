@@ -40,11 +40,9 @@
 
 #include "dataprovider.h"
 
-#include "context.h"
-#include "data.h"
-#include "key.h"
-
-#include <cassert>
+#include <context.h>
+#include <data.h>
+#include <key.h>
 
 using namespace QGpgME;
 using namespace GpgME;
@@ -55,14 +53,60 @@ QGpgMEImportJob::QGpgMEImportJob(Context *context)
     lateInitialization();
 }
 
-QGpgMEImportJob::~QGpgMEImportJob() {}
+QGpgMEImportJob::~QGpgMEImportJob() = default;
 
-static QGpgMEImportJob::result_type import_qba(Context *ctx, const QByteArray &certData)
+static const char *originToString(Key::Origin origin)
 {
+    static const std::map<Key::Origin, const char *> mapping = {
+        { Key::OriginUnknown, "unknown" },
+        { Key::OriginKS,      "ks" },
+        { Key::OriginDane,    "dane" },
+        { Key::OriginWKD,     "wkd" },
+        { Key::OriginURL,     "url" },
+        { Key::OriginFile,    "file" },
+        { Key::OriginSelf,    "self" },
+    };
+    const auto it = mapping.find(origin);
+    return (it != std::end(mapping)) ? it->second : nullptr;
+}
+
+static QGpgMEImportJob::result_type import_qba(Context *ctx, const QByteArray &certData, const QString &importFilter,
+                                               Key::Origin keyOrigin, const QString &keyOriginUrl)
+{
+    if (!importFilter.isEmpty()) {
+        ctx->setFlag("import-filter", importFilter.toStdString().c_str());
+    }
+    if (keyOrigin != Key::OriginUnknown) {
+        if (const auto origin = originToString(keyOrigin)) {
+            std::string value{origin};
+            if (!keyOriginUrl.isEmpty()) {
+                value += ",";
+                value += keyOriginUrl.toStdString();
+            }
+            ctx->setFlag("key-origin", value.c_str());
+        }
+    }
+
     QGpgME::QByteArrayDataProvider dp(certData);
     Data data(&dp);
 
-    const ImportResult res = ctx->importKeys(data);
+    ImportResult res = ctx->importKeys(data);
+    // HACK: If the import failed with an error, then check if res.imports()
+    // contains only import statuses with "bad passphrase" error; if yes, this
+    // means that the user probably entered a wrong password to decrypt an
+    // encrypted key for import. In this case, return a result with "bad
+    // passphrase" error instead of the original error.
+    // We check if all import statuses instead of any import status has a
+    // "bad passphrase" error to avoid breaking imports that partially worked.
+    // See https://dev.gnupg.org/T5713.
+    const auto imports = res.imports();
+    if (res.error() && !imports.empty()
+        && std::all_of(std::begin(imports), std::end(imports),
+                       [](const Import &import) {
+                           return import.error().code() == GPG_ERR_BAD_PASSPHRASE;
+                       })) {
+        res = ImportResult{Error{GPG_ERR_BAD_PASSPHRASE}};
+    }
     Error ae;
     const QString log = _detail::audit_log_as_html(ctx, ae);
     return std::make_tuple(res, log, ae);
@@ -70,13 +114,13 @@ static QGpgMEImportJob::result_type import_qba(Context *ctx, const QByteArray &c
 
 Error QGpgMEImportJob::start(const QByteArray &certData)
 {
-    run(std::bind(&import_qba, std::placeholders::_1, certData));
+    run(std::bind(&import_qba, std::placeholders::_1, certData, importFilter(), keyOrigin(), keyOriginUrl()));
     return Error();
 }
 
 GpgME::ImportResult QGpgME::QGpgMEImportJob::exec(const QByteArray &keyData)
 {
-    const result_type r = import_qba(context(), keyData);
+    const result_type r = import_qba(context(), keyData, importFilter(), keyOrigin(), keyOriginUrl());
     resultHook(r);
     return mResult;
 }

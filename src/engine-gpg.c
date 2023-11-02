@@ -59,7 +59,7 @@ struct arg_and_data_s
   int print_fd;    /* Print the fd number and not the special form of it.  */
   int *arg_locp;   /* Write back the argv idx of this argument when
 		      building command line to this location.  */
-  char arg[1];     /* Used if data above is not used.  */
+  char arg[FLEXIBLE_ARRAY_MEMBER];     /* Used if data above is not used.  */
 };
 
 
@@ -233,7 +233,7 @@ _add_arg (engine_gpg_t gpg, const char *prefix, const char *arg, size_t arglen,
   assert (gpg);
   assert (arg);
 
-  a = malloc (sizeof *a + prefixlen + arglen);
+  a = malloc (offsetof (struct arg_and_data_s, arg) + prefixlen + arglen + 1);
   if (!a)
     return gpg_error_from_syserror ();
 
@@ -307,7 +307,7 @@ add_data (engine_gpg_t gpg, gpgme_data_t data, int dup_to, int inbound)
   assert (gpg);
   assert (data);
 
-  a = malloc (sizeof *a - 1);
+  a = malloc (offsetof (struct arg_and_data_s, arg));
   if (!a)
     return gpg_error_from_syserror ();
   a->next = NULL;
@@ -2354,7 +2354,8 @@ export_common (engine_gpg_t gpg, gpgme_export_mode_t mode,
   if ((mode & ~(GPGME_EXPORT_MODE_EXTERN
                 |GPGME_EXPORT_MODE_MINIMAL
                 |GPGME_EXPORT_MODE_SSH
-                |GPGME_EXPORT_MODE_SECRET)))
+                |GPGME_EXPORT_MODE_SECRET
+                |GPGME_EXPORT_MODE_SECRET_SUBKEY)))
     return gpg_error (GPG_ERR_NOT_SUPPORTED);
 
   if ((mode & GPGME_EXPORT_MODE_MINIMAL))
@@ -2379,7 +2380,9 @@ export_common (engine_gpg_t gpg, gpgme_export_mode_t mode,
     }
   else
     {
-      if ((mode & GPGME_EXPORT_MODE_SECRET))
+      if ((mode & GPGME_EXPORT_MODE_SECRET_SUBKEY))
+        err = add_arg (gpg, "--export-secret-subkeys");
+      else if ((mode & GPGME_EXPORT_MODE_SECRET))
         err = add_arg (gpg, "--export-secret-keys");
       else
         err = add_arg (gpg, "--export");
@@ -2766,21 +2769,43 @@ string_from_data (gpgme_data_t data, int delim,
 
 
 static gpgme_error_t
-gpg_import (void *engine, gpgme_data_t keydata, gpgme_key_t *keyarray)
+gpg_import (void *engine, gpgme_data_t keydata, gpgme_key_t *keyarray,
+            const char *keyids[], const char *import_filter,
+            const char *key_origin)
 {
   engine_gpg_t gpg = engine;
   gpgme_error_t err;
   int idx;
   gpgme_data_encoding_t dataenc;
 
-  if (keydata && keyarray)
+  if ((keydata && keyarray) || (keydata && keyids) || (keyarray && keyids))
     return gpg_error (GPG_ERR_INV_VALUE); /* Only one is allowed.  */
 
   dataenc = gpgme_data_get_encoding (keydata);
 
-  if (keyarray)
+  if (keyids)
     {
       err = add_arg (gpg, "--recv-keys");
+      if (!err && import_filter && have_gpg_version (gpg, "2.1.14"))
+        {
+          err = add_arg (gpg, "--import-filter");
+          if (!err)
+            err = add_arg (gpg, import_filter);
+        }
+      if (!err)
+        err = add_arg (gpg, "--");
+      while (!err && *keyids && **keyids)
+        err = add_arg (gpg, *(keyids++));
+    }
+  else if (keyarray)
+    {
+      err = add_arg (gpg, "--recv-keys");
+      if (!err && import_filter && have_gpg_version (gpg, "2.1.14"))
+        {
+          err = add_arg (gpg, "--import-filter");
+          if (!err)
+            err = add_arg (gpg, import_filter);
+        }
       if (!err)
         err = add_arg (gpg, "--");
       for (idx=0; !err && keyarray[idx]; idx++)
@@ -2812,6 +2837,12 @@ gpg_import (void *engine, gpgme_data_t keydata, gpgme_key_t *keyarray)
          should use an option to gpg to modify such commands (ala
          --multifile).  */
       err = add_arg (gpg, "--fetch-keys");
+      if (!err && import_filter && have_gpg_version (gpg, "2.1.14"))
+        {
+          err = add_arg (gpg, "--import-filter");
+          if (!err)
+            err = add_arg (gpg, import_filter);
+        }
       if (!err)
         err = add_arg (gpg, "--");
       helpptr = NULL;
@@ -2830,6 +2861,18 @@ gpg_import (void *engine, gpgme_data_t keydata, gpgme_key_t *keyarray)
   else
     {
       err = add_arg (gpg, "--import");
+      if (!err && import_filter && have_gpg_version (gpg, "2.1.14"))
+        {
+          err = add_arg (gpg, "--import-filter");
+          if (!err)
+            err = add_arg (gpg, import_filter);
+        }
+      if (!err && key_origin && have_gpg_version (gpg, "2.1.22"))
+        {
+          err = add_arg (gpg, "--key-origin");
+          if (!err)
+            err = add_arg (gpg, key_origin);
+        }
       if (!err)
         err = add_arg (gpg, "--");
       if (!err)
@@ -3062,8 +3105,11 @@ gpg_keylist_build_options (engine_gpg_t gpg, int secret_only,
                  code.  The problem is that we don't know the context
                  here and thus can't access the cached version number
                  for the engine info structure.  */
-              err = add_arg (gpg, "--locate-keys");
-              if ((mode & GPGME_KEYLIST_MODE_SIGS))
+              if ((mode & GPGME_KEYLIST_MODE_FORCE_EXTERN))
+                err = add_arg (gpg, "--locate-external-keys");
+              else
+                err = add_arg (gpg, "--locate-keys");
+              if (!err && (mode & GPGME_KEYLIST_MODE_SIGS))
                 err = add_arg (gpg, "--with-sig-check");
             }
           else
@@ -3136,7 +3182,7 @@ gpg_keylist_ext (void *engine, const char *pattern[], int secret_only,
 
 
 static gpgme_error_t
-gpg_keylist_data (void *engine, gpgme_data_t data)
+gpg_keylist_data (void *engine, gpgme_keylist_mode_t mode, gpgme_data_t data)
 {
   engine_gpg_t gpg = engine;
   gpgme_error_t err;
@@ -3155,6 +3201,9 @@ gpg_keylist_data (void *engine, gpgme_data_t data)
     err = add_arg (gpg, "--dry-run");
   if (!err)
     err = add_arg (gpg, "--import");
+  if (!err && (mode & GPGME_KEYLIST_MODE_SIGS)
+      && have_gpg_version (gpg, "2.0.10"))
+    err = add_arg (gpg, "--with-sig-check");
   if (!err)
     err = add_arg (gpg, "--");
   if (!err)

@@ -27,7 +27,7 @@
 (defsystem gpgme
   :description "GnuPG Made Easy."
   :author "g10 Code GmbH"
-  :version "1.16.0"
+  :version "1.18.0"
   :licence "GPL"
   :defsystem-depends-on ("cffi-grovel")
   :depends-on ("cffi" "gpg-error" "trivial-garbage")

@@ -116,6 +116,7 @@ bin_PROGRAMS = gpgme-tool$(EXEEXT) gpgme-json$(EXEEXT)
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/m4/ax_gcc_func_attribute.m4 \
 	$(top_srcdir)/m4/ax_pkg_swig.m4 \
 	$(top_srcdir)/m4/ax_python_devel.m4 \
 	$(top_srcdir)/m4/glib-2.0.m4 $(top_srcdir)/m4/glibc21.m4 \
@@ -248,7 +249,7 @@ gpgme_tool_DEPENDENCIES = libgpgme.la
 gpgme_w32spawn_SOURCES = gpgme-w32spawn.c
 gpgme_w32spawn_OBJECTS = gpgme-w32spawn.$(OBJEXT)
 gpgme_w32spawn_LDADD = $(LDADD)
-SCRIPTS = $(bin_SCRIPTS)
+SCRIPTS = $(bin_SCRIPTS) $(noinst_SCRIPTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -409,6 +410,7 @@ GPGME_CONFIG_AVAIL_LANG = @GPGME_CONFIG_AVAIL_LANG@
 GPGME_CONFIG_CFLAGS = @GPGME_CONFIG_CFLAGS@
 GPGME_CONFIG_HOST = @GPGME_CONFIG_HOST@
 GPGME_CONFIG_LIBS = @GPGME_CONFIG_LIBS@
+GPGME_CPP_CFLAGS = @GPGME_CPP_CFLAGS@
 GPGME_QTTEST_CFLAGS = @GPGME_QTTEST_CFLAGS@
 GPGME_QTTEST_LIBS = @GPGME_QTTEST_LIBS@
 GPGME_QT_CFLAGS = @GPGME_QT_CFLAGS@
@@ -564,7 +566,8 @@ EXTRA_DIST = gpgme-config.in gpgme.m4 libgpgme.vers ChangeLog-2011 \
 	     gpgme.h.in versioninfo.rc.in gpgme.def \
 	     gpgme.pc.in gpgme-glib.pc.in
 
-bin_SCRIPTS = gpgme-config
+@USE_GPGRT_CONFIG_TRUE@noinst_SCRIPTS = gpgme-config
+@USE_GPGRT_CONFIG_FALSE@bin_SCRIPTS = gpgme-config
 m4datadir = $(datadir)/aclocal
 m4data_DATA = gpgme.m4
 nodist_include_HEADERS = gpgme.h

@@ -146,6 +146,12 @@ keylist_status_handler (void *priv, gpgme_status_code_t code, char *args)
       err = 0;
       break;
 
+    case GPGME_STATUS_IMPORT_OK:
+    case GPGME_STATUS_IMPORT_PROBLEM:
+    case GPGME_STATUS_IMPORT_RES:
+      err = _gpgme_import_status_handler (priv, code, args);
+      break;
+
     default:
       break;
     }
@@ -417,6 +423,7 @@ parse_sec_field15 (gpgme_key_t key, gpgme_subkey_t subkey, char *field)
     {
       /* Fields starts with a hex digit; thus it is a serial number.  */
       key->secret = 1;
+      subkey->secret = 1;
       subkey->is_cardkey = 1;
       subkey->card_number = strdup (field);
       if (!subkey->card_number)
@@ -1125,6 +1132,10 @@ gpgme_op_keylist_start (gpgme_ctx_t ctx, const char *pattern, int secret_only)
   if (err)
     return TRACE_ERR (err);
 
+  err = _gpgme_op_import_init_result (ctx);
+  if (err)
+    return TRACE_ERR (err);
+
   _gpgme_engine_set_status_handler (ctx->engine, keylist_status_handler, ctx);
 
   err = _gpgme_engine_set_colon_line_handler (ctx->engine,
@@ -1169,6 +1180,10 @@ gpgme_op_keylist_ext_start (gpgme_ctx_t ctx, const char *pattern[],
   if (err)
     return TRACE_ERR (err);
 
+  err = _gpgme_op_import_init_result (ctx);
+  if (err)
+    return TRACE_ERR (err);
+
   _gpgme_engine_set_status_handler (ctx->engine, keylist_status_handler, ctx);
   err = _gpgme_engine_set_colon_line_handler (ctx->engine,
 					      keylist_colon_handler, ctx);
@@ -1210,13 +1225,17 @@ gpgme_op_keylist_from_data_start (gpgme_ctx_t ctx, gpgme_data_t data,
   if (err)
     return TRACE_ERR (err);
 
+  err = _gpgme_op_import_init_result (ctx);
+  if (err)
+    return TRACE_ERR (err);
+
   _gpgme_engine_set_status_handler (ctx->engine, keylist_status_handler, ctx);
   err = _gpgme_engine_set_colon_line_handler (ctx->engine,
                                               keylist_colon_handler, ctx);
   if (err)
     return TRACE_ERR (err);
 
-  err = _gpgme_engine_op_keylist_data (ctx->engine, data);
+  err = _gpgme_engine_op_keylist_data (ctx->engine, ctx->keylist_mode, data);
   return TRACE_ERR (err);
 }
 

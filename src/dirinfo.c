@@ -44,6 +44,7 @@ enum
     WANT_LIBDIR,
     WANT_DATADIR,
     WANT_LOCALEDIR,
+    WANT_SOCKETDIR,
     WANT_AGENT_SOCKET,
     WANT_AGENT_SSH_SOCKET,
     WANT_DIRMNGR_SOCKET,
@@ -52,6 +53,11 @@ enum
     WANT_GPG_NAME,
     WANT_GPGSM_NAME,
     WANT_G13_NAME,
+    WANT_KEYBOXD_NAME,
+    WANT_AGENT_NAME,
+    WANT_SCDAEMON_NAME,
+    WANT_DIRMNGR_NAME,
+    WANT_PINENTRY_NAME,
     WANT_GPG_WKS_CLIENT_NAME,
     WANT_GPG_ONE_MODE
   };
@@ -67,6 +73,7 @@ static struct {
   char *libdir;
   char *datadir;
   char *localedir;
+  char *socketdir;
   char *agent_socket;
   char *agent_ssh_socket;
   char *dirmngr_socket;
@@ -75,6 +82,11 @@ static struct {
   char *gpg_name;
   char *gpgsm_name;
   char *g13_name;
+  char *keyboxd_name;
+  char *agent_name;
+  char *scdaemon_name;
+  char *dirmngr_name;
+  char *pinentry_name;
   char *gpg_wks_client_name;
   int  gpg_one_mode;  /* System is in gpg1 mode.  */
 } dirinfo;
@@ -135,6 +147,16 @@ parse_output (char *line, int components)
         dirinfo.gpgsm_name = strdup (value);
       else if (!strcmp (line, "g13") && !dirinfo.g13_name)
         dirinfo.g13_name = strdup (value);
+      else if (!strcmp (line, "keyboxd") && !dirinfo.keyboxd_name)
+        dirinfo.keyboxd_name = strdup (value);
+      else if (!strcmp (line, "gpg-agent") && !dirinfo.agent_name)
+        dirinfo.agent_name = strdup (value);
+      else if (!strcmp (line, "scdaemon") && !dirinfo.scdaemon_name)
+        dirinfo.scdaemon_name = strdup (value);
+      else if (!strcmp (line, "dirmngr") && !dirinfo.dirmngr_name)
+        dirinfo.dirmngr_name = strdup (value);
+      else if (!strcmp (line, "pinentry") && !dirinfo.pinentry_name)
+        dirinfo.pinentry_name = strdup (value);
     }
   else
     {
@@ -152,6 +174,8 @@ parse_output (char *line, int components)
         dirinfo.datadir = strdup (value);
       else if (!strcmp (line, "localedir") && !dirinfo.localedir)
         dirinfo.localedir = strdup (value);
+      else if (!strcmp (line, "socketdir") && !dirinfo.socketdir)
+        dirinfo.socketdir = strdup (value);
       else if (!strcmp (line, "agent-socket") && !dirinfo.agent_socket)
         {
           const char name[] = "S.uiserver";
@@ -306,10 +330,34 @@ get_gpgconf_item (int what)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
                       "gpgme-dinfo:   gpgsm='%s'\n",
                       dirinfo.gpgsm_name);
+      if (dirinfo.keyboxd_name)
+        _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
+                      "gpgme-dinfo:     keyboxd='%s'\n",
+                      dirinfo.keyboxd_name);
+      if (dirinfo.agent_name)
+        _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
+                      "gpgme-dinfo:     gpg-agent='%s'\n",
+                      dirinfo.agent_name);
+      if (dirinfo.scdaemon_name)
+        _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
+                      "gpgme-dinfo:     scdaemon='%s'\n",
+                      dirinfo.scdaemon_name);
+      if (dirinfo.dirmngr_name)
+        _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
+                      "gpgme-dinfo:     dirmngr='%s'\n",
+                      dirinfo.dirmngr_name);
+      if (dirinfo.pinentry_name)
+        _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
+                      "gpgme-dinfo:     pinentry='%s'\n",
+                      dirinfo.pinentry_name);
       if (dirinfo.homedir)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
                       "gpgme-dinfo: homedir='%s'\n",
                       dirinfo.homedir);
+      if (dirinfo.socketdir)
+        _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
+                      "gpgme-dinfo: sockdir='%s'\n",
+                      dirinfo.socketdir);
       if (dirinfo.agent_socket)
         _gpgme_debug (NULL,DEBUG_INIT, -1, NULL, NULL, NULL,
                       "gpgme-dinfo:   agent='%s'\n",
@@ -336,6 +384,7 @@ get_gpgconf_item (int what)
     case WANT_LIBDIR:     result = dirinfo.libdir; break;
     case WANT_DATADIR:    result = dirinfo.datadir; break;
     case WANT_LOCALEDIR:  result = dirinfo.localedir; break;
+    case WANT_SOCKETDIR:  result = dirinfo.socketdir; break;
     case WANT_AGENT_SOCKET: result = dirinfo.agent_socket; break;
     case WANT_AGENT_SSH_SOCKET: result = dirinfo.agent_ssh_socket; break;
     case WANT_DIRMNGR_SOCKET: result = dirinfo.dirmngr_socket; break;
@@ -343,6 +392,11 @@ get_gpgconf_item (int what)
     case WANT_GPG_NAME:   result = dirinfo.gpg_name; break;
     case WANT_GPGSM_NAME: result = dirinfo.gpgsm_name; break;
     case WANT_G13_NAME:   result = dirinfo.g13_name; break;
+    case WANT_KEYBOXD_NAME: result = dirinfo.keyboxd_name; break;
+    case WANT_AGENT_NAME: result = dirinfo.agent_name; break;
+    case WANT_SCDAEMON_NAME: result = dirinfo.scdaemon_name; break;
+    case WANT_DIRMNGR_NAME: result = dirinfo.dirmngr_name; break;
+    case WANT_PINENTRY_NAME: result = dirinfo.pinentry_name; break;
     case WANT_UISRV_SOCKET:  result = dirinfo.uisrv_socket; break;
     case WANT_GPG_ONE_MODE: result = dirinfo.gpg_one_mode? "1":NULL; break;
     case WANT_GPG_WKS_CLIENT_NAME:
@@ -458,6 +512,16 @@ gpgme_get_dirinfo (const char *what)
     return get_gpgconf_item (WANT_GPGSM_NAME);
   else if (!strcmp (what, "g13-name"))
     return get_gpgconf_item (WANT_G13_NAME);
+  else if (!strcmp (what, "keyboxd-name"))
+    return get_gpgconf_item (WANT_KEYBOXD_NAME);
+  else if (!strcmp (what, "agent-name"))
+    return get_gpgconf_item (WANT_AGENT_NAME);
+  else if (!strcmp (what, "scdaemon-name"))
+    return get_gpgconf_item (WANT_SCDAEMON_NAME);
+  else if (!strcmp (what, "dirmngr-name"))
+    return get_gpgconf_item (WANT_DIRMNGR_NAME);
+  else if (!strcmp (what, "pinentry-name"))
+    return get_gpgconf_item (WANT_PINENTRY_NAME);
   else if (!strcmp (what, "gpg-wks-client-name"))
     return get_gpgconf_item (WANT_GPG_WKS_CLIENT_NAME);
   else if (!strcmp (what, "agent-ssh-socket"))
@@ -476,6 +540,8 @@ gpgme_get_dirinfo (const char *what)
     return get_gpgconf_item (WANT_DATADIR);
   else if (!strcmp (what, "localedir"))
     return get_gpgconf_item (WANT_LOCALEDIR);
+  else if (!strcmp (what, "socketdir"))
+    return get_gpgconf_item (WANT_SOCKETDIR);
   else
     return NULL;
 }

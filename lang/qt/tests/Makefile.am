@@ -24,14 +24,23 @@ GPG = gpg
 GNUPGHOME=$(abs_builddir)
 TESTS_ENVIRONMENT = GNUPGHOME=$(GNUPGHOME)
 
-EXTRA_DIST = initial.test
+EXTRA_DIST = initial.test final.test
 
-TESTS = initial.test t-keylist t-keylocate t-ownertrust t-tofuinfo \
-        t-encrypt t-verify t-various t-config t-remarks t-trustsignatures
+the_tests = \
+	t-addexistingsubkey \
+	t-keylist t-keylocate t-ownertrust t-tofuinfo \
+	t-encrypt t-verify t-various t-config t-remarks t-trustsignatures \
+	t-changeexpiryjob t-wkdlookup t-import t-revokekey t-setprimaryuserid
 
-moc_files = t-keylist.moc t-keylocate.moc t-ownertrust.moc t-tofuinfo.moc \
-            t-encrypt.moc t-support.hmoc t-wkspublish.moc t-verify.moc \
-            t-various.moc t-config.moc t-remarks.moc t-trustsignatures.moc
+TESTS = initial.test $(the_tests) final.test
+
+moc_files = \
+	t-addexistingsubkey.moc \
+	t-keylist.moc t-keylocate.moc t-ownertrust.moc t-tofuinfo.moc \
+	t-encrypt.moc t-support.hmoc t-wkspublish.moc t-verify.moc \
+	t-various.moc t-config.moc t-remarks.moc t-trustsignatures.moc \
+	t-changeexpiryjob.moc t-wkdlookup.moc t-import.moc t-revokekey.moc \
+	t-setprimaryuserid.moc
 
 AM_LDFLAGS = -no-install
 
@@ -47,6 +56,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/lang/cpp/src -I$(top_builddir)/src \
 
 support_src = t-support.h t-support.cpp
 
+t_addexistingsubkey_SOURCES = t-addexistingsubkey.cpp $(support_src)
 t_keylist_SOURCES = t-keylist.cpp $(support_src)
 t_keylocate_SOURCES = t-keylocate.cpp $(support_src)
 t_ownertrust_SOURCES = t-ownertrust.cpp $(support_src)
@@ -58,15 +68,28 @@ t_various_SOURCES = t-various.cpp $(support_src)
 t_config_SOURCES = t-config.cpp $(support_src)
 t_remarks_SOURCES = t-remarks.cpp $(support_src)
 t_trustsignatures_SOURCES = t-trustsignatures.cpp $(support_src)
+t_changeexpiryjob_SOURCES = t-changeexpiryjob.cpp $(support_src)
+t_wkdlookup_SOURCES = t-wkdlookup.cpp $(support_src)
+t_import_SOURCES = t-import.cpp $(support_src)
+t_revokekey_SOURCES = t-revokekey.cpp $(support_src)
+t_setprimaryuserid_SOURCES = t-setprimaryuserid.cpp $(support_src)
+run_exportjob_SOURCES = run-exportjob.cpp
+run_importjob_SOURCES = run-importjob.cpp
 run_keyformailboxjob_SOURCES = run-keyformailboxjob.cpp
+run_receivekeysjob_SOURCES = run-receivekeysjob.cpp
+run_refreshkeysjob_SOURCES = run-refreshkeysjob.cpp
 
 nodist_t_keylist_SOURCES = $(moc_files)
 
 BUILT_SOURCES = $(moc_files) pubring-stamp
 
-noinst_PROGRAMS = t-keylist t-keylocate t-ownertrust t-tofuinfo t-encrypt \
-    run-keyformailboxjob t-wkspublish t-verify t-various t-config t-remarks \
-    t-trustsignatures
+noinst_PROGRAMS = \
+	t-addexistingsubkey \
+	t-keylist t-keylocate t-ownertrust t-tofuinfo t-encrypt \
+	run-keyformailboxjob t-wkspublish t-verify t-various t-config t-remarks \
+	t-trustsignatures t-changeexpiryjob t-wkdlookup t-import t-revokekey \
+	t-setprimaryuserid \
+	run-importjob run-exportjob run-receivekeysjob run-refreshkeysjob
 
 CLEANFILES = secring.gpg pubring.gpg pubring.kbx trustdb.gpg dirmngr.conf \
 	gpg-agent.conf pubring.kbx~ S.gpg-agent gpg.conf pubring.gpg~ \

@@ -61,6 +61,8 @@ show_usage (int ex)
          "  --ephemeral      use GPGME_KEYLIST_MODE_EPHEMERAL\n"
          "  --validate       use GPGME_KEYLIST_MODE_VALIDATE\n"
          "  --locate         use GPGME_KEYLIST_MODE_LOCATE\n"
+         "  --force-extern   use GPGME_KEYLIST_MODE_FORCE_EXTERN\n"
+         "  --locate-external use GPGME_KEYLIST_MODE_LOCATE_EXTERNAL\n"
          , stderr);
   exit (ex);
 }
@@ -117,7 +119,17 @@ main (int argc, char **argv)
         } else if (!strcmp (*argv, "--locate")) {
             argc--; argv++;
             mode |= KeyListMode::Locate;
+        } else if (!strcmp (*argv, "--with-secret")) {
+            argc--; argv++;
+            mode |= KeyListMode::WithSecret;
+        } else if (!strcmp (*argv, "--force-extern")) {
+            argc--; argv++;
+            mode |= KeyListMode::ForceExtern;
+        } else if (!strcmp (*argv, "--locate-external")) {
+            argc--; argv++;
+            mode |= KeyListMode::LocateExternal;
         } else if (!strncmp (*argv, "--", 2)) {
+            std::cerr << "Error: Unknown option: " << *argv << std::endl;
             show_usage (1);
         }
     }
@@ -133,6 +145,12 @@ main (int argc, char **argv)
         return -1;
     }
     ctx->setKeyListMode (mode);
+    if (ctx->keyListMode() != mode) {
+        // unfortunately, Context::setKeyListMode() does not return the error
+        // returned by gpgme
+        std::cerr << "Failed to set keylist mode. You may have used an invalid combination of options.\n";
+        return -1;
+    }
     Error err = ctx->startKeyListing (*argv, only_secret);
     if (err) {
         std::cout << "Error: " << err.asString() << "\n";

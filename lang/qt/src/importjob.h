@@ -38,7 +38,11 @@
 #include "abstractimportjob.h"
 #include "qgpgme_export.h"
 
-#include <QtCore/QByteArray>
+#ifdef BUILDING_QGPGME
+# include <key.h>
+#else
+# include <gpgme++/key.h>
+#endif
 
 namespace GpgME
 {
@@ -68,7 +72,14 @@ class QGPGME_EXPORT ImportJob : public AbstractImportJob
 protected:
     explicit ImportJob(QObject *parent);
 public:
-    ~ImportJob();
+    ~ImportJob() override;
+
+    void setImportFilter(const QString &filter);
+    QString importFilter() const;
+
+    void setKeyOrigin(GpgME::Key::Origin origin, const QString &url = {});
+    GpgME::Key::Origin keyOrigin() const;
+    QString keyOriginUrl() const;
 
     /**
        Starts the importing operation. \a keyData contains the data to

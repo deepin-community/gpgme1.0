@@ -114,6 +114,7 @@ noinst_PROGRAMS = $(am__EXEEXT_2) $(am__EXEEXT_4)
 subdir = tests/gpg
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/m4/ax_gcc_func_attribute.m4 \
 	$(top_srcdir)/m4/ax_pkg_swig.m4 \
 	$(top_srcdir)/m4/ax_python_devel.m4 \
 	$(top_srcdir)/m4/glib-2.0.m4 $(top_srcdir)/m4/glibc21.m4 \
@@ -149,8 +150,9 @@ am__EXEEXT_2 = t-encrypt$(EXEEXT) t-encrypt-sym$(EXEEXT) \
 am__EXEEXT_4 = t-genkey$(EXEEXT) $(am__EXEEXT_3)
 PROGRAMS = $(noinst_PROGRAMS)
 t_cancel_SOURCES = t-cancel.c
-t_cancel_OBJECTS = t-cancel.$(OBJEXT)
-t_cancel_DEPENDENCIES = ../../src/libgpgme.la
+t_cancel_OBJECTS = t_cancel-t-cancel.$(OBJEXT)
+am__DEPENDENCIES_1 = ../../src/libgpgme.la
+t_cancel_DEPENDENCIES = $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -240,14 +242,16 @@ t_signers_OBJECTS = t-signers.$(OBJEXT)
 t_signers_LDADD = $(LDADD)
 t_signers_DEPENDENCIES = ../../src/libgpgme.la
 t_thread_keylist_SOURCES = t-thread-keylist.c
-t_thread_keylist_OBJECTS = t-thread-keylist.$(OBJEXT)
-t_thread_keylist_DEPENDENCIES = ../../src/libgpgme.la
+t_thread_keylist_OBJECTS =  \
+	t_thread_keylist-t-thread-keylist.$(OBJEXT)
+t_thread_keylist_DEPENDENCIES = $(am__DEPENDENCIES_1)
 t_thread_keylist_verify_SOURCES = t-thread-keylist-verify.c
-t_thread_keylist_verify_OBJECTS = t-thread-keylist-verify.$(OBJEXT)
-t_thread_keylist_verify_DEPENDENCIES = ../../src/libgpgme.la
+t_thread_keylist_verify_OBJECTS =  \
+	t_thread_keylist_verify-t-thread-keylist-verify.$(OBJEXT)
+t_thread_keylist_verify_DEPENDENCIES = $(am__DEPENDENCIES_1)
 t_thread1_SOURCES = t-thread1.c
-t_thread1_OBJECTS = t-thread1.$(OBJEXT)
-t_thread1_DEPENDENCIES = ../../src/libgpgme.la
+t_thread1_OBJECTS = t_thread1-t-thread1.$(OBJEXT)
+t_thread1_DEPENDENCIES = $(am__DEPENDENCIES_1)
 t_verify_SOURCES = t-verify.c
 t_verify_OBJECTS = t-verify.$(OBJEXT)
 t_verify_LDADD = $(LDADD)
@@ -271,21 +275,22 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/conf
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/t-cancel.Po \
-	./$(DEPDIR)/t-decrypt-verify.Po ./$(DEPDIR)/t-decrypt.Po \
-	./$(DEPDIR)/t-edit-sign.Po ./$(DEPDIR)/t-edit.Po \
-	./$(DEPDIR)/t-encrypt-large.Po ./$(DEPDIR)/t-encrypt-mixed.Po \
-	./$(DEPDIR)/t-encrypt-sign.Po ./$(DEPDIR)/t-encrypt-sym.Po \
-	./$(DEPDIR)/t-encrypt.Po ./$(DEPDIR)/t-eventloop.Po \
-	./$(DEPDIR)/t-export.Po ./$(DEPDIR)/t-file-name.Po \
-	./$(DEPDIR)/t-genkey.Po ./$(DEPDIR)/t-gpgconf.Po \
-	./$(DEPDIR)/t-import.Po ./$(DEPDIR)/t-keylist-secret-sig.Po \
+am__depfiles_remade = ./$(DEPDIR)/t-decrypt-verify.Po \
+	./$(DEPDIR)/t-decrypt.Po ./$(DEPDIR)/t-edit-sign.Po \
+	./$(DEPDIR)/t-edit.Po ./$(DEPDIR)/t-encrypt-large.Po \
+	./$(DEPDIR)/t-encrypt-mixed.Po ./$(DEPDIR)/t-encrypt-sign.Po \
+	./$(DEPDIR)/t-encrypt-sym.Po ./$(DEPDIR)/t-encrypt.Po \
+	./$(DEPDIR)/t-eventloop.Po ./$(DEPDIR)/t-export.Po \
+	./$(DEPDIR)/t-file-name.Po ./$(DEPDIR)/t-genkey.Po \
+	./$(DEPDIR)/t-gpgconf.Po ./$(DEPDIR)/t-import.Po \
+	./$(DEPDIR)/t-keylist-secret-sig.Po \
 	./$(DEPDIR)/t-keylist-sig.Po ./$(DEPDIR)/t-keylist.Po \
 	./$(DEPDIR)/t-sig-notation.Po ./$(DEPDIR)/t-sign.Po \
-	./$(DEPDIR)/t-signers.Po \
-	./$(DEPDIR)/t-thread-keylist-verify.Po \
-	./$(DEPDIR)/t-thread-keylist.Po ./$(DEPDIR)/t-thread1.Po \
-	./$(DEPDIR)/t-verify.Po ./$(DEPDIR)/t-wait.Po
+	./$(DEPDIR)/t-signers.Po ./$(DEPDIR)/t-verify.Po \
+	./$(DEPDIR)/t-wait.Po ./$(DEPDIR)/t_cancel-t-cancel.Po \
+	./$(DEPDIR)/t_thread1-t-thread1.Po \
+	./$(DEPDIR)/t_thread_keylist-t-thread-keylist.Po \
+	./$(DEPDIR)/t_thread_keylist_verify-t-thread-keylist-verify.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -419,6 +424,7 @@ GPGME_CONFIG_AVAIL_LANG = @GPGME_CONFIG_AVAIL_LANG@
 GPGME_CONFIG_CFLAGS = @GPGME_CONFIG_CFLAGS@
 GPGME_CONFIG_HOST = @GPGME_CONFIG_HOST@
 GPGME_CONFIG_LIBS = @GPGME_CONFIG_LIBS@
+GPGME_CPP_CFLAGS = @GPGME_CPP_CFLAGS@
 GPGME_QTTEST_CFLAGS = @GPGME_QTTEST_CFLAGS@
 GPGME_QTTEST_LIBS = @GPGME_QTTEST_LIBS@
 GPGME_QT_CFLAGS = @GPGME_QT_CFLAGS@
@@ -582,8 +588,8 @@ noinst_HEADERS = t-support.h
 c_tests = \
         t-encrypt t-encrypt-sym t-encrypt-sign t-sign t-signers		\
 	t-decrypt t-verify t-decrypt-verify t-sig-notation t-export	\
-	t-import t-edit t-keylist t-keylist-sig t-keylist-secret-sig t-wait	\
-	t-encrypt-large t-file-name t-gpgconf t-encrypt-mixed t-edit-sign	\
+	t-import t-edit t-keylist t-keylist-sig t-keylist-secret-sig t-wait \
+	t-encrypt-large t-file-name t-gpgconf t-encrypt-mixed t-edit-sign \
 	$(tests_unix)
 
 CLEANFILES = secring.gpg pubring.gpg pubring.kbx trustdb.gpg dirmngr.conf \
@@ -601,7 +607,8 @@ private_keys = \
 EXTRA_DIST = initial.test final.test \
         pubdemo.asc secdemo.asc cipher-1.asc cipher-2.asc \
 	cipher-3.asc cipher-no-sig.asc \
-	geheim.txt pubkey-1.asc seckey-1.asc pinentry $(private_keys)
+	geheim.txt pubkey-1.asc seckey-1.asc pinentry $(private_keys) \
+	gpg.conf.in
 
 BUILT_SOURCES = gpg.conf gpg-agent.conf pubring-stamp \
            gpg-sample.stamp
@@ -609,10 +616,18 @@ BUILT_SOURCES = gpg.conf gpg-agent.conf pubring-stamp \
 AM_CPPFLAGS = -I$(top_builddir)/src @GPG_ERROR_CFLAGS@
 AM_LDFLAGS = -no-install
 LDADD = ../../src/libgpgme.la @LDADD_FOR_TESTS_KLUDGE@
-t_thread1_LDADD = ../../src/libgpgme.la -lpthread @LDADD_FOR_TESTS_KLUDGE@
-t_thread_keylist_LDADD = ../../src/libgpgme.la -lpthread @LDADD_FOR_TESTS_KLUDGE@
-t_thread_keylist_verify_LDADD = ../../src/libgpgme.la -lpthread @LDADD_FOR_TESTS_KLUDGE@
-t_cancel_LDADD = ../../src/libgpgme.la -lpthread @LDADD_FOR_TESTS_KLUDGE@
+WITH_THREAD_CPPFLAGS = -I$(top_builddir)/src @GPG_ERROR_MT_CFLAGS@
+WITH_THREAD_LDADD = ../../src/libgpgme.la \
+	@GPG_ERROR_MT_LIBS@ @LDADD_FOR_TESTS_KLUDGE@
+
+t_thread1_CPPFLAGS = $(WITH_THREAD_CPPFLAGS)
+t_thread1_LDADD = $(WITH_THREAD_LDADD)
+t_thread_keylist_CPPFLAGS = $(WITH_THREAD_CPPFLAGS)
+t_thread_keylist_LDADD = $(WITH_THREAD_LDADD)
+t_thread_keylist_verify_CPPFLAGS = $(WITH_THREAD_CPPFLAGS)
+t_thread_keylist_verify_LDADD = $(WITH_THREAD_LDADD)
+t_cancel_CPPFLAGS = $(WITH_THREAD_CPPFLAGS)
+t_cancel_LDADD = $(WITH_THREAD_LDADD)
 
 # We don't run t-genkey and t-cancel in the test suite, because it
 # takes too long
@@ -775,7 +790,6 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-cancel.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-decrypt-verify.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-decrypt.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-edit-sign.Po@am__quote@ # am--include-marker
@@ -797,11 +811,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-sig-notation.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-sign.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-signers.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-thread-keylist-verify.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-thread-keylist.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-thread1.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-verify.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-wait.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_cancel-t-cancel.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_thread1-t-thread1.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_thread_keylist-t-thread-keylist.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_thread_keylist_verify-t-thread-keylist-verify.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -829,6 +844,62 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+t_cancel-t-cancel.o: t-cancel.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_cancel_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT t_cancel-t-cancel.o -MD -MP -MF $(DEPDIR)/t_cancel-t-cancel.Tpo -c -o t_cancel-t-cancel.o `test -f 't-cancel.c' || echo '$(srcdir)/'`t-cancel.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_cancel-t-cancel.Tpo $(DEPDIR)/t_cancel-t-cancel.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-cancel.c' object='t_cancel-t-cancel.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_cancel_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o t_cancel-t-cancel.o `test -f 't-cancel.c' || echo '$(srcdir)/'`t-cancel.c
+
+t_cancel-t-cancel.obj: t-cancel.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_cancel_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT t_cancel-t-cancel.obj -MD -MP -MF $(DEPDIR)/t_cancel-t-cancel.Tpo -c -o t_cancel-t-cancel.obj `if test -f 't-cancel.c'; then $(CYGPATH_W) 't-cancel.c'; else $(CYGPATH_W) '$(srcdir)/t-cancel.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_cancel-t-cancel.Tpo $(DEPDIR)/t_cancel-t-cancel.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-cancel.c' object='t_cancel-t-cancel.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_cancel_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o t_cancel-t-cancel.obj `if test -f 't-cancel.c'; then $(CYGPATH_W) 't-cancel.c'; else $(CYGPATH_W) '$(srcdir)/t-cancel.c'; fi`
+
+t_thread_keylist-t-thread-keylist.o: t-thread-keylist.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_thread_keylist_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT t_thread_keylist-t-thread-keylist.o -MD -MP -MF $(DEPDIR)/t_thread_keylist-t-thread-keylist.Tpo -c -o t_thread_keylist-t-thread-keylist.o `test -f 't-thread-keylist.c' || echo '$(srcdir)/'`t-thread-keylist.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_thread_keylist-t-thread-keylist.Tpo $(DEPDIR)/t_thread_keylist-t-thread-keylist.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-thread-keylist.c' object='t_thread_keylist-t-thread-keylist.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_thread_keylist_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o t_thread_keylist-t-thread-keylist.o `test -f 't-thread-keylist.c' || echo '$(srcdir)/'`t-thread-keylist.c
+
+t_thread_keylist-t-thread-keylist.obj: t-thread-keylist.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_thread_keylist_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT t_thread_keylist-t-thread-keylist.obj -MD -MP -MF $(DEPDIR)/t_thread_keylist-t-thread-keylist.Tpo -c -o t_thread_keylist-t-thread-keylist.obj `if test -f 't-thread-keylist.c'; then $(CYGPATH_W) 't-thread-keylist.c'; else $(CYGPATH_W) '$(srcdir)/t-thread-keylist.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_thread_keylist-t-thread-keylist.Tpo $(DEPDIR)/t_thread_keylist-t-thread-keylist.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-thread-keylist.c' object='t_thread_keylist-t-thread-keylist.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_thread_keylist_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o t_thread_keylist-t-thread-keylist.obj `if test -f 't-thread-keylist.c'; then $(CYGPATH_W) 't-thread-keylist.c'; else $(CYGPATH_W) '$(srcdir)/t-thread-keylist.c'; fi`
+
+t_thread_keylist_verify-t-thread-keylist-verify.o: t-thread-keylist-verify.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_thread_keylist_verify_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT t_thread_keylist_verify-t-thread-keylist-verify.o -MD -MP -MF $(DEPDIR)/t_thread_keylist_verify-t-thread-keylist-verify.Tpo -c -o t_thread_keylist_verify-t-thread-keylist-verify.o `test -f 't-thread-keylist-verify.c' || echo '$(srcdir)/'`t-thread-keylist-verify.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_thread_keylist_verify-t-thread-keylist-verify.Tpo $(DEPDIR)/t_thread_keylist_verify-t-thread-keylist-verify.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-thread-keylist-verify.c' object='t_thread_keylist_verify-t-thread-keylist-verify.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_thread_keylist_verify_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o t_thread_keylist_verify-t-thread-keylist-verify.o `test -f 't-thread-keylist-verify.c' || echo '$(srcdir)/'`t-thread-keylist-verify.c
+
+t_thread_keylist_verify-t-thread-keylist-verify.obj: t-thread-keylist-verify.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_thread_keylist_verify_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT t_thread_keylist_verify-t-thread-keylist-verify.obj -MD -MP -MF $(DEPDIR)/t_thread_keylist_verify-t-thread-keylist-verify.Tpo -c -o t_thread_keylist_verify-t-thread-keylist-verify.obj `if test -f 't-thread-keylist-verify.c'; then $(CYGPATH_W) 't-thread-keylist-verify.c'; else $(CYGPATH_W) '$(srcdir)/t-thread-keylist-verify.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_thread_keylist_verify-t-thread-keylist-verify.Tpo $(DEPDIR)/t_thread_keylist_verify-t-thread-keylist-verify.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-thread-keylist-verify.c' object='t_thread_keylist_verify-t-thread-keylist-verify.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_thread_keylist_verify_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o t_thread_keylist_verify-t-thread-keylist-verify.obj `if test -f 't-thread-keylist-verify.c'; then $(CYGPATH_W) 't-thread-keylist-verify.c'; else $(CYGPATH_W) '$(srcdir)/t-thread-keylist-verify.c'; fi`
+
+t_thread1-t-thread1.o: t-thread1.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_thread1_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT t_thread1-t-thread1.o -MD -MP -MF $(DEPDIR)/t_thread1-t-thread1.Tpo -c -o t_thread1-t-thread1.o `test -f 't-thread1.c' || echo '$(srcdir)/'`t-thread1.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_thread1-t-thread1.Tpo $(DEPDIR)/t_thread1-t-thread1.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-thread1.c' object='t_thread1-t-thread1.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_thread1_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o t_thread1-t-thread1.o `test -f 't-thread1.c' || echo '$(srcdir)/'`t-thread1.c
+
+t_thread1-t-thread1.obj: t-thread1.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_thread1_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT t_thread1-t-thread1.obj -MD -MP -MF $(DEPDIR)/t_thread1-t-thread1.Tpo -c -o t_thread1-t-thread1.obj `if test -f 't-thread1.c'; then $(CYGPATH_W) 't-thread1.c'; else $(CYGPATH_W) '$(srcdir)/t-thread1.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/t_thread1-t-thread1.Tpo $(DEPDIR)/t_thread1-t-thread1.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='t-thread1.c' object='t_thread1-t-thread1.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(t_thread1_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o t_thread1-t-thread1.obj `if test -f 't-thread1.c'; then $(CYGPATH_W) 't-thread1.c'; else $(CYGPATH_W) '$(srcdir)/t-thread1.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -1060,8 +1131,7 @@ clean-am: clean-generic clean-libtool clean-local clean-noinstPROGRAMS \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/t-cancel.Po
-	-rm -f ./$(DEPDIR)/t-decrypt-verify.Po
+		-rm -f ./$(DEPDIR)/t-decrypt-verify.Po
 	-rm -f ./$(DEPDIR)/t-decrypt.Po
 	-rm -f ./$(DEPDIR)/t-edit-sign.Po
 	-rm -f ./$(DEPDIR)/t-edit.Po
@@ -1082,11 +1152,12 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/t-sig-notation.Po
 	-rm -f ./$(DEPDIR)/t-sign.Po
 	-rm -f ./$(DEPDIR)/t-signers.Po
-	-rm -f ./$(DEPDIR)/t-thread-keylist-verify.Po
-	-rm -f ./$(DEPDIR)/t-thread-keylist.Po
-	-rm -f ./$(DEPDIR)/t-thread1.Po
 	-rm -f ./$(DEPDIR)/t-verify.Po
 	-rm -f ./$(DEPDIR)/t-wait.Po
+	-rm -f ./$(DEPDIR)/t_cancel-t-cancel.Po
+	-rm -f ./$(DEPDIR)/t_thread1-t-thread1.Po
+	-rm -f ./$(DEPDIR)/t_thread_keylist-t-thread-keylist.Po
+	-rm -f ./$(DEPDIR)/t_thread_keylist_verify-t-thread-keylist-verify.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1132,8 +1203,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/t-cancel.Po
-	-rm -f ./$(DEPDIR)/t-decrypt-verify.Po
+		-rm -f ./$(DEPDIR)/t-decrypt-verify.Po
 	-rm -f ./$(DEPDIR)/t-decrypt.Po
 	-rm -f ./$(DEPDIR)/t-edit-sign.Po
 	-rm -f ./$(DEPDIR)/t-edit.Po
@@ -1154,11 +1224,12 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/t-sig-notation.Po
 	-rm -f ./$(DEPDIR)/t-sign.Po
 	-rm -f ./$(DEPDIR)/t-signers.Po
-	-rm -f ./$(DEPDIR)/t-thread-keylist-verify.Po
-	-rm -f ./$(DEPDIR)/t-thread-keylist.Po
-	-rm -f ./$(DEPDIR)/t-thread1.Po
 	-rm -f ./$(DEPDIR)/t-verify.Po
 	-rm -f ./$(DEPDIR)/t-wait.Po
+	-rm -f ./$(DEPDIR)/t_cancel-t-cancel.Po
+	-rm -f ./$(DEPDIR)/t_thread1-t-thread1.Po
+	-rm -f ./$(DEPDIR)/t_thread_keylist-t-thread-keylist.Po
+	-rm -f ./$(DEPDIR)/t_thread_keylist_verify-t-thread-keylist-verify.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -1216,11 +1287,8 @@ pubring-stamp: $(srcdir)/pubdemo.asc gpg-sample.stamp
 		--import $(srcdir)/secdemo.asc
 	echo x > ./pubring-stamp
 
-gpg.conf:
-# This is required for t-sig-notations.
-	echo no-force-v3-sigs > ./gpg.conf
-# This is required for t-edit-sign.
-	echo allow-weak-key-signatures >> ./gpg.conf
+gpg.conf: $(srcdir)/gpg.conf.in
+	cp $(srcdir)/gpg.conf.in gpg.conf
 
 gpg-agent.conf:
 # This is required for gpg2, which does not support command fd for the

@@ -1,0 +1,26 @@
+Description: Fix setup.py invocation.
+ Debian's python3-setuptools requires additional options (compared to
+ distutils which was shipped wwith python < 3.12).
+Author: Andreas Metzler <ametzler@debian.org>
+Bug-Debian: https://bugs.debian.org/1039724
+
+Origin: vendor
+Forwarded: not-needed
+Last-Update: 2023-10-28
+
+--- a/lang/python/Makefile.am
++++ b/lang/python/Makefile.am
+@@ -88,11 +88,12 @@ install-exec-local:
+ 	  top_builddir="$(top_builddir)" \
+ 	  $$PYTHON setup.py \
+ 	  build \
+ 	  --build-base="$$(basename "$${PYTHON}")-gpg" \
+ 	  install \
+-	  --prefix "$(DESTDIR)$(prefix)" \
++	  --install-layout=deb \
++	  --root "$(DESTDIR)" \
+ 	  --verbose ; \
+ 	done
+ 
+ uninstall-local:
+ 	set -x; GV=$$(echo $(VERSION) | tr - _); for PYTHON in $(PYTHONS); do \

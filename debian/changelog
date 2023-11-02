@@ -1,8 +1,97 @@
-gpgme1.0 (1.16.0-1.2) UNRELEASED; urgency=medium
+gpgme1.0 (1.18.0-4) unstable; urgency=medium
 
-  * update
+  * Team upload.
+  * Patch Makefile.am to invoke setup.py with --install-layout=deb and
+    --root "$(DESTDIR)" (instead of setting prefix) and adapt paths in
+    python3-gpg.install to allow building with python3-setuptools.
+    Closes: #1039724, #1054786
 
- -- Debian GnuPG Maintainers <pkg-gnupg-maint@lists.alioth.debian.org>  Tue, 07 Jun 2022 09:56:05 -0400
+ -- Andreas Metzler <ametzler@debian.org>  Wed, 01 Nov 2023 18:11:31 +0100
+
+gpgme1.0 (1.18.0-3) unstable; urgency=medium
+
+  * Acknowledge NMU.  Thanks very much to Andreas Metzler!
+  * Refresh patches
+
+ -- Daniel Kahn Gillmor <dkg@fifthhorseman.net>  Sun, 20 Nov 2022 18:16:16 -0500
+
+gpgme1.0 (1.18.0-2.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Cherrypicked from upstream GIT:
+    + 0015-build-Prefer-gpgrt-config-when-available.patch,
+      0016-gpgme.m4-Include-_AM_PATH_GPGRT_CONFIG-implementatio.patch: Update
+      gpgme.m4 to prefer gpgrt-config even if gpgme-config was available and
+      to find gpgrt-config when AM_PATH_GPG_ERROR was not used.
+    + 0017-doc-Update-documentation-for-gpgme.pc-and-pkg-config.patch:
+      Document pkg-config instead of gpgme-config in manual.
+
+ -- Andreas Metzler <ametzler@debian.org>  Sun, 20 Nov 2022 07:16:46 +0100
+
+gpgme1.0 (1.18.0-2) unstable; urgency=medium
+
+  [ Andreas Metzler ]
+  * Fix FTBFS after removal of gpg-error-config (Closes: #1022348)
+  * gpgme-config not installed anymore
+
+  [ Jelmer Vernooĳ ]
+  * debian/upstream/metadata: Set Repository and Repository-Browse.
+
+  [ Daniel Kahn Gillmor ]
+  * d/upstream/metadata: add upstream bug reporting details
+
+ -- Daniel Kahn Gillmor <dkg@fifthhorseman.net>  Wed, 02 Nov 2022 10:54:12 -0400
+
+gpgme1.0 (1.18.0-1) unstable; urgency=medium
+
+  * new upstream version
+    (acknowledge NMU -- thanks, Paul and Alexandre!)
+  * d/upstream/signing-key.asc: add gniibe's key (working around #1010955)
+  * drop patch already upstream
+  * refresh patches
+  * Standards-Version: bump to 4.6.1 (no changes needed)
+  * update lintian overrides
+
+ -- Daniel Kahn Gillmor <dkg@fifthhorseman.net>  Wed, 28 Sep 2022 20:31:10 -0400
+
+gpgme1.0 (1.17.1-4.1) unstable; urgency=medium
+
+  * Non-maintainer upload
+  * fix FTBFS caused by missing PYTHON (Closes: #1015995)
+    (Original patch by Alexandre Ghiti)
+
+ -- Paul Gevers <elbrus@debian.org>  Tue, 06 Sep 2022 20:59:56 +0200
+
+gpgme1.0 (1.17.1-4) unstable; urgency=medium
+
+  * release to unstable
+
+ -- Daniel Kahn Gillmor <dkg@fifthhorseman.net>  Wed, 15 Jun 2022 13:02:47 -0400
+
+gpgme1.0 (1.17.1-3) experimental; urgency=medium
+
+  * adopt upstream patch to fix build in 32-bit platforms
+
+ -- Daniel Kahn Gillmor <dkg@fifthhorseman.net>  Sat, 21 May 2022 02:03:55 -0400
+
+gpgme1.0 (1.17.1-2) experimental; urgency=medium
+
+  * avoid -unknown suffix (Closes: #1004742)
+
+ -- Daniel Kahn Gillmor <dkg@fifthhorseman.net>  Fri, 20 May 2022 23:55:23 -0400
+
+gpgme1.0 (1.17.1-1) experimental; urgency=medium
+
+  * New upstream release
+  * move to DEP-14 branch naming
+  * drop patches already upstream
+  * refresh patches
+  * update symbols
+  * d/libgpgmepp6.lintian-overrides: update
+  * qgpgme: ABI bump: Change from libqgpgme7 to libqgpgme15
+  * move to experimental to test transition to libqgpgme15
+
+ -- Daniel Kahn Gillmor <dkg@fifthhorseman.net>  Sun, 01 May 2022 01:14:54 -0400
 
 gpgme1.0 (1.16.0-1.2) unstable; urgency=medium
 

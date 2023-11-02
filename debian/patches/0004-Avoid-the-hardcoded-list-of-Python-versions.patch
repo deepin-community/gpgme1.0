@@ -5,15 +5,16 @@ Subject: Avoid the hardcoded list of Python versions
 Instead stick to Debian's list of supported Pythons.
 
 Bug-Debian: https://bugs.debian.org/998471
+Forwarded: not-needed
 ---
  configure.ac | 4 ++++
  1 file changed, 4 insertions(+)
 
 diff --git a/configure.ac b/configure.ac
-index 442bafb..deae501 100644
+index 581cc56..aed5594 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -457,6 +457,10 @@ if test "$found_py" = "1"; then
+@@ -475,6 +475,10 @@ if test "$found_py" = "1"; then
  	PYTHONS="$(echo $PYTHONS | tr '[[:space:]]' '\n' | sort | uniq | tr '\n' ' ' | sed -e 's/ $//')"
  	PYTHON_VERSIONS="$(echo $PYTHON_VERSIONS | tr '[[:space:]]' '\n' | sort | uniq | tr '\n' ' ' | sed -e 's/ $//')"
  

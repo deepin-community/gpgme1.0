@@ -95,7 +95,10 @@ struct engine_ops
                            unsigned int extraflags,
 			   gpgme_data_t pubkey, gpgme_data_t seckey);
   gpgme_error_t (*import) (void *engine, gpgme_data_t keydata,
-                           gpgme_key_t *keyarray);
+                           gpgme_key_t *keyarray,
+                           const char *keyids[],
+                           const char *import_filter,
+                           const char *key_origin);
   gpgme_error_t (*keylist) (void *engine, const char *pattern,
 			    int secret_only, gpgme_keylist_mode_t mode,
 			    int engine_flags);
@@ -103,7 +106,8 @@ struct engine_ops
 				int secret_only, int reserved,
 				gpgme_keylist_mode_t mode,
 				int engine_flags);
-  gpgme_error_t (*keylist_data) (void *engine, gpgme_data_t data);
+  gpgme_error_t (*keylist_data) (void *engine, gpgme_keylist_mode_t mode,
+				 gpgme_data_t data);
   gpgme_error_t (*keysign) (void *engine,
                             gpgme_key_t key, const char *userid,
                             unsigned long expires, unsigned int flags,

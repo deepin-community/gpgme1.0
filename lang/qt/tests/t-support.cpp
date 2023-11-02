@@ -35,7 +35,10 @@
 #endif
 
 #include "t-support.h"
-#include "context.h"
+
+#include "importjob.h"
+#include "job.h"
+#include "protocol.h"
 
 #include <QTest>
 
@@ -43,8 +46,14 @@
 #include <QCoreApplication>
 #include <QObject>
 #include <QDir>
+#include <QSignalSpy>
 
+#include "context.h"
 #include "engineinfo.h"
+#include "importresult.h"
+
+using namespace GpgME;
+using namespace QGpgME;
 
 void QGpgMETest::initTestCase()
 {
@@ -57,6 +66,12 @@ void QGpgMETest::cleanupTestCase()
 {
     QCoreApplication::sendPostedEvents();
     killAgent();
+}
+
+// static
+bool QGpgMETest::doOnlineTests()
+{
+    return !qgetenv("DO_ONLINE_TESTS").isEmpty();
 }
 
 bool QGpgMETest::copyKeyrings(const QString &src, const QString &dest)
@@ -84,6 +99,41 @@ bool QGpgMETest::copyKeyrings(const QString &src, const QString &dest)
         }
     }
     return true;
+}
+
+bool QGpgMETest::importSecretKeys(const char *keyData, int expectedKeys)
+{
+    auto job = std::unique_ptr<ImportJob>{openpgp()->importJob()};
+    VERIFY_OR_FALSE(job);
+    hookUpPassphraseProvider(job.get());
+
+    ImportResult result;
+    connect(job.get(), &ImportJob::result,
+            this, [this, &result](const ImportResult &result_) {
+                result = result_;
+                Q_EMIT asyncDone();
+            });
+    VERIFY_OR_FALSE(!job->start(keyData));
+    job.release(); // after the job has been started it's on its own
+
+    QSignalSpy spy (this, SIGNAL(asyncDone()));
+    VERIFY_OR_FALSE(spy.wait(QSIGNALSPY_TIMEOUT));
+    VERIFY_OR_FALSE(!result.error());
+    VERIFY_OR_FALSE(!result.imports().empty());
+    COMPARE_OR_FALSE(result.numSecretKeysImported(), expectedKeys);
+
+    return true;
+}
+
+void QGpgMETest::hookUpPassphraseProvider(GpgME::Context *context)
+{
+    context->setPassphraseProvider(&mPassphraseProvider);
+    context->setPinentryMode(Context::PinentryLoopback);
+}
+
+void QGpgMETest::hookUpPassphraseProvider(QGpgME::Job *job)
+{
+    hookUpPassphraseProvider(Job::context(job));
 }
 
 void killAgent(const QString& dir)

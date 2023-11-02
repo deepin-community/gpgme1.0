@@ -1,5 +1,5 @@
 /*
-    qgpgmerefreshkeysjob.cpp
+    qgpgmerefreshsmimekeysjob.cpp
 
     This file is part of qgpgme, the Qt API binding for gpgme
     Copyright (c) 2004 Klarävdalens Datakonsult AB
@@ -38,21 +38,27 @@
  #include "config.h"
 #endif
 
-#include "qgpgmerefreshkeysjob.h"
+#include "qgpgmerefreshsmimekeysjob.h"
+#include "util.h"
 
 #include <QDebug>
 #include "qgpgme_debug.h"
 
 #include "context.h"
+#include <key.h>
 
 #include <QByteArray>
+#include <QMetaObject>
+#include <QProcess>
 #include <QStringList>
 
 #include <gpg-error.h>
 
 #include <assert.h>
 
-QGpgME::QGpgMERefreshKeysJob::QGpgMERefreshKeysJob()
+using namespace QGpgME;
+
+QGpgMERefreshSMIMEKeysJob::QGpgMERefreshSMIMEKeysJob()
     : RefreshKeysJob(nullptr),
       mProcess(nullptr),
       mError(0)
@@ -60,12 +66,12 @@ QGpgME::QGpgMERefreshKeysJob::QGpgMERefreshKeysJob()
 
 }
 
-QGpgME::QGpgMERefreshKeysJob::~QGpgMERefreshKeysJob()
+QGpgMERefreshSMIMEKeysJob::~QGpgMERefreshSMIMEKeysJob()
 {
 
 }
 
-GpgME::Error QGpgME::QGpgMERefreshKeysJob::start(const QStringList &patterns)
+GpgME::Error QGpgMERefreshSMIMEKeysJob::start(const QStringList &patterns)
 {
     assert(mPatternsToDo.empty());
 
@@ -79,11 +85,31 @@ GpgME::Error QGpgME::QGpgMERefreshKeysJob::start(const QStringList &patterns)
     return startAProcess();
 }
 
+GpgME::Error QGpgMERefreshSMIMEKeysJob::start(const std::vector<GpgME::Key> &keys)
+{
+    if (keys.empty()) {
+        QMetaObject::invokeMethod(this, [this]() {
+            Q_EMIT slotProcessExited(0, QProcess::NormalExit);
+        }, Qt::QueuedConnection);
+        return {};
+    }
+
+    const bool gotWrongKeys = std::any_of(std::begin(keys), std::end(keys), [](const auto &k) {
+        return k.protocol() != GpgME::CMS;
+    });
+    if (gotWrongKeys) {
+        qCDebug(QGPGME_LOG) << "Error: At least one of the keys is not an S/MIME key";
+        return GpgME::Error::fromCode(GPG_ERR_INV_VALUE);
+    }
+
+    return start(toFingerprints(keys));
+}
+
 #if MAX_CMD_LENGTH < 65 + 128
 #error MAX_CMD_LENGTH is too low
 #endif
 
-GpgME::Error QGpgME::QGpgMERefreshKeysJob::startAProcess()
+GpgME::Error QGpgMERefreshSMIMEKeysJob::startAProcess()
 {
     if (mPatternsToDo.empty()) {
         return GpgME::Error();
@@ -122,10 +148,12 @@ GpgME::Error QGpgME::QGpgMERefreshKeysJob::startAProcess()
 
     connect(mProcess, SIGNAL(finished(int,QProcess::ExitStatus)),
             SLOT(slotProcessExited(int,QProcess::ExitStatus)));
-    connect(mProcess, SIGNAL(readyReadStandardOutput()),
-            SLOT(slotStdout()));
-    connect(mProcess, &QProcess::readyReadStandardError,
-            this, &QGpgMERefreshKeysJob::slotStderr);
+    connect(mProcess, &QProcess::readyReadStandardOutput, this, [this]() {
+        qCDebug(QGPGME_LOG) << "stdout:" << mProcess->readAllStandardOutput();
+    });
+    connect(mProcess, &QProcess::readyReadStandardError, this, [this]() {
+        qCDebug(QGPGME_LOG) << "stderr:" << mProcess->readAllStandardError();
+    });
 
     mProcess->start();
     if (!mProcess->waitForStarted()) {
@@ -137,7 +165,7 @@ GpgME::Error QGpgME::QGpgMERefreshKeysJob::startAProcess()
     }
 }
 
-void QGpgME::QGpgMERefreshKeysJob::slotCancel()
+void QGpgMERefreshSMIMEKeysJob::slotCancel()
 {
     if (mProcess) {
         mProcess->kill();
@@ -146,7 +174,7 @@ void QGpgME::QGpgMERefreshKeysJob::slotCancel()
     mError = GpgME::Error::fromCode(GPG_ERR_CANCELED, GPG_ERR_SOURCE_GPGSM);
 }
 
-void QGpgME::QGpgMERefreshKeysJob::slotStatus(QProcess *proc, const QString &type, const QStringList &args)
+void QGpgMERefreshSMIMEKeysJob::slotStatus(QProcess *proc, const QString &type, const QStringList &args)
 {
     if (proc != mProcess) {
         return;
@@ -204,12 +232,7 @@ void QGpgME::QGpgMERefreshKeysJob::slotStatus(QProcess *proc, const QString &typ
     }
 }
 
-void QGpgME::QGpgMERefreshKeysJob::slotStderr()
-{
-    // implement? or not?
-}
-
-void QGpgME::QGpgMERefreshKeysJob::slotProcessExited(int exitCode, QProcess::ExitStatus exitStatus)
+void QGpgMERefreshSMIMEKeysJob::slotProcessExited(int exitCode, QProcess::ExitStatus exitStatus)
 {
     if (!mError && !mPatternsToDo.empty()) {
         if (const GpgME::Error err = startAProcess()) {
@@ -227,4 +250,4 @@ void QGpgME::QGpgMERefreshKeysJob::slotProcessExited(int exitCode, QProcess::Exi
     Q_EMIT result(mError);
     deleteLater();
 }
-#include "qgpgmerefreshkeysjob.moc"
+#include "qgpgmerefreshsmimekeysjob.moc"

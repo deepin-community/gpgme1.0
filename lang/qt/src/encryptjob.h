@@ -5,6 +5,8 @@
     Copyright (c) 2004, 2007 Klarälvdalens Datakonsult AB
     Copyright (c) 2016 by Bundesamt für Sicherheit in der Informationstechnik
     Software engineering by Intevation GmbH
+    Copyright (c) 2022 g10 Code GmbH
+    Software engineering by Ingo Klöcker <dev@ingo-kloecker.de>
 
     QGpgME is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -80,6 +82,9 @@ protected:
 public:
     ~EncryptJob();
 
+    void setFileName(const QString &fileName);
+    QString fileName() const;
+
     /**
        Starts the encryption operation. \a recipients is the a list of
        keys to encrypt \a plainText to. Empty (null) keys are
@@ -99,8 +104,6 @@ public:
       If \a cipherText is non-null, the ciphertext is written
       there. Otherwise, it will be delivered in the second argument of
       result().
-
-      \throws GpgME::Exception if starting fails
     */
     virtual void start(const std::vector<GpgME::Key> &recipients,
                        const std::shared_ptr<QIODevice> &plainText,

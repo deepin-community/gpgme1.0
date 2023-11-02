@@ -40,6 +40,7 @@
 #include "qgpgme_export.h"
 
 namespace QGpgME {
+class AddExistingSubkeyJob;
 class CryptoConfig;
 class KeyListJob;
 class ListAllKeysJob;
@@ -64,10 +65,14 @@ class ChangePasswdJob;
 class AddUserIDJob;
 class SpecialJob;
 class KeyForMailboxJob;
+class WKDLookupJob;
 class WKSPublishJob;
 class TofuPolicyJob;
 class QuickJob;
 class GpgCardJob;
+class ReceiveKeysJob;
+class RevokeKeyJob;
+class SetPrimaryUserIDJob;
 
 /** The main entry point for QGpgME Comes in OpenPGP and SMIME(CMS) flavors.
  *
@@ -92,6 +97,7 @@ class GpgCardJob;
  * {
  *    // keys and resuls can now be used.
  * });
+ * job->start({QStringLiteral("alfa@example.net")}, false);
  * \endcode
  *
  * \code
@@ -124,12 +130,18 @@ public:
     virtual ImportJob            *importJob() const = 0;
     virtual ImportFromKeyserverJob *importFromKeyserverJob() const = 0;
     virtual ExportJob            *publicKeyExportJob(bool armor = false) const = 0;
-    // @param charset the encoding of the passphrase in the exported file
-    virtual ExportJob            *secretKeyExportJob(bool armor = false, const QString &charset = QString()) const = 0;
+    // the second parameter is ignored; the passphrase in the exported file is always utf-8 encoded
+    virtual ExportJob            *secretKeyExportJob(bool armor = false, const QString & = QString()) const = 0;
     virtual DownloadJob          *downloadJob(bool armor = false) const = 0;
     virtual DeleteJob            *deleteJob() const = 0;
     virtual SignEncryptJob       *signEncryptJob(bool armor = false, bool textMode = false) const = 0;
     virtual DecryptVerifyJob     *decryptVerifyJob(bool textmode = false) const = 0;
+
+    /**
+     * For S/MIME keys this job performs a full validation check of the keys
+     * with updated CRLs.
+     * For OpenPGP keys, use receiveKeysJob.
+     */
     virtual RefreshKeysJob       *refreshKeysJob() const = 0;
     virtual ChangeExpiryJob      *changeExpiryJob() const = 0;
     virtual SignKeyJob           *signKeyJob() const = 0;
@@ -162,6 +174,21 @@ public:
 
     /** A Job for the quick commands */
     virtual QuickJob *quickJob() const = 0;
+
+    /** This job looks up a key via WKD without importing it. */
+    virtual WKDLookupJob *wkdLookupJob() const = 0;
+
+    virtual ExportJob *secretSubkeyExportJob(bool armor = false) const = 0;
+    virtual AddExistingSubkeyJob *addExistingSubkeyJob() const = 0;
+    virtual ReceiveKeysJob *receiveKeysJob() const = 0;
+
+    virtual RevokeKeyJob *revokeKeyJob() const = 0;
+
+    /**
+     * Returns a job for flagging a user ID as the primary user ID of an
+     * OpenPGP key.
+     */
+    virtual SetPrimaryUserIDJob *setPrimaryUserIDJob() const = 0;
 };
 
 /** Obtain a reference to the OpenPGP Protocol.

@@ -254,6 +254,8 @@ gpgme_release (gpgme_ctx_t ctx)
   free (ctx->auto_key_locate);
   free (ctx->trust_model);
   free (ctx->cert_expire);
+  free (ctx->key_origin);
+  free (ctx->import_filter);
   _gpgme_engine_info_release (ctx->engine_info);
   ctx->engine_info = NULL;
   DESTROY_LOCK (ctx->lock);
@@ -586,6 +588,20 @@ gpgme_set_ctx_flag (gpgme_ctx_t ctx, const char *name, const char *value)
       if (!ctx->cert_expire)
         err = gpg_error_from_syserror ();
     }
+  else if (!strcmp (name, "key-origin"))
+    {
+      free (ctx->key_origin);
+      ctx->key_origin = strdup (value);
+      if (!ctx->key_origin)
+        err = gpg_error_from_syserror ();
+    }
+  else if (!strcmp (name, "import-filter"))
+    {
+      free (ctx->import_filter);
+      ctx->import_filter = strdup (value);
+      if (!ctx->import_filter)
+        err = gpg_error_from_syserror ();
+    }
   else
     err = gpg_error (GPG_ERR_UNKNOWN_NAME);
 
@@ -658,6 +674,14 @@ gpgme_get_ctx_flag (gpgme_ctx_t ctx, const char *name)
   else if (!strcmp (name, "cert-expire"))
     {
       return ctx->cert_expire? ctx->cert_expire : "";
+    }
+  else if (!strcmp (name, "key-origin"))
+    {
+      return ctx->key_origin? ctx->key_origin : "";
+    }
+  else if (!strcmp (name, "import-filter"))
+    {
+      return ctx->import_filter? ctx->import_filter : "";
     }
   else
     return NULL;
@@ -756,6 +780,10 @@ gpgme_set_keylist_mode (gpgme_ctx_t ctx, gpgme_keylist_mode_t mode)
 	  mode);
 
   if (!ctx)
+    return gpg_error (GPG_ERR_INV_VALUE);
+
+  if ((mode & GPGME_KEYLIST_MODE_LOCATE_EXTERNAL) ==
+      (GPGME_KEYLIST_MODE_LOCAL|GPGME_KEYLIST_MODE_FORCE_EXTERN))
     return gpg_error (GPG_ERR_INV_VALUE);
 
   ctx->keylist_mode = mode;
