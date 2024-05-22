@@ -1,4 +1,4 @@
-libgpgme.so.11 libgpgme11 #MINVER#
+libgpgme.so.11 libgpgme11t64 #MINVER#
 * Build-Depends-Package: libgpgme-dev
  GPGME_1.0@GPGME_1.0 1.1.2
  GPGME_1.1@GPGME_1.1 1.1.2
