@@ -4,7 +4,7 @@ Section: libs
 Maintainer: Debian GnuPG Maintainers <pkg-gnupg-maint@lists.alioth.debian.org>
 Uploaders:
  Daniel Kahn Gillmor <dkg@fifthhorseman.net>,
-Build-Depends:
+Build-Depends: dpkg-dev (>= 1.22.5),
  automake (>= 1.14),
  debhelper-compat (= 13),
  dh-python,
@@ -36,7 +36,7 @@ Depends:
  libassuan-dev,
  libc6-dev,
  libgpg-error-dev,
- libgpgme11 (= ${binary:Version}),
+ libgpgme11t64 (= ${binary:Version}),
  ${misc:Depends},
  ${shlibs:Depends},
 Breaks:
@@ -52,7 +52,10 @@ Description: GPGME - GnuPG Made Easy (development files)
  This package contains the headers and other files needed to compile
  against this library.
 
-Package: libgpgme11
+Package: libgpgme11t64
+Provides: ${t64:Provides}
+Replaces: libgpgme11
+Breaks: libgpgme11 (<< ${source:Version})
 Architecture: any
 Multi-Arch: same
 Pre-Depends:
@@ -98,7 +101,10 @@ Description: Python interface to the GPGME GnuPG encryption library (Python 3)
  .
  This is the official upstream Python 3 binding for GPGME.
 
-Package: libqgpgme15
+Package: libqgpgme15t64
+Provides: ${t64:Provides}
+Replaces: libqgpgme15
+Breaks: libqgpgme15 (<< ${source:Version})
 Architecture: any
 Multi-Arch: same
 Depends:
@@ -110,7 +116,10 @@ Description: library for GPGME integration with Qt
  .
  This is the official upstream Qt binding for GPGME.
 
-Package: libgpgmepp6
+Package: libgpgmepp6t64
+Provides: ${t64:Provides}
+Replaces: libgpgmepp6
+Breaks: libgpgmepp6 (<< ${source:Version})
 Architecture: any
 Multi-Arch: same
 Depends:
@@ -127,8 +136,8 @@ Section: libdevel
 Architecture: any
 Multi-Arch: same
 Depends:
- libgpgmepp6 (= ${binary:Version}),
- libqgpgme15 (= ${binary:Version}),
+ libgpgmepp6t64 (= ${binary:Version}),
+ libqgpgme15t64 (= ${binary:Version}),
  qtbase5-dev,
  ${misc:Depends},
 Recommends:
