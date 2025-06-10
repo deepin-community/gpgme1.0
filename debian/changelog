@@ -1,3 +1,9 @@
+gpgme1.0 (1.18.0-4deepin2) unstable; urgency=medium
+
+  * update version for rebuild.
+
+ -- liujianqiang <liujianqiang@uniontech.com>  Tue, 10 Jun 2025 15:36:18 +0800
+
 gpgme1.0 (1.18.0-4deepin1) unstable; urgency=medium
 
   * No source change upload to rebuild with python 3.12
