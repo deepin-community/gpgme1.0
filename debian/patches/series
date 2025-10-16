@@ -9,3 +9,4 @@
 0016-gpgme.m4-Include-_AM_PATH_GPGRT_CONFIG-implementatio.patch
 0017-doc-Update-documentation-for-gpgme.pc-and-pkg-config.patch
 0020-python3-setuptools.diff
+0022-build-python-Fix-build-with-setuptools-72.2.0.patch
