@@ -421,18 +421,28 @@ directory in which the header file is located to the compilers include
 file search path (via the @option{-I} option).
 
 However, the path to the include file is determined at the time the
-source is configured.  To solve this problem, gpgme ships with a small
-helper program @command{gpgme-config} that knows about the path to the
-include file and other configuration options.  The options that need
-to be added to the compiler invocation at compile time are output by
-the @option{--cflags} option to @command{gpgme-config}.  The following
-example shows how it can be used at the command line:
+source is configured.  To solve this problem, gpgme ships with
+@code{gpgme.pc} file, that knows about the path to the include file
+and other configuration options.  The command, @command{pkg-config},
+can be used to handle information with @code{gpgme.pc} file.  In an
+environment which doesn't have @command{pkg-config} (like the one in
+early stage of OS bootstrap), for Automake, you can use
+@code{gpgme.m4} which invokes @command{gpgrt-config} with
+@code{gpgme.pc}.  (In the past, gpgme used to ship with a small helper
+program @command{gpgme-config}.  This functionality of
+@command{gpgme-config} is replaced by @command{pkg-config} with
+@code{gpgme.pc} file.)
+
+The options that need to be added to the compiler invocation at
+compile time are output by the @option{--cflags} option to
+@command{pkg-config gpgme}.  The following example shows how it can be
+used at the command line:
 
 @example
-gcc -c foo.c `gpgme-config --cflags`
+gcc -c foo.c `pkg-config --cflags gpgme`
 @end example
 
-Adding the output of @samp{gpgme-config --cflags} to the compiler
+Adding the output of @samp{pkg-config --cflags gpgme} to the compiler
 command line will ensure that the compiler can find the
 @acronym{GPGME} header file.
 
@@ -440,36 +450,39 @@ A similar problem occurs when linking the program with the library.
 Again, the compiler has to find the library files.  For this to work,
 the path to the library files has to be added to the library search
 path (via the @option{-L} option).  For this, the option
-@option{--libs} to @command{gpgme-config} can be used.  For
+@option{--libs} to @command{pkg-config gpgme} can be used.  For
 convenience, this option also outputs all other options that are
 required to link the program with @acronym{GPGME} (in particular, the
 @samp{-lgpgme} option).  The example shows how to link @file{foo.o}
 with the @acronym{GPGME} library to a program @command{foo}.
 
 @example
-gcc -o foo foo.o `gpgme-config --libs`
+gcc -o foo foo.o `pkg-config --libs gpgme`
 @end example
 
 Of course you can also combine both examples to a single command by
-specifying both options to @command{gpgme-config}:
+specifying both options to @command{pkg-config gpgme}:
 
 @example
-gcc -o foo foo.c `gpgme-config --cflags --libs`
+gcc -o foo foo.c `pkg-config --cflags --libs gpgme`
 @end example
 
-If you need to detect the installed language bindings you can use list
-them using:
-
-@example
-gpgme-config --print-lang
-@end example
-
-or test for the availability using
-
-@example
-gpgme-config --have-lang=python && echo 'Bindings for Pythons available'
-@end example
-
+@c
+@c Feature not available by pkg-config/gpgrt-config
+@c
+@c If you need to detect the installed language bindings you can use list
+@c them using:
+@c
+@c @example
+@c gpgme-config --print-lang
+@c @end example
+@c
+@c or test for the availability using
+@c
+@c @example
+@c gpgme-config --have-lang=python && echo 'Bindings for Pythons available'
+@c @end example
+@c
 
 @node Largefile Support (LFS)
 @section Largefile Support (LFS)
@@ -538,7 +551,7 @@ convention for 32 bit Windows by using @code{long} there.
 and thus we are able to use @code{int64_t} instead of @code{off_t}
 there.  For easier migration the typedef @code{gpgme_off_t} has been
 defined.  The reason we cannot use @code{off_t} directly is that some
-toolchains (e.g. mingw64) introduce a POSIX compatible hack for
+toolchains (e.g., mingw64) introduce a POSIX compatible hack for
 @code{off_t}.  Some widely used toolkits make use of this hack and in
 turn @acronym{GPGME} would need to use it also.  However, this would
 introduce an ABI break and existing software making use of libgpgme
@@ -576,45 +589,52 @@ mode (@code{_LARGEFILE64_SOURCE}).
 @cindex automake
 @cindex autoconf
 
-It is much easier if you use GNU Automake instead of writing your own
-Makefiles.  If you do that you do not have to worry about finding and
-invoking the @command{gpgme-config} script at all.  @acronym{GPGME}
-provides an extension to Automake that does all the work for you.
+You can simply use @code{PKG_CHECK_MODULES} macro with @command{pkg-config}:
+@example
+PKG_CHECK_MODULES([GPGME], [gpgme >= 1.23.1])
+@end example
+
+Alternatively, instead of using @command{pkg-config}, for building on
+an environment with no pkg-config, @acronym{GPGME} provides an
+extension to Automake that does all the work for you.  Please note
+that it is required to have gpgrt-config from libgpg-error installed
+in this case.
 
 @c A simple macro for optional variables.
 @macro ovar{varname}
 @r{[}@var{\varname\}@r{]}
 @end macro
 @defmac AM_PATH_GPGME (@ovar{minimum-version}, @ovar{action-if-found}, @ovar{action-if-not-found})
-@defmacx AM_PATH_GPGME_PTH (@ovar{minimum-version}, @ovar{action-if-found}, @ovar{action-if-not-found})
-@defmacx AM_PATH_GPGME_PTHREAD (@ovar{minimum-version}, @ovar{action-if-found}, @ovar{action-if-not-found})
 Check whether @acronym{GPGME} (at least version @var{minimum-version},
 if given) exists on the host system.  If it is found, execute
 @var{action-if-found}, otherwise do @var{action-if-not-found}, if
 given.
 
+This macro locates for @code{gpgme.pc}, with cross-compile support.
+
 Additionally, the function defines @code{GPGME_CFLAGS} to the flags
 needed for compilation of the program to find the @file{gpgme.h}
 header file, and @code{GPGME_LIBS} to the linker flags needed to link
-the program to the @acronym{GPGME} library.  If the used helper script
-does not match the target type you are building for a warning is
-printed and the string @code{libgcrypt} is appended to the variable
-@code{gpg_config_script_warn}.
+the program to the @acronym{GPGME} library.
+@c
+@c If the used helper script does not match the target type you are
+@c building for a warning is printed and the string @code{gpgme} is
+@c appended to the variable @code{gpg_config_script_warn}.
+@c@c@c@c@c@c@c@c
+@c ^-- About this statement.
+@c In the past, this might happens, when it was configured by
+@c --with-*-prefix options, and it located the helper script for
+@c other target.  Cross-build by gpgrt-config has been improved
+@c (in different way), so it's not relevant now.
+@c
 
-@code{AM_PATH_GPGME_PTHREAD} checks for the version of @acronym{GPGME}
-that can be used with the native pthread implementation, and defines
-@code{GPGME_PTHREAD_CFLAGS} and @code{GPGME_PTHREAD_LIBS}. Since
-version 1.8.0 this is no longer required to GPGME_PTHREAD as
-@acronym{GPGME} itself is thread safe.
 
-This macro searches for @command{gpgme-config} along the PATH.  If
-you are cross-compiling, it is useful to set the environment variable
-@code{SYSROOT} to the top directory of your target.  The macro will
-then first look for the helper program in the @file{bin} directory
-below that top directory.  An absolute directory name must be used for
-@code{SYSROOT}.  Finally, if the configure command line option
-@code{--with-gpgme-prefix} is used, only its value is used for the top
-directory below which the helper script is expected.
+@code{AM_PATH_GPGME_PTHREAD} was provided to check for the version of
+@acronym{GPGME} with the native pthread implementation, and it defined
+@code{GPGME_PTHREAD_CFLAGS} and @code{GPGME_PTHREAD_LIBS}.  Since
+version 1.8.0 this is no longer necessary, as @acronym{GPGME} itself
+is thread safe.  Please use plain @code{AM_PATH_GPGME} instead, with
+@code{GPGME_CFLAGS} and @code{GPGME_LDFLAGS}.
 
 @end defmac
 
@@ -632,9 +652,8 @@ LDADD = $(GPGME_LIBS)
 @cindex libtool
 
 The easiest way is to just use GNU Libtool.  If you use libtool, and
-link to @code{libgpgme.la}, @code{libgpgme-pth.la} or
-@code{libgpgme-pthread.la} respectively, everything will be done
-automatically by Libtool.
+link to @code{libgpgme.la}, everything will be done automatically by
+Libtool.
 
 
 @node Library Version Check
@@ -726,6 +745,13 @@ Set the minimum version of the required GnuPG engine.  If that version
 is not met, GPGME fails early instead of trying to use the existent
 version.  The given version must be a string with major, minor, and
 micro number.  Example: "2.1.0".
+
+@item inst-type
+The installation type is used to prefer a certain GnuPG installation.
+The value is interpreted as an integer: A value of 0 is ignored, a
+value of 1 indicates an installation scheme as used by Gpg4win, a
+value of 2 indicates an installation scheme as used by GnuPG Desktop
+on Windows.  All other values are reserved.
 
 @item w32-inst-dir
 On Windows GPGME needs to know its installation directory to find its
@@ -961,6 +987,9 @@ Return the name of the directory with GnuPG shared data.
 @item localedir
 Return the name of the directory with GnuPG locale data.
 
+@item socketdir
+Return the name of the directory with the following sockets.
+
 @item agent-socket
 Return the name of the socket to connect to the gpg-agent.
 
@@ -1003,6 +1032,9 @@ Return the name of the pinentry program.
 
 @item gpg-wks-client-name
 Return the name of the Web Key Service tool.
+
+@item gpgtar-name
+Return the name of the gpgtar program.
 
 @end table
 
@@ -1278,8 +1310,8 @@ returned.
 
 The function @code{gpgme_pubkey_algo_string} is a convenience function
 to build and return an algorithm string in the same way GnuPG does
-(e.g. ``rsa2048'' or ``ed25519'').  The caller must free the result
-using @code{gpgme_free}.  On error (e.g. invalid argument or memory
+(e.g., ``rsa2048'' or ``ed25519'').  The caller must free the result
+using @code{gpgme_free}.  On error (e.g., invalid argument or memory
 exhausted), the function returns NULL and sets @code{ERRNO}.
 @end deftypefun
 
@@ -1623,6 +1655,11 @@ when requested.
 @item GPG_ERR_CANCELED
 This value means that the operation was canceled.
 
+@item GPG_ERR_FULLY_CANCELED
+This value means that the operation was canceled. It is sometimes returned
+instead of @code{GPG_ERR_CANCELED} for internal reasons in GnuPG. You should
+treat both values identically.
+
 @item GPG_ERR_INV_ENGINE
 This value means that the engine that implements the desired protocol
 is currently not available.  This can either be because the sources
@@ -1764,7 +1801,7 @@ is used.
 
 On POSIX platforms the @code{gpgme_off_t} type is an alias for
 @code{off_t}; it may be used interchangeable.  On Windows platforms
-@code{gpgme_off_t} is defined as a long (i.e. 32 bit) for 32 bit
+@code{gpgme_off_t} is defined as a long (i.e., 32 bit) for 32 bit
 Windows and as a 64 bit signed integer for 64 bit Windows.
 @end deftp
 
@@ -2173,6 +2210,11 @@ associated with the data object.  The file name will be stored in the
 output when encrypting or signing the data and will be returned to the
 user when decrypting or verifying the output data.
 
+If a signed or encrypted archive is created, then the file name will be
+interpreted as the base directory for the relative paths of the files and
+directories to put into the archive.  This corresponds to the --directory
+option of gpgtar.
+
 The function returns the error code @code{GPG_ERR_INV_VALUE} if
 @var{dh} is not a valid pointer and @code{GPG_ERR_ENOMEM} if not
 enough memory is available.
@@ -2195,7 +2237,7 @@ for a new data object.  The backend will try its best to detect the
 encoding automatically.
 
 @item GPGME_DATA_ENCODING_BINARY
-This specifies that the data is encoding in binary form; i.e. there is
+This specifies that the data is encoding in binary form; i.e., there is
 no special encoding.
 
 @item GPGME_DATA_ENCODING_BASE64
@@ -2235,7 +2277,7 @@ characters percent escaped.  This mode is is not yet implemented.
 @deftypefun gpgme_data_encoding_t gpgme_data_get_encoding (@w{gpgme_data_t @var{dh}})
 The function @code{gpgme_data_get_encoding} returns the encoding of
 the data object with the handle @var{dh}.  If @var{dh} is not a valid
-pointer (e.g. @code{NULL}) @code{GPGME_DATA_ENCODING_NONE} is
+pointer (e.g., @code{NULL}) @code{GPGME_DATA_ENCODING_NONE} is
 returned.
 @end deftypefun
 
@@ -2336,7 +2378,7 @@ The data is a PKCS#12 message.  This is commonly used to exchange
 private keys for X.509.
 @end table
 
-@deftypefun gpgme_data_type_t gpgme_data_identify (@w{gpgme_data_t @var{dh}})
+@deftypefun gpgme_data_type_t gpgme_data_identify (@w{gpgme_data_t @var{dh}, int @var{reserved}})
 @since{1.4.3}
 
 The function @code{gpgme_data_identify} returns the type of the data
@@ -2346,6 +2388,7 @@ identification, the function returns zero
 object has been created the identification may not be possible or the
 data object may change its internal state (file pointer moved).  For
 file or memory based data object, the state should not change.
+@var{reserved} should be zero.
 @end deftypefun
 
 
@@ -2564,7 +2607,7 @@ addresses is not supported.
 
 The function @code{gpgme_set_sender} specifies the sender address for
 use in sign and verify operations.  @var{address} is expected to be
-the ``addr-spec'' part of an address but my also be a complete mailbox
+the ``addr-spec'' part of an address but may also be a complete mailbox
 address, in which case this function extracts the ``addr-spec'' from
 it.  Using @code{NULL} for @var{address} clears the sender address.
 
@@ -2657,8 +2700,9 @@ for example completely disable the use of Dirmngr for any engine.
 
 For the CMS protocol the offline mode specifies whether Dirmngr shall
 be used to do additional validation that might require connecting
-external services (e.g. CRL / OCSP checks).  Here the offline mode
-only affects the keylist mode @code{GPGME_KEYLIST_MODE_VALIDATE}.
+external services (e.g., CRL / OCSP checks).  The offline mode is used
+for all operations on this context.  It has only an effect with
+GnuPG versions 2.1.6 or later.
 
 For the OpenPGP protocol offline mode entirely disables the use of the
 Dirmngr and will thus guarantee that no network connections are done
@@ -2862,6 +2906,12 @@ option also makes sure that the keygrip is available in the output.
 
 The @code{GPGME_KEYLIST_MODE_EPHEMERAL} symbol specifies that keys
 flagged as ephemeral are included in the listing.
+
+@item GPGME_KEYLIST_MODE_WITH_V5FPR
+@since{1.23.0}
+
+The @code{GPGME_KEYLIST_MODE_WITH_V5FPR} symbol specifies that key
+listings shall also provide v5 style fingerprints for v4 OpenPGp keys.
 
 @item GPGME_KEYLIST_MODE_VALIDATE
 @since{0.4.5}
@@ -3141,8 +3191,8 @@ The string given in @var{value} is passed to the GnuPG engine to override
 the session key for decryption.  The format of that session key is
 specific to GnuPG and can be retrieved during a decrypt operation when
 the context flag "export-session-key" is enabled.  Please be aware that
-using this feature with GnuPG < 2.1.16 will leak the session key on
-many platforms via ps(1).
+using this feature with GnuPG < 2.1.16 or when decrypting an archive
+will leak the session key on many platforms via ps(1).
 
 @item "auto-key-retrieve"
 Setting the @var{value} to "1" asks the backend to automatically
@@ -3228,6 +3278,30 @@ manual and the gpg man page under the option @option{--key-origin}.
 The string given in @var{value} is passed to the GnuPG engine to use as
 filter when importing keys.  Valid values are documented in the GnuPG
 manual and the gpg man page under the option @option{--import-filter}.
+
+@item "import-options"
+@since{1.24.0}
+The string given in @var{value} is passed to the GnuPG engine to use as
+options when importing keys.  Valid values are documented in the GnuPG
+manual and the gpg man page under the option @option{--import-options}.
+
+@item "no-auto-check-trustdb"
+@since{1.19.0}
+Setting the @var{value} to "1" forces the GPG backend to disable the
+automatic check of the trust database.
+
+@item "proc-all-sigs"
+@since{1.24.0}
+Setting the @var{value} to "1" forces the GPG backend not to stop
+signature checking of data after a bad signatures.  This option is
+ignored if the backend itself does not support the --proc-all-sigs
+option.
+
+@item "known-notations"
+@since{1.24.0}
+The @var{value} is a space or comma delimited list of notation names
+which will be used to create @option{--known-notation} options for gpg.
+
 
 @end table
 
@@ -3412,22 +3486,47 @@ listings if the key could not be validated due to missing
 certificates or unmatched policies.
 
 @item unsigned int can_encrypt : 1
-This is true if the key (ie one of its subkeys) can be used for
-encryption.
+This is true if the key or one of its subkeys can be used for
+encryption and the encryption will likely succeed.
 
 @item unsigned int can_sign : 1
-This is true if the key (ie one of its subkeys) can be used to create
-data signatures.
+This is true if the key or one of its subkeys can be used to create
+data signatures and the signing will likely succeed.
 
 @item unsigned int can_certify : 1
-This is true if the key (ie one of its subkeys) can be used to create
+This is true if the key or one of its subkeys can be used to create
 key certificates.
 
 @item unsigned int can_authenticate : 1
 @since{0.4.5}
 
 This is true if the key (ie one of its subkeys) can be used for
-authentication.
+authentication and the authentication will likely succeed.
+
+@item unsigned int has_encrypt : 1
+@since{1.23.0}
+
+This is true if the key or one of its subkeys is capable of encryption.
+Note that this flag is set even if the key is expired.
+
+@item unsigned int has_sign : 1
+@since{1.23.0}
+
+This is true if the key or one of its subkeys is capable of signing.
+Note that this flag is set even if the key is expired.
+
+@item unsigned int has_certify : 1
+@since{1.23.0}
+
+This is true if the key or one of its subkeys is capable of
+certification.  Note that this flag is set even if the key is expired.
+
+@item unsigned int has_authenticate : 1
+@since{1.23.0}
+
+This is true if the key or one of its subkeys is capable of
+authentication.  Note that this flag is set even if the key is
+expired.
 
 @item unsigned int is_qualified : 1
 @since{1.1.0}
@@ -3485,6 +3584,10 @@ be missing but this field may be set nevertheless.
 @since{1.8.0}
 
 Reserved for the time of the last update of this key.
+
+@item gpgme_revocation_key_t revkeys
+@since{1.24.0}
+This is a linked list with the revocation keys for the key.
 
 @end table
 @end deftp
@@ -3544,12 +3647,17 @@ according to local government regulations.
 
 This is true if the subkey complies with the rules for classified
 information in Germany at the restricted level (VS-NfD).  This are
-currently RSA keys of at least 2048 bits or ECDH/ECDSA keys using a
+currently RSA keys of at least 3072 bits or ECDH/ECDSA keys using a
 Brainpool curve.
+
+@item unsigned int beta_compliance : 1;
+@since{1.24.0}
+The compliance flags (e.g. is_de_vs) are set but the software has not
+yet been approved or is in a beta state.
 
 @item unsigned int secret : 1
 This is true if the subkey is a secret key.  Note that it will be
-false if the key is actually a stub key; i.e. a secret key operation
+false if the key is actually a stub key; i.e., a secret key operation
 is currently not possible (offline-key).  This is only set if a
 listing of secret keys has been requested or if
 @code{GPGME_KEYLIST_MODE_WITH_SECRET} is active.
@@ -3566,6 +3674,10 @@ This is the key ID of the subkey in hexadecimal digits.
 @item char *fpr
 This is the fingerprint of the subkey in hexadecimal digits, if
 available.
+
+@item char *v5fpr
+For a v4 OpenPGP key this is its v5 style fingerprint of the subkey in
+hexadecimal digits, if available.
 
 @item char *keygrip
 @since{1.7.0}
@@ -3820,6 +3932,37 @@ This is the email component of @code{uid}, if available.
 
 @item gpgme_sig_notation_t notations
 This is a linked list with the notation data and policy URLs.
+@end table
+@end deftp
+
+
+@deftp {Data type} gpgme_revocation_key_t
+@since{1.24.0}
+
+The @code{gpgme_revocation_key_t} type is a pointer to a revocation key
+structure.  Revocation key structures are one component of a
+@code{gpgme_key_t} object.  They provide information about the designated
+revocation keys for a key.
+
+The revocation key structure has the following members:
+
+@table @code
+@item gpgme_revocation_key_t next
+This is a pointer to the next revocation key structure in the linked list,
+or @code{NULL} if this is the last element.
+
+@item gpgme_pubkey_algo_t pubkey_algo
+This is the public key algorithm of the revocation key.
+
+@item char *fpr
+This is the fingerprint of the revocation_key in hexadecimal digits.
+
+@item unsigned int key_class
+This is the class of the revocation key signature subpacket.
+
+@item unsigned int sensitive : 1
+This is true if the revocation key is marked as sensitive.
+
 @end table
 @end deftp
 
@@ -4152,6 +4295,53 @@ be completed by calling @code{gpgme_wait} on the context.
 
 @end deftypefun
 
+@c
+@c  gpgme_op_setownertrust
+@c
+@deftypefun gpgme_error_t gpgme_op_setownertrust @
+      (@w{gpgme_ctx_t @var{ctx}}, @
+       @w{gpgme_key_t @var{key}}, @
+       @w{const char *@var{value}});
+
+@since{1.24.0}
+
+The function @code{gpgme_op_setownertrust} sets the owner trust of the
+key @var{key} or it sets the disable flag of the key @var{key}.
+This function only works for OpenPGP and requires at least version 2.4.6
+of GnuPG.
+
+@var{key} specifies the key to operate on.
+
+@var{value} specifies the owner trust value to set.  Valid values are
+"undefined", "never", "marginal", "full", "ultimate".  If @var{value} is
+the string "disable" then the key @var{key} is disabled.  If @var{value}
+is the string "enable" then the key @var{key} is re-enabled.
+
+The function returns the error code @code{GPG_ERR_NO_ERROR} if the
+operation was completed successfully, @code{GPG_ERR_NOT_SUPPORTED} if
+the engine does not support the command, and @code{GPG_ERR_INV_VALUE} if
+@var{key} is not a valid pointer or not a valid key or if @var{value} is
+not a valid pointer or the empty string.
+
+@end deftypefun
+
+
+@deftypefun gpgme_error_t gpgme_op_setownertrust_start @
+      (@w{gpgme_ctx_t @var{ctx}}, @
+       @w{gpgme_key_t @var{key}}, @
+       @w{const char *@var{value}});
+
+@since{1.24.0}
+
+The function @code{gpgme_op_setownertrust_start} initiates a
+@code{gpgme_op_setownertrust} operation; see there for details.  It must
+be completed by calling @code{gpgme_wait} on the context.
+@xref{Waiting For Completion}.
+
+The function returns the same error codes as @code{gpgme_op_setownertrust}.
+
+@end deftypefun
+
 
 @node Generating Keys
 @subsection Generating Keys
@@ -4188,7 +4378,7 @@ GnuPG.
 @var{userid} is commonly the mail address associated with the key.
 GPGME does not require a specific syntax but if more than a mail
 address is given, RFC-822 style format is suggested.  The value is
-expected to be in UTF-8 encoding (i.e. no IDN encoding for mail
+expected to be in UTF-8 encoding (i.e., no IDN encoding for mail
 addresses).  This is a required parameter.
 
 @var{algo} specifies the algorithm for the new key (actually a keypair
@@ -4271,6 +4461,14 @@ override this check.
 
 Request generation of keys that do not expire.
 
+@item GPGME_CREATE_ADSK
+@since{1.24.0}
+
+Add an ADSK to the key.  With this flag @var{algo} is expected to be
+the hexified fingerprint of the ADSK to be added; this must be a
+subkey.  If the string "default" is used for @var{algo} the engine
+will add all ADSK as it would do for new keys.
+
 @end table
 
 After the operation completed successfully, information about the
@@ -4346,6 +4544,10 @@ values for timestamps and thus can only encode dates up to the year
 @var{flags} takes the same values as described above for
 @code{gpgme_op_createkey}.
 
+If the @code{GPGME_CREATE_ADSK} flag is set, the subkey fingerprint
+given in the @code{algo} parameter is added as an ADSK
+to the key.
+
 After the operation completed successfully, information about the
 created key can be retrieved with @code{gpgme_op_genkey_result}.
 
@@ -4397,7 +4599,7 @@ requires at least version 2.1.13 of GnuPG.
 the mail address to be associated with the key.  GPGME does not
 require a specific syntax but if more than a mail address is given,
 RFC-822 style format is suggested.  The value is expected to be in
-UTF-8 encoding (i.e. no IDN encoding for mail addresses).  This is a
+UTF-8 encoding (i.e., no IDN encoding for mail addresses).  This is a
 required parameter.
 
 @var{flags} are currently not used and must be set to zero.
@@ -4606,7 +4808,7 @@ retrieved with @code{gpgme_op_genkey_result}.
 
 The function returns the error code @code{GPG_ERR_NO_ERROR} if the
 operation could be started successfully, @code{GPG_ERR_INV_VALUE} if
-@var{parms} is not a well-formed string (e.g. does not have the
+@var{parms} is not a well-formed string (e.g., does not have the
 expected tag-like headers and footers), @code{GPG_ERR_NOT_SUPPORTED}
 if @var{public} or @var{secret} is not valid, and
 @code{GPG_ERR_GENERAL} if no key was created by the backend.
@@ -5069,7 +5271,7 @@ The function @code{gpgme_op_import_keys} adds the keys described by
 the @code{NULL} terminated array @var{keys} to the key ring of the
 crypto engine used by @var{ctx}.  It is used to actually import and
 make keys permanent which have been retrieved from an external source
-(i.e. using @code{GPGME_KEYLIST_MODE_EXTERN}) earlier.  The external
+(i.e., using @code{GPGME_KEYLIST_MODE_EXTERN}) earlier.  The external
 keylisting must have been made with the same context configuration (in
 particular the same home directory).  @footnote{Thus it is a
 replacement for the usual workaround of exporting and then importing a
@@ -5079,7 +5281,7 @@ require another access to the keyserver over the network.
 Only keys of the currently selected protocol of @var{ctx} are
 considered for import.  Other keys specified by the @var{keys} are
 ignored.  As of now all considered keys must have been retrieved using
-the same method, i.e. the used key listing mode must be identical.
+the same method, i.e., the used key listing mode must be identical.
 
 After the operation completed successfully, the result can be
 retrieved with @code{gpgme_op_import_result}.
@@ -5151,7 +5353,7 @@ This is a pointer to the next status structure in the linked list, or
 
 @item char *fpr
 This is the fingerprint of the key that was considered, or @code{NULL}
-if the fingerprint of the key is not known, e.g. because the key to
+if the fingerprint of the key is not known, e.g., because the key to
 import was encrypted and decryption failed.
 
 @item gpgme_error_t result
@@ -5299,16 +5501,19 @@ operation was started successfully, and @code{GPG_ERR_INV_VALUE} if
 @var{ctx} or @var{key} is not a valid pointer.
 @end deftypefun
 
-The following functions allow only to use one particular flag.
+The following functions allow only to use one particular flag.  Their
+use is thus deprecated.
 
 @deftypefun gpgme_error_t gpgme_op_delete (@w{gpgme_ctx_t @var{ctx}}, @w{const gpgme_key_t @var{key}}, @w{int @var{allow_secret}})
 Similar to @code{gpgme_op_delete_ext}, but only the flag
-@code{GPGME_DELETE_ALLOW_SECRET} can be provided.
+@code{GPGME_DELETE_ALLOW_SECRET} can be provided.  Actually all true
+values are mapped to this flag.
 @end deftypefun
 
 @deftypefun gpgme_error_t gpgme_op_delete_start (@w{gpgme_ctx_t @var{ctx}}, @w{const gpgme_key_t @var{key}}, @w{int @var{allow_secret}})
 Similar to @code{gpgme_op_delete_ext_start}, but only the flag
-@code{GPGME_DELETE_ALLOW_SECRET} can be provided.
+@code{GPGME_DELETE_ALLOW_SECRET} can be provided.  Actually all true
+values are mapped to this flag.
 @end deftypefun
 
 
@@ -5550,7 +5755,10 @@ An error code describing the reason why the key was found invalid.
 
 @deftypefun gpgme_error_t gpgme_op_decrypt (@w{gpgme_ctx_t @var{ctx}}, @w{gpgme_data_t @var{cipher}}, @w{gpgme_data_t @var{plain}})
 The function @code{gpgme_op_decrypt} decrypts the ciphertext in the
-data object @var{cipher} and stores it into the data object
+data object @var{cipher} or, if a file name is set on the data object,
+the ciphertext stored in the corresponding file.  The decrypted
+ciphertext is stored into the data object @var{plain} or written to
+the file set with @code{gpgme_data_set_file_name} for the data object
 @var{plain}.
 
 The function returns the error code @code{GPG_ERR_NO_ERROR} if the
@@ -5586,6 +5794,12 @@ The function @code{gpgme_op_decrypt_ext} is the same as
 @code{gpgme_op_decrypt} but has an additional argument
 @var{flags}.  If @var{flags} is 0 both function behave identically.
 
+If the flag @code{GPGME_DECRYPT_ARCHIVE} is set, then an encrypted
+archive in the data object @var{cipher} is decrypted and extracted.
+The content of the archive is extracted into a directory named
+@code{GPGARCH_n_} (where @code{n} is a number) or into the directory
+set with @code{gpgme_data_set_file_name} for the data object @var{plain}.
+
 The value in @var{flags} is a bitwise-or combination of one or
 multiple of the following bit values:
 
@@ -5595,6 +5809,14 @@ multiple of the following bit values:
 
 The @code{GPGME_DECRYPT_VERIFY} symbol specifies that this function
 shall exactly act as @code{gpgme_op_decrypt_verify}.
+
+@item GPGME_DECRYPT_ARCHIVE
+@since{1.19.0}
+
+The @code{GPGME_DECRYPT_ARCHIVE} symbol specifies that the input is an
+encrypted archive that shall be decrypted and extracted.  This feature
+is currently only supported for the OpenPGP crypto engine and requires
+GnuPG 2.4.1.
 
 @item GPGME_DECRYPT_UNWRAP
 @since{1.8.0}
@@ -5688,6 +5910,11 @@ The message claims that the content is a MIME object.
 The message was encrypted in a VS-NfD compliant way.  This is a
 specification in Germany for a restricted communication level.
 
+@item unsigned int beta_compliance : 1;
+@since{1.24.0}
+The compliance flags (e.g. is_de_vs) are set but the software has not
+yet been approved or is in a beta state.
+
 @item gpgme_recipient_t recipients
 @since{1.1.0}
 
@@ -5750,7 +5977,12 @@ detached signature, then the signed text should be provided in
 Otherwise, if @var{sig} is a normal (or cleartext) signature,
 @var{signed_text} should be a null pointer and @var{plain} should be a
 writable data object that will contain the plaintext after successful
-verification.
+verification.  If a file name is set on the data object @var{sig} (or
+on the data object @var{signed_text}), then the data of the signature
+(resp. the data of the signed text) is not read from the data object
+but from the file with the given file name.  If a file name is set on
+the data object @var{plain} then the plaintext is not stored in the
+data object but it is written to a file with the given file name.
 
 The results of the individual signature verifications can be retrieved
 with @code{gpgme_op_verify_result}.
@@ -5774,6 +6006,61 @@ operation could be started successfully, @code{GPG_ERR_INV_VALUE} if
 @code{GPG_ERR_NO_DATA} if @var{sig} or @var{plain} does not contain
 any data to verify.
 @end deftypefun
+
+
+@deftypefun gpgme_error_t gpgme_op_verify_ext ( @
+            @w{gpgme_ctx_t @var{ctx}}, @
+            @w{gpgme_verify_flags_t @var{flags}}, @
+            @w{gpgme_data_t @var{sig}}, @
+            @w{gpgme_data_t @var{signed_text}}, @
+            @w{gpgme_data_t @var{plain}})
+
+The function @code{gpgme_op_verify_ext} is the same as
+@code{gpgme_op_verify} but has an additional argument
+@var{flags}.  If @var{flags} is 0 both function behave identically.
+
+If the flag @code{GPGME_VERIFY_ARCHIVE} is set, then a signed archive
+in the data object @var{sig} is verified and extracted. The content of
+the archive is extracted into a directory named @code{GPGARCH_n_}
+(where @code{n} is a number) or into the directory set with
+@code{gpgme_data_set_file_name} for the data object @var{plain}.
+
+The value in @var{flags} is a bitwise-or combination of one or
+multiple of the following bit values:
+
+@table @code
+@item GPGME_VERIFY_ARCHIVE
+@since{1.19.0}
+
+The @code{GPGME_VERIFY_ARCHIVE} symbol specifies that the input is a
+signed archive that shall be verified and extracted.  This feature
+is currently only supported for the OpenPGP crypto engine and requires
+GnuPG 2.4.1.
+
+@end table
+
+The function returns the error codes as descriped for
+@code{gpgme_op_decrypt} respective @code{gpgme_op_encrypt}.
+@end deftypefun
+
+@deftypefun gpgme_error_t gpgme_op_verify_ext_start ( @
+            @w{gpgme_ctx_t @var{ctx}}, @
+            @w{gpgme_verify_flags_t @var{flags}}, @
+            @w{gpgme_data_t @var{sig}}, @
+            @w{gpgme_data_t @var{signed_text}}, @
+            @w{gpgme_data_t @var{plain}})
+
+The function @code{gpgme_op_verify_ext_start} initiates a
+@code{gpgme_op_verify_ext} operation.  It can be completed by calling
+@code{gpgme_wait} on the context.  @xref{Waiting For Completion}.
+
+The function returns the error code @code{GPG_ERR_NO_ERROR} if the
+operation could be started successfully, @code{GPG_ERR_INV_VALUE} if
+@var{ctx}, @var{sig} or @var{plain} is not a valid pointer, and
+@code{GPG_ERR_NO_DATA} if @var{sig} or @var{plain} does not contain
+any data to verify.
+@end deftypefun
+
 
 @deftp {Data type} {gpgme_sig_notation_t}
 This is a pointer to a structure used to store a part of the result of
@@ -5874,7 +6161,7 @@ The defined bits are:
 
   @item GPGME_SIGSUM_RED
   The signature is bad. It might be useful to check other bits and
-  display more information, i.e. a revoked certificate might not render a
+  display more information, i.e., a revoked certificate might not render a
   signature invalid when the message was received prior to the cause for
   the revocation.
 
@@ -5996,6 +6283,15 @@ of the issuing certificate.  In contrast the default validation model
 checks the validity of signature as well at the entire certificate chain
 at the current time.
 
+@item unsigned int is_de_vs : 1;
+@since{1.10.0}
+The signature was created in a VS-NfD compliant way.  This is a
+specification in Germany for a restricted communication level.
+
+@item unsigned int beta_compliance : 1;
+@since{1.24.0}
+The compliance flags (e.g. is_de_vs) are set but the software has not
+yet been approved or is in a beta state.
 
 @item gpgme_validity_t validity
 The validity of the signature.
@@ -6120,7 +6416,7 @@ functions in GPGME and GnuPG:
 
 Return the mail address (called ``addr-spec'' in RFC-5322) from the
 string @var{uid} which is assumed to be a user id (called ``address''
-in RFC-5322).  All plain ASCII characters (i.e. those with bit 7
+in RFC-5322).  All plain ASCII characters (i.e., those with bit 7
 cleared) in the result are converted to lowercase.  Caller must free
 the result using @code{gpgme_free}.  Returns @code{NULL} if no valid
 address was found (in which case @code{ERRNO} is set to @code{EINVAL})
@@ -6207,16 +6503,48 @@ A detached signature is made.
 @item GPGME_SIG_MODE_CLEAR
 A clear text signature is made.  The @acronym{ASCII} armor and text
 mode settings of the context are ignored.
+
+@item GPGME_SIG_MODE_ARCHIVE
+@since{1.19.0}
+
+A signed archive is created from the given files and directories.  This
+feature is currently only supported for the OpenPGP crypto engine and requires
+GnuPG 2.4.1.
+
+@item GPGME_SIG_MODE_FILE
+@since{1.24.0}
+
+The filename set with @code{gpgme_data_set_file_name} for the data object
+@var{plain} is passed to gpg, so that gpg reads the plaintext directly from
+this file instead of from the data object @var{plain}.  This flag can be
+combined with @code{GPGME_SIG_MODE_NORMAL}, @code{GPGME_SIG_MODE_DETACH},
+and @code{GPGME_SIG_MODE_CLEAR}, but not with @code{GPGME_SIG_MODE_ARCHIVE}.
+This feature is currently only supported for the OpenPGP crypto engine.
+
 @end table
 @end deftp
 
 @deftypefun gpgme_error_t gpgme_op_sign (@w{gpgme_ctx_t @var{ctx}}, @w{gpgme_data_t @var{plain}}, @w{gpgme_data_t @var{sig}}, @w{gpgme_sig_mode_t @var{mode}})
 The function @code{gpgme_op_sign} creates a signature for the text in
 the data object @var{plain} and returns it in the data object
-@var{sig}.  The type of the signature created is determined by the
-@acronym{ASCII} armor (or, if that is not set, by the encoding
-specified for @var{sig}), the text mode attributes set for the context
-@var{ctx} and the requested signature mode @var{mode}.
+@var{sig} or writes it directly to the file set with
+@code{gpgme_data_set_file_name} for the data object @var{sig}.  The type
+of the signature created is determined by the @acronym{ASCII} armor (or,
+if that is not set, by the encoding specified for @var{sig}), the text
+mode attributes set for the context @var{ctx} and the requested signature
+mode @var{mode}.
+
+If the signature mode flag @code{GPGME_SIG_MODE_FILE} is set and a filename
+has been set with @code{gpgme_data_set_file_name} for the data object
+@var{plain}, then this filename is passed to gpg, so that gpg reads the
+plaintext directly from this file instead of from the data object @var{plain}.
+
+If signature mode @code{GPGME_SIG_MODE_ARCHIVE} is requested then a
+signed archive is created from the files and directories given as
+NUL-separated list in the data object @var{plain}.  The paths of the files
+and directories have to be given as paths relative to the current working
+directory or relative to the base directory set with
+@code{gpgme_data_set_file_name} for the data object @var{plain}.
 
 After the operation completed successfully, the result can be
 retrieved with @code{gpgme_op_sign_result}.
@@ -6265,7 +6593,8 @@ The public key algorithm used to create this signature.
 The hash algorithm used to create this signature.
 
 @item unsigned int sig_class
-The signature class of this signature.
+The signature class of this signature.  Note that only the values 0,
+1, and 2 are well-defined.
 
 @item long int timestamp
 The creation timestamp of this signature.
@@ -6383,10 +6712,26 @@ and then passed to the encryption operation.
 @deftypefun gpgme_error_t gpgme_op_encrypt (@w{gpgme_ctx_t @var{ctx}}, @w{gpgme_key_t @var{recp}[]}, @w{gpgme_encrypt_flags_t @var{flags}}, @w{gpgme_data_t @var{plain}}, @w{gpgme_data_t @var{cipher}})
 The function @code{gpgme_op_encrypt} encrypts the plaintext in the
 data object @var{plain} for the recipients @var{recp} and stores the
-ciphertext in the data object @var{cipher}.  The type of the
-ciphertext created is determined by the @acronym{ASCII} armor (or, if
-that is not set, by the encoding specified for @var{cipher}) and the
-text mode attributes set for the context @var{ctx}.
+ciphertext in the data object @var{cipher} or writes it directly to the
+file set with @code{gpgme_data_set_file_name} for the data object
+@var{cipher}.  The type of the ciphertext created is determined by the
+@acronym{ASCII} armor (or, if that is not set, by the encoding specified
+for @var{cipher}) and the text mode attributes set for the context
+@var{ctx}.  If a filename has been set with @code{gpgme_data_set_file_name}
+for the data object @var{plain} then this filename is stored in the
+ciphertext.
+
+If the flag @code{GPGME_ENCRYPT_FILE} is set and a filename has been set
+with @code{gpgme_data_set_file_name} for the data object @var{plain},
+then this filename is passed to gpg, so that gpg reads the plaintext
+directly from this file instead of from the data object @var{plain}.
+
+If the flag @code{GPGME_ENCRYPT_ARCHIVE} is set, then an encrypted
+archive is created from the files and directories given as NUL-separated
+list in the data object @var{plain}.  The paths of the files and
+directories have to be given as paths relative to the current working
+directory or relative to the base directory set with
+@code{gpgme_data_set_file_name} for the data object @var{plain}.
 
 @var{recp} must be a @code{NULL}-terminated array of keys.  The user
 must keep references for all keys during the whole duration of the
@@ -6402,6 +6747,10 @@ The @code{GPGME_ENCRYPT_ALWAYS_TRUST} symbol specifies that all the
 recipients in @var{recp} should be trusted, even if the keys do not
 have a high enough validity in the keyring.  This flag should be used
 with care; in general it is not a good idea to use any untrusted keys.
+
+For the S/MIME (CMS) protocol this flag allows to encrypt to a
+certificate without running any checks on the validity of the
+certificate.
 
 @item GPGME_ENCRYPT_NO_ENCRYPT_TO
 @since{1.2.0}
@@ -6422,7 +6771,7 @@ may reveal information about the plaintext.
 @item GPGME_ENCRYPT_PREPARE
 @itemx GPGME_ENCRYPT_EXPECT_SIGN
 The @code{GPGME_ENCRYPT_PREPARE} symbol is used with the UI Server
-protocol to prepare an encryption (i.e. sending the
+protocol to prepare an encryption (i.e., sending the
 @code{PREP_ENCRYPT} command).  With the
 @code{GPGME_ENCRYPT_EXPECT_SIGN} symbol the UI Server is advised to
 also expect a sign command.
@@ -6434,6 +6783,17 @@ The @code{GPGME_ENCRYPT_SYMMETRIC} symbol specifies that the
 output should be additionally encrypted symmetrically even
 if recipients are provided. This feature is only supported
 for the OpenPGP crypto engine.
+
+@item GPGME_ENCRYPT_ADD_RECP
+@item GPGME_ENCRYPT_CHG_RECP
+@since{1.24.0}
+
+Instead of encrypting, decrypt the input and write an output which is
+additionally encrypted to the specified keys.  The CHG flag is similar
+but does not add encryption to the specified keys but existing
+encryption keys by the new ones.  This feature is only supported for
+the OpenPGP crypto engine and requires at least GnuPG version 2.5.1.
+
 
 @item GPGME_ENCRYPT_THROW_KEYIDS
 @since{1.8.0}
@@ -6462,6 +6822,23 @@ address part of the key specification is conveyed to the backend.  As
 of now the key must be specified using the @var{recpstring} argument
 of the extended encrypt functions.  This feature is currently only
 supported for the OpenPGP crypto engine.
+
+@item GPGME_ENCRYPT_ARCHIVE
+@since{1.19.0}
+
+The @code{GPGME_ENCRYPT_ARCHIVE} symbol specifies that the input is a
+NUL-separated list of file paths and directory paths that shall be
+encrypted into an archive.  This feature is currently only supported
+for the OpenPGP crypto engine and requires GnuPG 2.4.1.
+
+@item GPGME_ENCRYPT_FILE
+@since{1.24.0}
+
+The @code{GPGME_ENCRYPT_FILE} symbol specifies that the filename set
+with @code{gpgme_data_set_file_name} for the data object @var{plain}
+is passed to gpg, so that gpg reads the plaintext directly from this
+file instead of from the data object @var{plain}.  This feature is
+currently only supported for the OpenPGP crypto engine.
 
 @end table
 
@@ -7798,6 +8175,15 @@ reveal sensitive details like passphrases or other data you use in
 your application.  If you are asked to send a log file, make sure that
 you run your tests only with play data.
 
+The trace function makes use of gpgrt's logging function and thus the
+special @file{socket://} and @file{tcp://} files may be used.  Because
+this conflicts with the use of colons to separate fields, the following
+hack is used: If the file name contains the string @code{^//} all
+carets are replaced by colons.  For example to log to TCP port 42042
+this can be used:
+@smallexample
+GPGME_DEBUG=5:tcp^//127.0.0.1^42042
+@end smallexample
 
 @node Deprecated Functions
 @appendix Deprecated Functions

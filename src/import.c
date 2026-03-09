@@ -37,6 +37,9 @@ typedef struct
 {
   struct _gpgme_op_import_result result;
 
+  /* The error code from a FAILURE status line or 0.  */
+  gpg_error_t failure_code;
+
   /* A pointer to the next pointer of the last import status in the
      list.  This makes appending new imports painless while preserving
      the order.  */
@@ -129,7 +132,7 @@ parse_import (char *args, gpgme_import_status_t *import_status, int problem)
 
   gpg_err_set_errno (0);
   nr = strtol (args, &tail, 0);
-  if (errno || args == tail || *tail != ' ')
+  if (errno || args == tail)
     {
       /* The crypto backend does not behave.  */
       free (import);
@@ -173,12 +176,17 @@ parse_import (char *args, gpgme_import_status_t *import_status, int problem)
   if (tail)
     *tail = '\0';
 
-  import->fpr = strdup (args);
-  if (!import->fpr)
+  if (*args)
     {
-      free (import);
-      return gpg_error_from_syserror ();
+      import->fpr = strdup (args);
+      if (!import->fpr)
+        {
+          free (import);
+          return gpg_error_from_syserror ();
+        }
     }
+  else
+    import->fpr = NULL;
 
   *import_status = import;
   return 0;
@@ -304,6 +312,17 @@ _gpgme_import_status_handler (void *priv, gpgme_status_code_t code, char *args)
         opd->lastp = &(*opd->lastp)->next;
       break;
 
+    case GPGME_STATUS_FAILURE:
+      if (!opd->failure_code
+          || gpg_err_code (opd->failure_code) == GPG_ERR_GENERAL)
+        opd->failure_code = _gpgme_parse_failure (args);
+      break;
+
+    case GPGME_STATUS_EOF:
+      if (opd->failure_code)
+        return opd->failure_code;
+      break;
+
     default:
       break;
     }
@@ -349,7 +368,8 @@ _gpgme_op_import_start (gpgme_ctx_t ctx, int synchronous, gpgme_data_t keydata)
                                     ctx);
 
   return _gpgme_engine_op_import (ctx->engine, keydata, NULL, NULL,
-                                  ctx->import_filter, ctx->key_origin);
+                                  ctx->import_filter, ctx->import_options,
+                                  ctx->key_origin);
 }
 
 
@@ -429,7 +449,8 @@ _gpgme_op_import_keys_start (gpgme_ctx_t ctx, int synchronous,
                                     ctx);
 
   return _gpgme_engine_op_import (ctx->engine, NULL, keys, NULL,
-                                  ctx->import_filter, ctx->key_origin);
+                                  ctx->import_filter, ctx->import_options,
+                                  ctx->key_origin);
 }
 
 
@@ -522,7 +543,8 @@ _gpgme_op_receive_keys_start (gpgme_ctx_t ctx, int synchronous, const char *keyi
                                     ctx);
 
   return _gpgme_engine_op_import (ctx->engine, NULL, NULL, keyids,
-                                  ctx->import_filter, ctx->key_origin);
+                                  ctx->import_filter, ctx->import_options,
+                                  ctx->key_origin);
 }
 
 

@@ -130,6 +130,13 @@ const char *Error::asString() const
     return mMessage.c_str();
 }
 
+std::string Error::asStdString() const
+{
+    std::string message;
+    format_error(static_cast<gpgme_error_t>(mErr), message);
+    return message;
+}
+
 int Error::code() const
 {
     return gpgme_err_code(mErr);
@@ -142,16 +149,12 @@ int Error::sourceID() const
 
 bool Error::isCanceled() const
 {
-    return code() == GPG_ERR_CANCELED;
+    return code() == GPG_ERR_CANCELED || code() == GPG_ERR_FULLY_CANCELED;
 }
 
 int Error::toErrno() const
 {
-//#ifdef HAVE_GPGME_GPG_ERROR_WRAPPERS
     return gpgme_err_code_to_errno(static_cast<gpgme_err_code_t>(code()));
-//#else
-//    return gpg_err_code_to_errno( static_cast<gpg_err_code_t>( code() ) );
-//#endif
 }
 
 // static
@@ -192,7 +195,7 @@ Error Error::fromCode(unsigned int err, unsigned int src)
 
 std::ostream &operator<<(std::ostream &os, const Error &err)
 {
-    return os << "GpgME::Error(" << err.encodedError() << " (" << err.asString() << "))";
+    return os << "GpgME::Error(" << err.encodedError() << " (" << err.asStdString() << "))";
 }
 
 Context::KeyListModeSaver::KeyListModeSaver(Context *ctx)
@@ -1070,7 +1073,7 @@ DecryptionResult Context::decrypt(const Data &cipherText, Data &plainText, const
     const Data::Private *const cdp = cipherText.impl();
     Data::Private *const pdp = plainText.impl();
     d->lasterr = gpgme_op_decrypt_ext(d->ctx, static_cast<gpgme_decrypt_flags_t> (d->decryptFlags | flags), cdp ? cdp->data : nullptr, pdp ? pdp->data : nullptr);
-    return DecryptionResult(d->ctx, Error(d->lasterr));
+    return decryptionResult();
 }
 
 DecryptionResult Context::decrypt(const Data &cipherText, Data &plainText)
@@ -1107,7 +1110,7 @@ VerificationResult Context::verifyDetachedSignature(const Data &signature, const
     const Data::Private *const sdp = signature.impl();
     const Data::Private *const tdp = signedText.impl();
     d->lasterr = gpgme_op_verify(d->ctx, sdp ? sdp->data : nullptr, tdp ? tdp->data : nullptr, nullptr);
-    return VerificationResult(d->ctx, Error(d->lasterr));
+    return verificationResult();
 }
 
 VerificationResult Context::verifyOpaqueSignature(const Data &signedData, Data &plainText)
@@ -1116,7 +1119,7 @@ VerificationResult Context::verifyOpaqueSignature(const Data &signedData, Data &
     const Data::Private *const sdp = signedData.impl();
     Data::Private *const pdp = plainText.impl();
     d->lasterr = gpgme_op_verify(d->ctx, sdp ? sdp->data : nullptr, nullptr, pdp ? pdp->data : nullptr);
-    return VerificationResult(d->ctx, Error(d->lasterr));
+    return verificationResult();
 }
 
 Error Context::startDetachedSignatureVerification(const Data &signature, const Data &signedText)
@@ -1138,9 +1141,18 @@ Error Context::startOpaqueSignatureVerification(const Data &signedData, Data &pl
 VerificationResult Context::verificationResult() const
 {
     if (d->lastop & Private::Verify) {
-        return VerificationResult(d->ctx, Error(d->lasterr));
+        const auto res = VerificationResult{d->ctx, Error(d->lasterr)};
+        if ((d->lastop == Private::DecryptAndVerify)
+            && (res.error().code() == GPG_ERR_NO_DATA)
+            && (res.numSignatures() > 0)) {
+            // ignore "no data" error for verification if there are signatures and
+            // the operation was a combined (tentative) decryption and verification
+            // because then "no data" just indicates that there was nothing to decrypt
+            return VerificationResult{d->ctx, Error{}};
+        }
+        return res;
     } else {
-        return VerificationResult();
+        return {};
     }
 }
 
@@ -1151,8 +1163,7 @@ std::pair<DecryptionResult, VerificationResult> Context::decryptAndVerify(const 
     Data::Private *const pdp = plainText.impl();
     d->lasterr = gpgme_op_decrypt_ext(d->ctx, static_cast<gpgme_decrypt_flags_t> (d->decryptFlags | flags | DecryptVerify),
                                       cdp ? cdp->data : nullptr, pdp ? pdp->data : nullptr);
-    return std::make_pair(DecryptionResult(d->ctx, Error(d->lasterr)),
-                          VerificationResult(d->ctx, Error(d->lasterr)));
+    return std::make_pair(decryptionResult(), verificationResult());
 }
 
 std::pair<DecryptionResult, VerificationResult> Context::decryptAndVerify(const Data &cipherText, Data &plainText)
@@ -1278,14 +1289,25 @@ std::vector<Notation> Context::signatureNotations() const
     return result;
 }
 
-static gpgme_sig_mode_t sigmode2sigmode(SignatureMode mode)
+static gpgme_sig_mode_t sigflags2sigflags(SignatureMode flags)
 {
-    switch (mode) {
-    default:
-    case NormalSignatureMode: return GPGME_SIG_MODE_NORMAL;
-    case Detached:            return GPGME_SIG_MODE_DETACH;
-    case Clearsigned:         return GPGME_SIG_MODE_CLEAR;
+    unsigned int result = 0;
+    if (flags & SignatureMode::NormalSignatureMode) {
+        result |= GPGME_SIG_MODE_NORMAL;
     }
+    if (flags & SignatureMode::Detached) {
+        result |= GPGME_SIG_MODE_DETACH;
+    }
+    if (flags & SignatureMode::Clearsigned) {
+        result |= GPGME_SIG_MODE_CLEAR;
+    }
+    if (flags & SignatureMode::SignArchive) {
+        result |= GPGME_SIG_MODE_ARCHIVE;
+    }
+    if (flags & SignatureMode::SignFile) {
+        result |= GPGME_SIG_MODE_FILE;
+    }
+    return static_cast<gpgme_sig_mode_t>(result);
 }
 
 SigningResult Context::sign(const Data &plainText, Data &signature, SignatureMode mode)
@@ -1293,7 +1315,7 @@ SigningResult Context::sign(const Data &plainText, Data &signature, SignatureMod
     d->lastop = Private::Sign;
     const Data::Private *const pdp = plainText.impl();
     Data::Private *const sdp = signature.impl();
-    d->lasterr = gpgme_op_sign(d->ctx, pdp ? pdp->data : nullptr, sdp ? sdp->data : nullptr, sigmode2sigmode(mode));
+    d->lasterr = gpgme_op_sign(d->ctx, pdp ? pdp->data : nullptr, sdp ? sdp->data : nullptr, sigflags2sigflags(mode));
     return SigningResult(d->ctx, Error(d->lasterr));
 }
 
@@ -1302,7 +1324,7 @@ Error Context::startSigning(const Data &plainText, Data &signature, SignatureMod
     d->lastop = Private::Sign;
     const Data::Private *const pdp = plainText.impl();
     Data::Private *const sdp = signature.impl();
-    return Error(d->lasterr = gpgme_op_sign_start(d->ctx, pdp ? pdp->data : nullptr, sdp ? sdp->data : nullptr, sigmode2sigmode(mode)));
+    return Error(d->lasterr = gpgme_op_sign_start(d->ctx, pdp ? pdp->data : nullptr, sdp ? sdp->data : nullptr, sigflags2sigflags(mode)));
 }
 
 SigningResult Context::signingResult() const
@@ -1334,6 +1356,21 @@ static gpgme_encrypt_flags_t encryptflags2encryptflags(Context::EncryptionFlags 
     }
     if (flags & Context::Symmetric) {
         result |= GPGME_ENCRYPT_SYMMETRIC;
+    }
+    if (flags & Context::ThrowKeyIds) {
+        result |= GPGME_ENCRYPT_THROW_KEYIDS;
+    }
+    if (flags & Context::EncryptWrap) {
+        result |= GPGME_ENCRYPT_WRAP;
+    }
+    if (flags & Context::WantAddress) {
+        result |= GPGME_ENCRYPT_WANT_ADDRESS;
+    }
+    if (flags & Context::EncryptArchive) {
+        result |= GPGME_ENCRYPT_ARCHIVE;
+    }
+    if (flags & Context::EncryptFile) {
+        result |= GPGME_ENCRYPT_FILE;
     }
     return static_cast<gpgme_encrypt_flags_t>(result);
 }
@@ -1730,6 +1767,51 @@ Error Context::startSetExpire(const Key &k, unsigned long expires,
                  k.impl(), expires, subfprs.c_str(), 0));
 }
 
+static const char *owner_trust_to_string(Key::OwnerTrust trust)
+{
+    static const char *const owner_trust_strings[] = {
+        "undefined", // --quick-set-ownertrust wants "undefined" for Unknown
+        "undefined", // Undefined is never used for key->owner_trust
+        "never",
+        "marginal",
+        "full",
+        "ultimate",
+    };
+
+    if (Key::OwnerTrust::Unknown <= trust && trust <= Key::OwnerTrust::Ultimate) {
+        return owner_trust_strings[trust];
+    }
+    return nullptr;
+}
+
+Error Context::setOwnerTrust(const Key &key, Key::OwnerTrust trust)
+{
+    d->lasterr = gpgme_op_setownertrust(d->ctx, key.impl(),
+                                        owner_trust_to_string(trust));
+    return Error(d->lasterr);
+}
+
+Error Context::startSetOwnerTrust(const Key &key, Key::OwnerTrust trust)
+{
+    d->lasterr = gpgme_op_setownertrust_start(d->ctx, key.impl(),
+                                              owner_trust_to_string(trust));
+    return Error(d->lasterr);
+}
+
+Error Context::setKeyEnabled(const Key &key, bool enabled)
+{
+    d->lasterr = gpgme_op_setownertrust(d->ctx, key.impl(),
+                                        enabled ? "enable" : "disable");
+    return Error(d->lasterr);
+}
+
+Error Context::startSetKeyEnabled(const Key &key, bool enabled)
+{
+    d->lasterr = gpgme_op_setownertrust_start(d->ctx, key.impl(),
+                                              enabled ? "enable" : "disable");
+    return Error(d->lasterr);
+}
+
 static std::string getLFSeparatedListOfUserIds(const std::vector<UserID> &userIds)
 {
     if (userIds.empty()) {
@@ -1763,6 +1845,16 @@ Error Context::startRevokeSignature(const Key &key, const Key &signingKey,
     const std::string uids = getLFSeparatedListOfUserIds(userIds);
     return Error(d->lasterr = gpgme_op_revsig_start(d->ctx,
                  key.impl(), signingKey.impl(), uids.c_str(), flags));
+}
+
+Error Context::addAdsk(const Key &k, const char *adsk)
+{
+    return Error(d->lasterr = gpgme_op_createsubkey(d->ctx, k.impl(), adsk, 0, 0, GPGME_CREATE_ADSK));
+}
+
+Error Context::startAddAdsk(const Key &k, const char *adsk)
+{
+    return Error(d->lasterr = gpgme_op_createsubkey_start(d->ctx, k.impl(), adsk, 0, 0, GPGME_CREATE_ADSK));
 }
 
 Error Context::setFlag(const char *name, const char *value)
@@ -1886,7 +1978,8 @@ std::ostream &operator<<(std::ostream &os, KeyListMode mode)
 std::ostream &operator<<(std::ostream &os, SignatureMode mode)
 {
     os << "GpgME::SignatureMode(";
-    switch (mode) {
+#undef CHECK
+    switch (mode & (NormalSignatureMode|Detached|Clearsigned)) {
 #define CHECK( x ) case x: os << #x; break
         CHECK(NormalSignatureMode);
         CHECK(Detached);
@@ -1896,6 +1989,10 @@ std::ostream &operator<<(std::ostream &os, SignatureMode mode)
         os << "???" "(" << static_cast<int>(mode) << ')';
         break;
     }
+#define CHECK( x ) if ( !(mode & (x)) ) {} else do { os << #x " "; } while (0)
+        CHECK(SignArchive);
+        CHECK(SignFile);
+#undef CHECK
     return os << ')';
 }
 
@@ -1909,6 +2006,11 @@ std::ostream &operator<<(std::ostream &os, Context::EncryptionFlags flags)
     CHECK(ExpectSign);
     CHECK(NoCompress);
     CHECK(Symmetric);
+    CHECK(ThrowKeyIds);
+    CHECK(EncryptWrap);
+    CHECK(WantAddress);
+    CHECK(EncryptArchive);
+    CHECK(EncryptFile);
 #undef CHECK
     return os << ')';
 }

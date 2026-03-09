@@ -319,10 +319,35 @@ public:
                          const std::vector<Subkey> &subkeys = std::vector<Subkey>(),
                          const SetExpireFlags flags = SetExpireDefault);
 
+    /**
+     * Sets the owner trust of the key \a key to the value \a trust.
+     * Requires gpg 2.4.6.
+     */
+    Error setOwnerTrust(const Key &key, Key::OwnerTrust trust);
+    /**
+     * Starts the operation to set the owner trust of the key \a key to the value \a trust.
+     * Requires gpg 2.4.6.
+     */
+    Error startSetOwnerTrust(const Key &key, Key::OwnerTrust trust);
+
+    /**
+     * Enables or disables the key \a key.
+     * Requires gpg 2.4.6.
+     */
+    Error setKeyEnabled(const Key &key, bool enabled);
+    /**
+     * Starts the operation to enable or disable the key \a key.
+     * Requires gpg 2.4.6.
+     */
+    Error startSetKeyEnabled(const Key &key, bool enabled);
+
     Error revokeSignature(const Key &key, const Key &signingKey,
                           const std::vector<UserID> &userIds = std::vector<UserID>());
     Error startRevokeSignature(const Key &key, const Key &signingKey,
                                const std::vector<UserID> &userIds = std::vector<UserID>());
+
+    Error addAdsk(const Key &k, const char *adsk);
+    Error startAddAdsk(const Key &k, const char *adsk);
 
     // using TofuInfo::Policy
     Error setTofuPolicy(const Key &k, unsigned int policy);
@@ -370,6 +395,7 @@ public:
         // Keep in line with core's flags
         DecryptNone = 0,
         DecryptVerify = 1,
+        DecryptArchive = 2,
         DecryptUnwrap = 128,
         DecryptMaxValue = 0x80000000
     };
@@ -447,7 +473,10 @@ public:
         NoCompress = 16,
         Symmetric = 32,
         ThrowKeyIds = 64,
-        EncryptWrap = 128
+        EncryptWrap = 128,
+        WantAddress = 256,
+        EncryptArchive = 512,
+        EncryptFile = 1024
     };
     EncryptionResult encrypt(const std::vector<Key> &recipients, const Data &plainText, Data &cipherText, EncryptionFlags flags);
     GpgME::Error encryptSymmetrically(const Data &plainText, Data &cipherText);

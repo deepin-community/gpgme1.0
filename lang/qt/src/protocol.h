@@ -50,13 +50,17 @@ class ImportFromKeyserverJob;
 class ExportJob;
 class DownloadJob;
 class DeleteJob;
+class EncryptArchiveJob;
 class EncryptJob;
 class DecryptJob;
+class SignArchiveJob;
+class SignEncryptArchiveJob;
 class SignJob;
 class SignKeyJob;
 class VerifyDetachedJob;
 class VerifyOpaqueJob;
 class SignEncryptJob;
+class DecryptVerifyArchiveJob;
 class DecryptVerifyJob;
 class RefreshKeysJob;
 class ChangeExpiryJob;
@@ -73,6 +77,7 @@ class GpgCardJob;
 class ReceiveKeysJob;
 class RevokeKeyJob;
 class SetPrimaryUserIDJob;
+class WKDRefreshJob;
 
 /** The main entry point for QGpgME Comes in OpenPGP and SMIME(CMS) flavors.
  *
@@ -189,6 +194,13 @@ public:
      * OpenPGP key.
      */
     virtual SetPrimaryUserIDJob *setPrimaryUserIDJob() const = 0;
+
+    virtual EncryptArchiveJob *encryptArchiveJob(bool armor = false) const = 0;
+    virtual SignArchiveJob *signArchiveJob(bool armor = false) const = 0;
+    virtual SignEncryptArchiveJob *signEncryptArchiveJob(bool armor = false) const = 0;
+    virtual DecryptVerifyArchiveJob *decryptVerifyArchiveJob() const = 0;
+
+    virtual WKDRefreshJob *wkdRefreshJob() const = 0;
 };
 
 /** Obtain a reference to the OpenPGP Protocol.

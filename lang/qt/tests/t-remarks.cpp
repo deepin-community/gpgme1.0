@@ -39,11 +39,12 @@
 #include <QTest>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include "debug.h"
 #include "keylistjob.h"
 #include "protocol.h"
 #include "signkeyjob.h"
-#include "context.h"
-#include "engineinfo.h"
+#include <gpgme++/context.h>
+#include <gpgme++/engineinfo.h>
 
 #include "t-support.h"
 
@@ -76,7 +77,7 @@ public:
         QVERIFY (job);
         hookUpPassphraseProvider(job);
 
-        // Setup the job
+        // Set up the job
         job->setExportable(false);
         std::vector<unsigned int> uids;
         uids.push_back(0);
@@ -90,7 +91,7 @@ public:
                                                         const GpgME::Error) {
             Q_EMIT asyncDone();
             if (err2) {
-                qDebug() << "Error: " << err2.asString();
+                qDebug() << "Error: " << err2;
             }
             QVERIFY(err2);
         });
@@ -127,7 +128,7 @@ private Q_SLOTS:
         QVERIFY (job);
         hookUpPassphraseProvider(job);
 
-        // Setup the job
+        // Set up the job
         job->setExportable(true);
         std::vector<unsigned int> uids;
         uids.push_back(0);
@@ -159,7 +160,7 @@ private Q_SLOTS:
         QVERIFY (job3);
         hookUpPassphraseProvider(job3);
 
-        // Setup the job
+        // Set up the job
         job3->setExportable(false);
         job3->setUserIDsToSign(uids);
         job3->setSigningKey(seckey);
@@ -237,7 +238,7 @@ private Q_SLOTS:
         QVERIFY (job3);
         hookUpPassphraseProvider(job3);
 
-        // Setup the job
+        // Set up the job
         job3->setExportable(false);
         job3->setUserIDsToSign(uids);
         job3->setSigningKey(zulu);
@@ -291,7 +292,7 @@ private Q_SLOTS:
         QVERIFY (job);
         hookUpPassphraseProvider(job);
 
-        // Setup the job
+        // Set up the job
         job->setExportable(false);
         std::vector<unsigned int> uids;
         uids.push_back(0);
@@ -323,7 +324,7 @@ private Q_SLOTS:
         QVERIFY (job3);
         hookUpPassphraseProvider(job3);
 
-        // Setup the job
+        // Set up the job
         job3->setExportable(false);
         job3->setUserIDsToSign(uids);
         job3->setSigningKey(seckey);
@@ -372,7 +373,7 @@ private Q_SLOTS:
         QVERIFY (job);
         hookUpPassphraseProvider(job);
 
-        // Setup the job
+        // Set up the job
         job->setExportable(false);
         std::vector<unsigned int> uids;
         uids.push_back(0);
@@ -403,7 +404,7 @@ private Q_SLOTS:
         QVERIFY (job2);
         hookUpPassphraseProvider(job2);
 
-        // Setup the job
+        // Set up the job
         job2->setExportable(false);
         job2->setUserIDsToSign(uids);
         job2->setSigningKey(seckey);
@@ -424,7 +425,7 @@ private Q_SLOTS:
         QVERIFY (job3);
         hookUpPassphraseProvider(job3);
 
-        // Setup the job
+        // Set up the job
         job3->setExportable(false);
         job3->setUserIDsToSign(uids);
         job3->setSigningKey(seckey);

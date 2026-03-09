@@ -37,22 +37,58 @@
 
 #include "qgpgmequickjob.h"
 
-#include "context.h"
-#include "key.h"
+#include "qgpgme_debug.h"
+#include "quickjob_p.h"
 #include "util.h"
+
+#include <gpgme++/context.h>
+#include <gpgme++/key.h>
+
 
 using namespace QGpgME;
 using namespace GpgME;
 
+namespace
+{
+
+class QGpgMEQuickJobPrivate : public QuickJobPrivate
+{
+    QGpgMEQuickJob *q = nullptr;
+
+public:
+    QGpgMEQuickJobPrivate(QGpgMEQuickJob *qq)
+        : q{qq}
+    {
+    }
+
+    ~QGpgMEQuickJobPrivate() override = default;
+
+private:
+    GpgME::Error startIt() override
+    {
+        Q_ASSERT(!"Not supported by this Job class.");
+        return Error::fromCode(GPG_ERR_NOT_SUPPORTED);
+    }
+
+    void startNow() override
+    {
+        Q_ASSERT(!"Not supported by this Job class.");
+        q->run();
+    }
+
+    GpgME::Error startSetKeyEnabled(const GpgME::Key &key, bool enable) override;
+};
+
+}
+
 QGpgMEQuickJob::QGpgMEQuickJob(Context *context)
     : mixin_type(context)
 {
+    setJobPrivate(this, std::unique_ptr<QGpgMEQuickJobPrivate>{new QGpgMEQuickJobPrivate{this}});
     lateInitialization();
 }
 
-QGpgMEQuickJob::~QGpgMEQuickJob()
-{
-}
+QGpgMEQuickJob::~QGpgMEQuickJob() = default;
 
 static QGpgMEQuickJob::result_type createWorker(GpgME::Context *ctx,
                                                 const QString &uid,
@@ -64,7 +100,8 @@ static QGpgMEQuickJob::result_type createWorker(GpgME::Context *ctx,
     auto err = ctx->createKey(uid.toUtf8().constData(),
                               algo,
                               0,
-                              expires.isValid() ? (unsigned long) (expires.toMSecsSinceEpoch() / 1000) : 0,
+                              expires.isValid() ? (unsigned long) (expires.toMSecsSinceEpoch() / 1000
+                                  - QDateTime::currentSecsSinceEpoch()) : 0,
                               key,
                               flags);
     return std::make_tuple(err, QString(), Error());
@@ -77,7 +114,8 @@ static QGpgMEQuickJob::result_type addSubkeyWorker(GpgME::Context *ctx,
                                                     unsigned int flags)
 {
     auto err = ctx->createSubkey(key, algo,  0,
-                                 expires.isValid() ? (unsigned long) (expires.toMSecsSinceEpoch() / 1000): 0,
+                                 expires.isValid() ? (unsigned long) (expires.toMSecsSinceEpoch() / 1000
+                                     - QDateTime::currentSecsSinceEpoch()): 0,
                                  flags);
     return std::make_tuple(err, QString(), Error());
 }
@@ -104,6 +142,12 @@ static QGpgMEQuickJob::result_type revokeSignatureWorker(Context *ctx,
                                                          const std::vector<UserID> &userIds)
 {
     const auto err = ctx->revokeSignature(key, signingKey, userIds);
+    return std::make_tuple(err, QString(), Error());
+}
+
+static QGpgMEQuickJob::result_type addAdskWorker(Context *ctx, const Key &key, const char *adsk)
+{
+    const auto err = ctx->addAdsk(key, adsk);
     return std::make_tuple(err, QString(), Error());
 }
 
@@ -138,6 +182,30 @@ void QGpgMEQuickJob::startAddSubkey(const GpgME::Key &key, const char *algo,
 void QGpgMEQuickJob::startRevokeSignature(const Key &key, const Key &signingKey, const std::vector<UserID> &userIds)
 {
     run(std::bind(&revokeSignatureWorker, std::placeholders::_1, key, signingKey, userIds));
+}
+
+void QGpgMEQuickJob::startAddAdsk(const GpgME::Key &key, const char *adsk)
+{
+    run(std::bind(&addAdskWorker, std::placeholders::_1, key, adsk));
+}
+
+static QGpgMEQuickJob::result_type set_key_enabled(Context *ctx, const Key &key, bool enabled)
+{
+    const auto err = ctx->setKeyEnabled(key, enabled);
+    return std::make_tuple(err, QString(), Error());
+}
+
+Error QGpgMEQuickJobPrivate::startSetKeyEnabled(const Key &key, bool enabled)
+{
+    if (key.isNull()) {
+        return Error::fromCode(GPG_ERR_INV_VALUE);
+    }
+
+    q->run([=](Context *ctx) {
+        return set_key_enabled(ctx, key, enabled);
+    });
+
+    return {};
 }
 
 #include "qgpgmequickjob.moc"

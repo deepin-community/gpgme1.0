@@ -31,7 +31,6 @@
 
 #include <gpgme.h>
 
-#include <sstream>
 #include <vector>
 
 // avoid conflict (msvc)
@@ -112,14 +111,6 @@ unsigned int GpgRevokeKeyEditInteractor::Private::nextState(unsigned int status,
 
     static const Error GENERAL_ERROR = Error::fromCode(GPG_ERR_GENERAL);
 
-    if (q->needsNoResponse(status)) {
-        return q->state();
-    }
-
-    if (status == GPGME_STATUS_ERROR) {
-        err = q->parseStatusError(args);
-        return ERROR;
-    }
     switch (const auto state = q->state()) {
     case START:
         if (status == GPGME_STATUS_GET_LINE &&
@@ -146,7 +137,7 @@ unsigned int GpgRevokeKeyEditInteractor::Private::nextState(unsigned int status,
         if (status == GPGME_STATUS_GET_LINE &&
                 strcmp(args, "ask_revocation_reason.text") == 0) {
             nextLine++;
-            return nextLine < reasonLines.size() ? REASON_TEXT : REASON_TEXT_DONE;
+            return static_cast<std::size_t>(nextLine) < reasonLines.size() ? REASON_TEXT : REASON_TEXT_DONE;
         }
         err = GENERAL_ERROR;
         return ERROR;
@@ -155,7 +146,7 @@ unsigned int GpgRevokeKeyEditInteractor::Private::nextState(unsigned int status,
             if (status == GPGME_STATUS_GET_LINE &&
                     strcmp(args, "ask_revocation_reason.text") == 0) {
                 nextLine++;
-                return nextLine < reasonLines.size() ? state + 1 : REASON_TEXT_DONE;
+                return static_cast<std::size_t>(nextLine) < reasonLines.size() ? state + 1 : REASON_TEXT_DONE;
             }
         }
         err = GENERAL_ERROR;

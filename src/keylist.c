@@ -58,6 +58,9 @@ typedef struct
   /* The error code from ERROR keydb_search. */
   gpgme_error_t keydb_search_err;
 
+  /* The error code from a FAILURE status line or 0.  */
+  gpg_error_t failure_code;
+
   gpgme_key_t tmp_key;
 
   /* This points to the last uid in tmp_key.  */
@@ -144,6 +147,15 @@ keylist_status_handler (void *priv, gpgme_status_code_t code, char *args)
       if (!opd->keydb_search_err && !strcmp (args, "keydb_search"))
         opd->keydb_search_err = err;
       err = 0;
+      break;
+
+    case GPGME_STATUS_FAILURE:
+      if (!opd->failure_code
+          || gpg_err_code (opd->failure_code) == GPG_ERR_GENERAL)
+        opd->failure_code = _gpgme_parse_failure (args);
+      if (opd->failure_code && !strcmp (args, "option-parser")
+          && gpg_err_code (opd->failure_code) == GPG_ERR_GENERAL)
+        err = gpg_error (GPG_ERR_INV_ENGINE);
       break;
 
     case GPGME_STATUS_IMPORT_OK:
@@ -286,6 +298,18 @@ set_subkey_capability (gpgme_subkey_t subkey, const char *src)
 	case 'a':
 	  subkey->can_authenticate = 1;
 	  break;
+
+        case 'r':
+          subkey->can_renc = 1;
+          break;
+
+        case 't':
+          subkey->can_timestamp = 1;
+          break;
+
+        case 'g':
+          subkey->is_group_owned = 1;
+          break;
 
 	case 'q':
 	  subkey->is_qualified = 1;
@@ -541,6 +565,26 @@ static void
 finish_key (gpgme_ctx_t ctx, op_data_t opd)
 {
   gpgme_key_t key = opd->tmp_key;
+  gpgme_subkey_t subkey;
+
+  /* Set the has_foo flags from the subkey capabilities.  */
+  if (key)
+    {
+      /* Note that we could have set has_certify always for OpenPGP
+       * but for X.509 a key is often not allowed to certify and thus
+       * we better take it from the subkey capabilities.  */
+      for (subkey = key->subkeys; subkey; subkey = subkey->next)
+        {
+          if (subkey->can_encrypt)
+            key->has_encrypt = 1;
+          if (subkey->can_sign)
+            key->has_sign = 1;
+          if (subkey->can_certify)
+            key->has_certify = 1;
+          if (subkey->can_authenticate)
+            key->has_authenticate = 1;
+        }
+    }
 
   opd->tmp_key = NULL;
   opd->tmp_uid = NULL;
@@ -558,8 +602,8 @@ keylist_colon_handler (void *priv, char *line)
   gpgme_ctx_t ctx = (gpgme_ctx_t) priv;
   enum
     {
-      RT_NONE, RT_SIG, RT_UID, RT_TFS, RT_SUB, RT_PUB, RT_FPR, RT_GRP,
-      RT_SSB, RT_SEC, RT_CRT, RT_CRS, RT_REV, RT_SPK
+      RT_NONE, RT_SIG, RT_UID, RT_TFS, RT_SUB, RT_PUB, RT_FPR, RT_FP2, RT_GRP,
+      RT_SSB, RT_SEC, RT_CRT, RT_CRS, RT_REV, RT_SPK, RT_RVK
     }
   rectype = RT_NONE;
 #define NR_FIELDS 20
@@ -611,6 +655,8 @@ keylist_colon_handler (void *priv, char *line)
     rectype = RT_CRS;
   else if (!strcmp (field[0], "fpr") && key)
     rectype = RT_FPR;
+  else if (!strcmp (field[0], "fp2") && key)
+    rectype = RT_FP2;
   else if (!strcmp (field[0], "grp") && key)
     rectype = RT_GRP;
   else if (!strcmp (field[0], "uid") && key)
@@ -623,6 +669,8 @@ keylist_colon_handler (void *priv, char *line)
     rectype = RT_SSB;
   else if (!strcmp (field[0], "spk") && key)
     rectype = RT_SPK;
+  else if (!strcmp (field[0], "rvk") && key)
+    rectype = RT_RVK;
   else
     rectype = RT_NONE;
 
@@ -902,6 +950,27 @@ keylist_colon_handler (void *priv, char *line)
 	}
       break;
 
+    case RT_FP2:
+      /* Either the SHA256 fingerprint of an X.509 cert or the
+       * alternate fingerprint of a v4 OpenPGP packet. (We take only
+       * the first one).  */
+      if (fields >= 10 && field[9] && *field[9])
+	{
+          /* Need to apply it to the last subkey because all subkeys
+             do have fingerprints. */
+          subkey = key->_last_subkey;
+          if (!subkey->v5fpr)
+            {
+              subkey->v5fpr = strdup (field[9]);
+              if (!subkey->v5fpr)
+                return gpg_error_from_syserror ();
+            }
+          /* Note that we don't store a copy in the key object as we
+           * do with the standard fingerprint.  */
+	}
+      break;
+
+
     case RT_GRP:
       /* Field 10 has the keygrip.  */
       if (fields >= 10 && field[9] && *field[9])
@@ -1057,6 +1126,39 @@ keylist_colon_handler (void *priv, char *line)
 	      keysig->_last_notation = notation;
 	    }
 	}
+      break;
+
+    case RT_RVK:
+      /* Ignore revocation keys without fingerprint */
+      if (fields >= 10 && *field[9])
+        {
+          gpgme_revocation_key_t revkey = NULL;
+
+          err = _gpgme_key_add_rev_key (key, field[9]);
+          if (err)
+            return err;
+
+          revkey = key->_last_revkey;
+          assert (revkey);
+
+          /* Field 4 has the public key algorithm.  */
+          {
+            int i = atoi (field[3]);
+            if (i >= 1 && i < 128)
+              revkey->pubkey_algo = _gpgme_map_pk_algo (i, ctx->protocol);
+          }
+
+          /* Field 11 has the class (eg, 0x40 means sensitive).  */
+          if (fields >= 11 && field[10][0] && field[10][1])
+            {
+              int key_class = _gpgme_hextobyte (field[10]);
+              if (key_class >= 0)
+                revkey->key_class = key_class;
+              if (field[10][2] == 's')
+                revkey->sensitive = 1;
+            }
+        }
+      break;
 
     case RT_NONE:
       /* Unknown record.  */
@@ -1114,7 +1216,6 @@ gpgme_op_keylist_start (gpgme_ctx_t ctx, const char *pattern, int secret_only)
   gpgme_error_t err;
   void *hook;
   op_data_t opd;
-  int flags = 0;
 
   TRACE_BEG  (DEBUG_CTX, "gpgme_op_keylist_start", ctx,
 	      "pattern=%s, secret_only=%i", pattern, secret_only);
@@ -1143,11 +1244,8 @@ gpgme_op_keylist_start (gpgme_ctx_t ctx, const char *pattern, int secret_only)
   if (err)
     return TRACE_ERR (err);
 
-  if (ctx->offline)
-    flags |= GPGME_ENGINE_FLAG_OFFLINE;
-
   err = _gpgme_engine_op_keylist (ctx->engine, pattern, secret_only,
-				  ctx->keylist_mode, flags);
+				  ctx->keylist_mode);
   return TRACE_ERR (err);
 }
 
@@ -1162,7 +1260,6 @@ gpgme_op_keylist_ext_start (gpgme_ctx_t ctx, const char *pattern[],
   gpgme_error_t err;
   void *hook;
   op_data_t opd;
-  int flags = 0;
 
   TRACE_BEG  (DEBUG_CTX, "gpgme_op_keylist_ext_start", ctx,
 	      "secret_only=%i, reserved=0x%x", secret_only, reserved);
@@ -1190,12 +1287,8 @@ gpgme_op_keylist_ext_start (gpgme_ctx_t ctx, const char *pattern[],
   if (err)
     return TRACE_ERR (err);
 
-  if (ctx->offline)
-    flags |= GPGME_ENGINE_FLAG_OFFLINE;
-
   err = _gpgme_engine_op_keylist_ext (ctx->engine, pattern, secret_only,
-				      reserved, ctx->keylist_mode,
-				      flags);
+				      reserved, ctx->keylist_mode);
   return TRACE_ERR (err);
 }
 
@@ -1296,12 +1389,21 @@ gpgme_op_keylist_next (gpgme_ctx_t ctx, gpgme_key_t *r_key)
 gpgme_error_t
 gpgme_op_keylist_end (gpgme_ctx_t ctx)
 {
+  void *hook;
+  op_data_t opd;
+  gpg_error_t err;
+
   TRACE (DEBUG_CTX, "gpgme_op_keylist_end", ctx, "");
 
   if (!ctx)
     return gpg_error (GPG_ERR_INV_VALUE);
 
-  return 0;
+  err = _gpgme_op_data_lookup (ctx, OPDATA_KEYLIST, &hook, -1, NULL);
+  opd = hook;
+  if (!err && opd && opd->failure_code)
+    err = opd->failure_code;
+
+  return err;
 }
 
 

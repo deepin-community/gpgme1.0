@@ -47,6 +47,7 @@ show_usage (int ex)
          "  --verbose        run in verbose mode\n"
          "  --openpgp        use the OpenPGP protocol (default)\n"
          "  --cms            use the CMS protocol\n"
+         "  --chain          list all keys of the X.509 chain\n"
          "  --secret         list only secret keys\n"
          "  --with-secret    list pubkeys with secret info filled\n"
          "  --local          use GPGME_KEYLIST_MODE_LOCAL\n"
@@ -55,15 +56,30 @@ show_usage (int ex)
          "  --tofu           use GPGME_KEYLIST_MODE_TOFU\n"
          "  --sig-notations  use GPGME_KEYLIST_MODE_SIG_NOTATIONS\n"
          "  --ephemeral      use GPGME_KEYLIST_MODE_EPHEMERAL\n"
+         "  --v5fpr          use GPGME_KEYLIST_MODE_V5FPR\n"
          "  --validate       use GPGME_KEYLIST_MODE_VALIDATE\n"
          "  --import         import all keys\n"
          "  --offline        use offline mode\n"
+         "  --no-trust-check disable automatic trust database check\n"
          "  --from-file      list all keys in the given file\n"
          "  --from-wkd       list key from a web key directory\n"
          "  --require-gnupg  required at least the given GnuPG version\n"
          "  --trust-model    use the specified trust-model\n"
          , stderr);
   exit (ex);
+}
+
+
+static char *
+xstrdup (const char *string)
+{
+  char *p = strdup (string);
+  if (!p)
+    {
+      fprintf (stderr, "strdup failed\n");
+      exit (2);
+    }
+  return p;
 }
 
 
@@ -103,11 +119,14 @@ main (int argc, char **argv)
   gpgme_protocol_t protocol = GPGME_PROTOCOL_OpenPGP;
   int only_secret = 0;
   int offline = 0;
+  int no_trust_check = 0;
   int from_file = 0;
   int from_wkd = 0;
+  int with_chain = 0;
   gpgme_data_t data = NULL;
   char *trust_model = NULL;
-
+  char *chain_id = NULL;
+  char *last_chain_id = NULL;
 
   if (argc)
     { argc--; argv++; }
@@ -135,6 +154,11 @@ main (int argc, char **argv)
       else if (!strcmp (*argv, "--cms"))
         {
           protocol = GPGME_PROTOCOL_CMS;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--chain"))
+        {
+          with_chain = 1;
           argc--; argv++;
         }
       else if (!strcmp (*argv, "--secret"))
@@ -182,6 +206,11 @@ main (int argc, char **argv)
           mode |= GPGME_KEYLIST_MODE_WITH_SECRET;
           argc--; argv++;
         }
+      else if (!strcmp (*argv, "--v5fpr"))
+        {
+          mode |= GPGME_KEYLIST_MODE_WITH_V5FPR;
+          argc--; argv++;
+        }
       else if (!strcmp (*argv, "--import"))
         {
           import = 1;
@@ -190,6 +219,11 @@ main (int argc, char **argv)
       else if (!strcmp (*argv, "--offline"))
         {
           offline = 1;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--no-trust-check"))
+        {
+          no_trust_check = 1;
           argc--; argv++;
         }
       else if (!strcmp (*argv, "--from-file"))
@@ -238,6 +272,12 @@ main (int argc, char **argv)
 
   gpgme_set_offline (ctx, offline);
 
+  if (no_trust_check)
+    {
+      err = gpgme_set_ctx_flag (ctx, "no-auto-check-trustdb", "1");
+      fail_if_err (err);
+    }
+
   if (trust_model)
     {
       err = gpgme_set_ctx_flag (ctx, "trust-model", trust_model);
@@ -262,22 +302,30 @@ main (int argc, char **argv)
     err = gpgme_op_keylist_start (ctx, argc? argv[0]:NULL, only_secret);
   fail_if_err (err);
 
+ next_cert:
   while (!(err = gpgme_op_keylist_next (ctx, &key)))
     {
       gpgme_user_id_t uid;
       gpgme_tofu_info_t ti;
       gpgme_key_sig_t ks;
+      gpgme_revocation_key_t revkey;
       int nuids;
       int nsub;
       int nsigs;
+      int nrevkeys;
 
       printf ("keyid   : %s\n", key->subkeys?nonnull (key->subkeys->keyid):"?");
-      printf ("caps    : %s%s%s%s\n",
+      printf ("can_cap : %s%s%s%s\n",
               key->can_encrypt? "e":"",
               key->can_sign? "s":"",
               key->can_certify? "c":"",
               key->can_authenticate? "a":"");
-      printf ("flags   :%s%s%s%s%s%s%s%s\n",
+      printf ("has_cap : %s%s%s%s\n",
+              key->has_encrypt? "e":"",
+              key->has_sign? "s":"",
+              key->has_certify? "c":"",
+              key->has_authenticate? "a":"");
+      printf ("flags   :%s%s%s%s%s%s%s%s%s\n",
               key->secret? " secret":"",
               key->revoked? " revoked":"",
               key->expired? " expired":"",
@@ -285,32 +333,50 @@ main (int argc, char **argv)
               key->invalid? " invalid":"",
               key->is_qualified? " qualified":"",
               key->subkeys && key->subkeys->is_de_vs? " de-vs":"",
+              key->subkeys && key->subkeys->is_de_vs
+              && key->subkeys->is_de_vs? "(beta)":"",
               key->subkeys && key->subkeys->is_cardkey? " cardkey":"");
       printf ("upd     : %lu (%u)\n", key->last_update, key->origin);
+      if (key->chain_id)
+        {
+          printf ("chain_id: %s\n", nonnull (key->chain_id));
+          free (chain_id);
+          chain_id = xstrdup (key->chain_id);
+        }
 
       subkey = key->subkeys;
       for (nsub=0; subkey; subkey = subkey->next, nsub++)
         {
+          char *algostr;
+
           printf ("fpr   %2d: %s\n", nsub, nonnull (subkey->fpr));
+          if (subkey->v5fpr)
+            printf ("v5fpr %2d: %s\n", nsub, nonnull (subkey->v5fpr));
           if (subkey->keygrip)
             printf ("grip  %2d: %s\n", nsub, subkey->keygrip);
-          if (subkey->curve)
-            printf ("curve %2d: %s\n", nsub, subkey->curve);
-          printf ("caps  %2d: %s%s%s%s\n",
+          algostr = gpgme_pubkey_algo_string (subkey);
+          printf   ("algo  %2d: %s (%s)\n", nsub, algostr,
+                    gpgme_pubkey_algo_name (subkey->pubkey_algo));
+          gpgme_free (algostr);
+          printf ("caps  %2d: %s%s%s%s%s%s\n",
                   nsub,
                   subkey->can_encrypt? "e":"",
                   subkey->can_sign? "s":"",
                   subkey->can_certify? "c":"",
-                  subkey->can_authenticate? "a":"");
-          printf ("flags %2d:%s%s%s%s%s%s%s%s\n",
+                  subkey->can_authenticate? "a":"",
+                  subkey->can_renc? "r":"",
+                  subkey->can_timestamp? "t":"");
+          printf ("flags %2d:%s%s%s%s%s%s%s%s%s%s\n",
                   nsub,
                   subkey->secret? " secret":"",
                   subkey->revoked? " revoked":"",
                   subkey->expired? " expired":"",
                   subkey->disabled? " disabled":"",
                   subkey->invalid? " invalid":"",
+                  subkey->is_group_owned? " group":"",
                   subkey->is_qualified? " qualified":"",
                   subkey->is_de_vs? " de-vs":"",
+                  subkey->is_de_vs && subkey->beta_compliance? "(beta)":"",
                   subkey->is_cardkey? " cardkey":"");
         }
       for (nuids=0, uid=key->uids; uid; uid = uid->next, nuids++)
@@ -368,6 +434,13 @@ main (int argc, char **argv)
             }
         }
 
+      revkey = key->revocation_keys;
+      for (nrevkeys=0; revkey; revkey = revkey->next, nrevkeys++)
+        {
+          printf ("revkey%2d: %s\n", nrevkeys, revkey->fpr);
+          printf ("   class: %x\n", revkey->key_class);
+        }
+
       putchar ('\n');
 
       if (import)
@@ -416,6 +489,25 @@ main (int argc, char **argv)
   for (keyidx=0; keyarray[keyidx]; keyidx++)
     gpgme_key_unref (keyarray[keyidx]);
 
+
+  if (with_chain && chain_id && *chain_id
+      && (!last_chain_id || strcmp (last_chain_id, chain_id)))
+    {
+      if (++with_chain > 30)
+        {
+          fprintf (stderr, PGM ": certificate chain too long - circle?\n");
+          exit (1);
+        }
+
+      free (last_chain_id);
+      last_chain_id = xstrdup (chain_id);
+      err = gpgme_op_keylist_start (ctx, chain_id, 0);
+      fail_if_err (err);
+      goto next_cert;
+    }
+
+  free (chain_id);
+  free (last_chain_id);
   free (trust_model);
 
   gpgme_release (ctx);

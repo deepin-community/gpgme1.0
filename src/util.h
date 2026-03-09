@@ -35,6 +35,8 @@
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif
+#include <stdint.h>
+
 
 #include "gpgme.h"
 
@@ -56,6 +58,7 @@ const char *_gpgme_get_default_gpg_name (void);
 const char *_gpgme_get_default_gpgsm_name (void);
 const char *_gpgme_get_default_g13_name (void);
 const char *_gpgme_get_default_gpgconf_name (void);
+const char *_gpgme_get_default_gpgtar_name (void);
 const char *_gpgme_get_default_uisrv_socket (void);
 int _gpgme_in_gpg_one_mode (void);
 
@@ -96,7 +99,7 @@ int _gpgme_ttyname_r (int fd, char *buf, size_t buflen);
 
 /*-- conversion.c --*/
 
-/* Make sure to to erase the memory (PTR,LEN).  */
+/* Make sure to erase the memory (PTR,LEN).  */
 void _gpgme_wipememory (void *ptr, size_t len);
 
 /* Concatenate the string S1 with all the following strings up to a
@@ -132,17 +135,22 @@ gpgme_error_t _gpgme_encode_percent_string (const char *src, char **destp,
 					    size_t len);
 
 /* Split a string into space delimited fields and remove leading and
- * trailing spaces from each field.  A pointer to the each field is
+ * trailing spaces from each field.  A pointer to each field is
  * stored in ARRAY.  Stop splitting at ARRAYSIZE fields.  The function
  * modifies STRING.  The number of parsed fields is returned.  */
 int _gpgme_split_fields (char *string, char **array, int arraysize);
+
+/* Tokenize STRING using the set of delimiters in DELIM into a NULL
+ * delimited array.  Leading spaces and tabs are removed from all
+ * tokens if TRIM is set.  The caller must free the result.  */
+char **_gpgme_strtokenize (const char *string, const char *delim, int trim);
 
 /* Convert the field STRING into an unsigned long value.  Check for
  * trailing garbage.  */
 gpgme_error_t _gpgme_strtoul_field (const char *string, unsigned long *result);
 
 /* Convert STRING into an offset value similar to atoi().  */
-gpgme_off_t _gpgme_string_to_off (const char *string);
+uint64_t _gpgme_string_to_off (const char *string);
 
 /* Parse the string TIMESTAMP into a time_t.  The string may either be
    seconds since Epoch or in the ISO 8601 format like
@@ -159,6 +167,9 @@ int _gpgme_map_pk_algo (int algo, gpgme_protocol_t protocol);
 
 const char *_gpgme_cipher_algo_name (int algo, gpgme_protocol_t protocol);
 const char *_gpgme_cipher_mode_name (int algo, gpgme_protocol_t protocol);
+
+/* Replace all backslashes in STRING with forward slashes.  */
+void _gpgme_replace_backslashes (char *string);
 
 
 /*-- b64dec.c --*/
@@ -224,6 +235,7 @@ int _gpgme_assuan_log_cb (assuan_context_t ctx, void *hook,
       {									\
 	switch (comp_ul)						\
 	  {								\
+          case 2023: (result)->beta_compliance = 1; /*fallthru */       \
 	  case 23: (result)->is_de_vs = 1; break;			\
 	  }								\
       }									\

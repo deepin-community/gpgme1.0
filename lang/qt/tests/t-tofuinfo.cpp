@@ -38,21 +38,23 @@
 #include <QTemporaryDir>
 #include <QSignalSpy>
 
+#include "debug.h"
 #include "protocol.h"
-#include "tofuinfo.h"
+#include <gpgme++/tofuinfo.h>
 #include "tofupolicyjob.h"
 #include "verifyopaquejob.h"
-#include "verificationresult.h"
-#include "signingresult.h"
+#include <gpgme++/verificationresult.h>
+#include <gpgme++/signingresult.h>
 #include "importjob.h"
-#include "importresult.h"
+#include <gpgme++/importresult.h>
 #include "keylistjob.h"
-#include "keylistresult.h"
+#include <gpgme++/keylistresult.h>
 #include "signjob.h"
-#include "key.h"
+#include <gpgme++/key.h>
+
 #include "t-support.h"
-#include "engineinfo.h"
-#include "context.h"
+#include <gpgme++/engineinfo.h>
+#include <gpgme++/context.h>
 #include <iostream>
 
 using namespace QGpgME;
@@ -162,7 +164,7 @@ private:
         delete job;
 
         QVERIFY(!sigResult.error());
-        foreach (const auto uid, keys[0].userIDs()) {
+        for (const auto &uid : keys[0].userIDs()) {
             auto info = uid.tofuInfo();
             QVERIFY(info.signCount() == expected - 1);
         }
@@ -376,7 +378,7 @@ private Q_SLOTS:
 
         if (keys.empty()) {
             qDebug() << "bravo@example.net not found";
-            qDebug() << "Error: " << result.error().asString();
+            qDebug() << "Error: " << result.error();
             const auto homedir = QString::fromLocal8Bit(qgetenv("GNUPGHOME"));
             qDebug() << "Homedir is: " << homedir;
             QFileInfo fi(homedir + "/pubring.gpg");
@@ -387,7 +389,7 @@ private Q_SLOTS:
                       << fi2.isReadable() << " size: " << fi2.size();
 
             result = job->exec(QStringList(), false, keys);
-            foreach (const auto key, keys) {
+            for (const auto &key : keys) {
                 qDebug() << "Key: " << key.userID(0).name() << " <"
                          << key.userID(0).email()
                          << ">\n fpr: " << key.primaryFingerprint();

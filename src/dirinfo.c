@@ -32,6 +32,12 @@
 #include "sema.h"
 #include "sys-util.h"
 
+#ifdef HAVE_DOSISH_SYSTEM
+# define EXEEXT_S ".exe"
+#else
+# define EXEEXT_S ""
+#endif
+
 DEFINE_STATIC_LOCK (dirinfo_lock);
 
 /* Constants used internally to select the data.  */
@@ -59,6 +65,7 @@ enum
     WANT_DIRMNGR_NAME,
     WANT_PINENTRY_NAME,
     WANT_GPG_WKS_CLIENT_NAME,
+    WANT_GPGTAR_NAME,
     WANT_GPG_ONE_MODE
   };
 
@@ -88,6 +95,7 @@ static struct {
   char *dirmngr_name;
   char *pinentry_name;
   char *gpg_wks_client_name;
+  char *gpgtar_name;
   int  gpg_one_mode;  /* System is in gpg1 mode.  */
 } dirinfo;
 
@@ -287,13 +295,13 @@ get_gpgconf_item (int what)
       if (pgmname && _gpgme_access (pgmname, F_OK))
         {
           _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                        "gpgme-dinfo: gpgconf='%s' [not installed]\n", pgmname);
+                        "gpgme-dinfo: gpgconf='%s' [not installed]", pgmname);
           free (pgmname);
           pgmname = NULL; /* Not available.  */
         }
       else
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo: gpgconf='%s'\n",
+                      "gpgme-dinfo: gpgconf='%s'",
                       pgmname? pgmname : "[null]");
       if (!pgmname)
         {
@@ -320,59 +328,59 @@ get_gpgconf_item (int what)
       dirinfo.valid = 1;
       if (dirinfo.gpg_name)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo:     gpg='%s'\n",
+                      "gpgme-dinfo:       gpg='%s'",
                       dirinfo.gpg_name);
       if (dirinfo.g13_name)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo:     g13='%s'\n",
+                      "gpgme-dinfo:       g13='%s'",
                       dirinfo.g13_name);
       if (dirinfo.gpgsm_name)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo:   gpgsm='%s'\n",
+                      "gpgme-dinfo:     gpgsm='%s'",
                       dirinfo.gpgsm_name);
       if (dirinfo.keyboxd_name)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo:     keyboxd='%s'\n",
+                      "gpgme-dinfo:   keyboxd='%s'",
                       dirinfo.keyboxd_name);
       if (dirinfo.agent_name)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo:     gpg-agent='%s'\n",
+                      "gpgme-dinfo: gpg-agent='%s'",
                       dirinfo.agent_name);
       if (dirinfo.scdaemon_name)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo:     scdaemon='%s'\n",
+                      "gpgme-dinfo:  scdaemon='%s'",
                       dirinfo.scdaemon_name);
       if (dirinfo.dirmngr_name)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo:     dirmngr='%s'\n",
+                      "gpgme-dinfo:   dirmngr='%s'",
                       dirinfo.dirmngr_name);
       if (dirinfo.pinentry_name)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo:     pinentry='%s'\n",
+                      "gpgme-dinfo:  pinentry='%s'",
                       dirinfo.pinentry_name);
       if (dirinfo.homedir)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo: homedir='%s'\n",
+                      "gpgme-dinfo:   homedir='%s'",
                       dirinfo.homedir);
       if (dirinfo.socketdir)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo: sockdir='%s'\n",
+                      "gpgme-dinfo:   sockdir='%s'",
                       dirinfo.socketdir);
       if (dirinfo.agent_socket)
-        _gpgme_debug (NULL,DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo:   agent='%s'\n",
+        _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
+                      "gpgme-dinfo:     agent='%s'",
                       dirinfo.agent_socket);
       if (dirinfo.agent_ssh_socket)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo:     ssh='%s'\n",
+                      "gpgme-dinfo:       ssh='%s'",
                       dirinfo.agent_ssh_socket);
       if (dirinfo.dirmngr_socket)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo: dirmngr='%s'\n",
+                      "gpgme-dinfo:   dirmngr='%s'",
                       dirinfo.dirmngr_socket);
       if (dirinfo.uisrv_socket)
         _gpgme_debug (NULL, DEBUG_INIT, -1, NULL, NULL, NULL,
-                      "gpgme-dinfo:   uisrv='%s'\n",
+                      "gpgme-dinfo:     uisrv='%s'",
                       dirinfo.uisrv_socket);
     }
   switch (what)
@@ -402,10 +410,20 @@ get_gpgconf_item (int what)
     case WANT_GPG_WKS_CLIENT_NAME:
       if (!dirinfo.gpg_wks_client_name && dirinfo.libexecdir)
         dirinfo.gpg_wks_client_name = _gpgme_strconcat (dirinfo.libexecdir,
-                                                        "/",
+                                                        DIRSEP_S,
                                                         "gpg-wks-client",
+                                                        EXEEXT_S,
                                                         NULL);
       result = dirinfo.gpg_wks_client_name;
+      break;
+    case WANT_GPGTAR_NAME:
+      if (!dirinfo.gpgtar_name && dirinfo.bindir)
+        dirinfo.gpgtar_name = _gpgme_strconcat (dirinfo.bindir,
+                                                DIRSEP_S,
+                                                "gpgtar",
+                                                EXEEXT_S,
+                                                NULL);
+      result = dirinfo.gpgtar_name;
       break;
     }
   UNLOCK (dirinfo_lock);
@@ -455,6 +473,13 @@ _gpgme_get_default_gpgconf_name (void)
   return get_gpgconf_item (WANT_GPGCONF_NAME);
 }
 
+/* Return the default gpgtar file name.  Returns NULL if not known.  */
+const char *
+_gpgme_get_default_gpgtar_name (void)
+{
+  return get_gpgconf_item (WANT_GPGTAR_NAME);
+}
+
 /* Return the default UI-server socket name.  Returns NULL if not
    known.  */
 const char *
@@ -463,7 +488,7 @@ _gpgme_get_default_uisrv_socket (void)
   return get_gpgconf_item (WANT_UISRV_SOCKET);
 }
 
-/* Return true if we are in GnuPG-1 mode - ie. no gpgconf and agent
+/* Return true if we are in GnuPG-1 mode - i.e. no gpgconf and agent
    being optional.  */
 int
 _gpgme_in_gpg_one_mode (void)
@@ -524,6 +549,8 @@ gpgme_get_dirinfo (const char *what)
     return get_gpgconf_item (WANT_PINENTRY_NAME);
   else if (!strcmp (what, "gpg-wks-client-name"))
     return get_gpgconf_item (WANT_GPG_WKS_CLIENT_NAME);
+  else if (!strcmp (what, "gpgtar-name"))
+    return get_gpgconf_item (WANT_GPGTAR_NAME);
   else if (!strcmp (what, "agent-ssh-socket"))
     return get_gpgconf_item (WANT_AGENT_SSH_SOCKET);
   else if (!strcmp (what, "dirmngr-socket"))

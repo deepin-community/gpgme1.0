@@ -47,6 +47,7 @@ public:
     DecryptionResult(gpgme_ctx_t ctx, const Error &err);
     explicit DecryptionResult(const Error &err);
 
+    DecryptionResult(const DecryptionResult &other) = default;
     const DecryptionResult &operator=(DecryptionResult other)
     {
         swap(other);
@@ -74,6 +75,8 @@ public:
     }
     bool isWrongKeyUsage() const;
     bool isDeVs() const;
+    bool isBetaCompliance() const;
+    bool isMime() const;
 
     const char *fileName() const;
 
@@ -103,6 +106,7 @@ public:
     Recipient();
     explicit Recipient(gpgme_recipient_t reci);
 
+    Recipient(const Recipient &other) = default;
     const Recipient &operator=(Recipient other)
     {
         swap(other);

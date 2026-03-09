@@ -19,18 +19,24 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
+#include <gpgme.h>
+#include <gpg-error.h>
+
 #include <unistd.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <locale.h>
 #include <limits.h>
 #include <ctype.h>
+#include <string.h>
 
 #ifdef HAVE_W32_SYSTEM
 #include <windows.h>
 #endif
 
-#include <gpgme.h>
+#ifndef PGM
+#define PGM "unknown program; define PGM before including t-support.h"
+#endif
 
 #ifndef DIM
 #define DIM(v)		     (sizeof(v)/sizeof((v)[0]))
@@ -46,6 +52,17 @@
 		   gpgme_strerror (err));			\
           exit (1);						\
         }							\
+    }								\
+  while (0)
+
+#define fail_with_syserr()			         	\
+  do								\
+    {								\
+      gpg_error_t _err = gpgme_err_code_from_errno (errno);	\
+      fprintf (stderr, PGM": file %s line %d: <%s> %s\n",	\
+               __FILE__, __LINE__, gpgme_strsource (_err),	\
+              gpgme_strerror (_err));			        \
+      exit (1);						        \
     }								\
   while (0)
 
@@ -99,6 +116,46 @@ print_data (gpgme_data_t dh)
     fwrite (buf, ret, 1, stdout);
   if (ret < 0)
     fail_if_err (gpgme_err_code_from_errno (errno));
+#undef BUF_SIZE
+}
+
+
+void
+check_data (gpgme_data_t dh, const char *expected)
+{
+#define BUF_SIZE 512
+  char buf[BUF_SIZE + 1];
+  int expectedlen;
+  int ret;
+
+  if (!expected)
+    {
+      fprintf (stderr, "%s:%i: Expected data must not be NULL.\n",
+               PGM, __LINE__);
+      exit (1);
+    }
+  expectedlen = strlen (expected);
+  if (expectedlen > BUF_SIZE)
+    {
+      fprintf (stderr, "%s:%i: Size of expected data (%d) is greater than "
+               "BUF_SIZE (%d).\n", PGM, __LINE__, expectedlen, BUF_SIZE);
+      exit (1);
+    }
+
+  ret = gpgme_data_seek (dh, 0, SEEK_SET);
+  if (ret)
+    fail_with_syserr ();
+  if ((ret = gpgme_data_read (dh, buf, BUF_SIZE)) < 0)
+    fail_with_syserr ();
+  buf[ret] = 0;
+  if (ret != expectedlen || strncmp (buf, expected, expectedlen))
+    {
+      fprintf (stderr, "%s:%i: Got unexpected data\n", PGM, __LINE__);
+      fprintf (stderr, "Expected data:\n---\n%s---\n", expected);
+      fprintf (stderr, "Actual data:\n---\n%s---\n", buf);
+      exit (1);
+    }
+#undef BUF_SIZE
 }
 
 
@@ -215,4 +272,22 @@ print_import_result (gpgme_import_result_t r)
           r->skipped_new_keys,
           r->not_imported,
           r->skipped_v3_keys);
+}
+
+
+/* Return true if the gpg engine's version is at least REQ_VERSION.  */
+int
+have_gpg_version (const char *req_version)
+{
+  gpgme_engine_info_t engine_info;
+  init_gpgme (GPGME_PROTOCOL_OpenPGP);
+
+  fail_if_err (gpgme_get_engine_info (&engine_info));
+  for (; engine_info; engine_info = engine_info->next)
+    if (engine_info->protocol == GPGME_PROTOCOL_OpenPGP)
+      break;
+
+  test (engine_info);
+
+  return gpgrt_cmp_version (engine_info->version, req_version, 3) >= 0;
 }

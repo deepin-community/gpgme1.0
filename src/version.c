@@ -72,6 +72,13 @@ do_subsystem_inits (void)
 
     WSAStartup (0x202, &wsadat);
   }
+
+  /* We want gpgrt's gettext to always output UTF-8. */
+#if GPGRT_VERSION_NUMBER >= 0x013300 /* >= 1.51 */
+  gettext_use_utf8 (3);
+#else
+  gettext_use_utf8 (1);
+#endif
 #endif
 
   _gpgme_debug_subsystem_init ();
@@ -91,7 +98,7 @@ cright_blurb (void)
     "This is GPGME " PACKAGE_VERSION " - The GnuPG Made Easy library\n"
     CRIGHTBLURB
     "\n"
-    "(" BUILD_REVISION " " BUILD_TIMESTAMP ")\n"
+    "("  BUILD_COMMITID " " BUILD_TIMESTAMP ")\n"
     "\n\n";
   return blurb;
 }
@@ -183,7 +190,7 @@ _gpgme_compare_versions (const char *my_version,
 }
 
 
-/* Check that the the version of the library is at minimum the
+/* Check that the version of the library is at minimum the
    requested one and return the version string; return NULL if the
    condition is not met.  If a NULL is passed to this function, no
    check is done and the version string is simply returned.
@@ -200,7 +207,7 @@ gpgme_check_version (const char *req_version)
 
   /* Catch-22: We need to get at least the debug subsystem ready
      before using the trace facility.  If we won't the trace would
-     automagically initialize the debug system with out the locks
+     automagically initialize the debug system without the locks
      being initialized and missing the assuan log level setting. */
   TRACE (DEBUG_INIT, "gpgme_check_version", NULL,
 	  "req_version=%s, VERSION=%s",

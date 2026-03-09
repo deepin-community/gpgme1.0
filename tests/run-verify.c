@@ -159,11 +159,11 @@ print_result (gpgme_verify_result_t result)
               sig->pka_trust == 0? "n/a" :
               sig->pka_trust == 1? "bad" :
               sig->pka_trust == 2? "okay": "RFU");
-      printf ("  other flags:%s%s%s\n",
+      printf ("  other flags:%s%s%s%s\n",
               sig->wrong_key_usage? " wrong-key-usage":"",
               sig->chain_model? " chain-model":"",
-              sig->is_de_vs? " de-vs":""
-              );
+              sig->is_de_vs? " de-vs":"",
+              sig->is_de_vs && sig->beta_compliance? "(beta)":"");
       for (nt = sig->notations; nt; nt = nt->next)
         {
           if (nt->name)
@@ -231,10 +231,18 @@ show_usage (int ex)
          "  --status         print status lines from the backend\n"
          "  --openpgp        use the OpenPGP protocol (default)\n"
          "  --cms            use the CMS protocol\n"
+         "  --binary         assume binary signature\n"
          "  --sender MBOX    use MBOX as sender address\n"
          "  --repeat N       repeat the operation N times\n"
          "  --auto-key-retrieve\n"
          "  --auto-key-import\n"
+         "  --output FILE    write output to FILE instead of stdout\n"
+         "  --archive        extract files from a signed archive FILE\n"
+         "  --directory DIR  extract the files into the directory DIR\n"
+         "  --diagnostics    print diagnostics\n"
+         "  --direct-file-io pass file names instead of streams with content of files to backend\n"
+         "  --proc-all-sigs  pass this option to gpg\n"
+         "  --known-notations STRING  Parse STRING and pass to gpg\n"
          , stderr);
   exit (ex);
 }
@@ -246,10 +254,18 @@ main (int argc, char **argv)
   int last_argc = -1;
   const char *s;
   gpgme_protocol_t protocol = GPGME_PROTOCOL_OpenPGP;
+  gpgme_verify_flags_t flags = 0;
   int print_status = 0;
   const char *sender = NULL;
+  const char *output = NULL;
+  const char *directory = NULL;
+  const char *known_notations = NULL;
   int auto_key_retrieve = 0;
   int auto_key_import = 0;
+  gpgme_data_encoding_t encoding = GPGME_DATA_ENCODING_NONE;
+  int diagnostics = 0;
+  int direct_file_io = 0;
+  int proc_all_sigs = 0;
   int repeats = 1;
   int i;
 
@@ -286,6 +302,11 @@ main (int argc, char **argv)
           protocol = GPGME_PROTOCOL_CMS;
           argc--; argv++;
         }
+      else if (!strcmp (*argv, "--binary"))
+        {
+          encoding = GPGME_DATA_ENCODING_BINARY;
+          argc--; argv++;
+        }
       else if (!strcmp (*argv, "--sender"))
         {
           argc--; argv++;
@@ -312,12 +333,56 @@ main (int argc, char **argv)
           auto_key_import = 1;
           argc--; argv++;
         }
+      else if (!strcmp (*argv, "--output"))
+        {
+          argc--; argv++;
+          if (!argc)
+            show_usage (1);
+          output = *argv;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--archive"))
+        {
+          flags |= GPGME_VERIFY_ARCHIVE;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--directory"))
+        {
+          argc--; argv++;
+          if (!argc)
+            show_usage (1);
+          directory = *argv;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--diagnostics"))
+        {
+          diagnostics = 1;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--direct-file-io"))
+        {
+          direct_file_io = 1;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--proc-all-sigs"))
+        {
+          proc_all_sigs = 1;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--known-notations"))
+        {
+          argc--; argv++;
+          if (!argc)
+            show_usage (1);
+          known_notations = *argv;
+          argc--; argv++;
+        }
       else if (!strncmp (*argv, "--", 2))
         show_usage (1);
 
     }
 
-  if (argc < 1 || argc > 2)
+  if (argc < 1 || argc > 2 || (argc > 1 && (flags & GPGME_VERIFY_ARCHIVE)))
     show_usage (1);
 
   init_gpgme (protocol);
@@ -330,6 +395,7 @@ main (int argc, char **argv)
       gpgme_data_t sig = NULL;
       FILE *fp_msg = NULL;
       gpgme_data_t msg = NULL;
+      gpgme_data_t out = NULL;
       gpgme_verify_result_t result;
 
       if (repeats > 1)
@@ -337,23 +403,26 @@ main (int argc, char **argv)
           printf ("Repeat: %i\n", i);
         }
 
-      fp_sig = fopen (argv[0], "rb");
-      if (!fp_sig)
+      if (!direct_file_io)
         {
-          err = gpgme_error_from_syserror ();
-          fprintf (stderr, PGM ": can't open `%s': %s\n",
-                   argv[0], gpgme_strerror (err));
-          exit (1);
-        }
-      if (argc > 1)
-        {
-          fp_msg = fopen (argv[1], "rb");
-          if (!fp_msg)
+          fp_sig = fopen (argv[0], "rb");
+          if (!fp_sig)
             {
               err = gpgme_error_from_syserror ();
               fprintf (stderr, PGM ": can't open `%s': %s\n",
-                       argv[1], gpgme_strerror (err));
+                       argv[0], gpgme_strerror (err));
               exit (1);
+            }
+          if (argc > 1)
+            {
+              fp_msg = fopen (argv[1], "rb");
+              if (!fp_msg)
+                {
+                  err = gpgme_error_from_syserror ();
+                  fprintf (stderr, PGM ": can't open `%s': %s\n",
+                           argv[1], gpgme_strerror (err));
+                  exit (1);
+                }
             }
         }
 
@@ -367,6 +436,9 @@ main (int argc, char **argv)
         }
       /* gpgme_set_ctx_flag (ctx, "raw-description", "1"); */
 
+      if (proc_all_sigs)
+        gpgme_set_ctx_flag (ctx, "proc-all-sigs", "1");
+
       if (auto_key_retrieve)
         {
           gpgme_set_ctx_flag (ctx, "auto-key-retrieve", "1");
@@ -377,6 +449,12 @@ main (int argc, char **argv)
                        "auto-key-retrieve");
               exit (1);
             }
+        }
+
+      if (known_notations)
+        {
+          err = gpgme_set_ctx_flag (ctx, "known-notations", known_notations);
+          fail_if_err (err);
         }
 
       if (auto_key_import)
@@ -397,26 +475,110 @@ main (int argc, char **argv)
           fail_if_err (err);
         }
 
-      err = gpgme_data_new_from_stream (&sig, fp_sig);
+      if (direct_file_io)
+        err = gpgme_data_new (&sig);
+      else
+        err = gpgme_data_new_from_stream (&sig, fp_sig);
       if (err)
         {
           fprintf (stderr, PGM ": error allocating data object: %s\n",
                    gpgme_strerror (err));
           exit (1);
         }
-      if (fp_msg)
+      gpgme_data_set_encoding (sig, encoding);
+      if (direct_file_io)
         {
-          err = gpgme_data_new_from_stream (&msg, fp_msg);
+          err = gpgme_data_set_file_name (sig, argv[0]);
+          if (err)
+            {
+              fprintf (stderr, PGM ": error setting file name (sig): %s\n",
+                       gpgme_strerror (err));
+              exit (1);
+            }
+        }
+      if (argc > 1)
+        {
+          if (direct_file_io)
+            err = gpgme_data_new (&msg);
+          else
+            err = gpgme_data_new_from_stream (&msg, fp_msg);
           if (err)
             {
               fprintf (stderr, PGM ": error allocating data object: %s\n",
                        gpgme_strerror (err));
               exit (1);
             }
+          if (direct_file_io)
+            {
+              err = gpgme_data_set_file_name (msg, argv[1]);
+              if (err)
+                {
+                  fprintf (stderr, PGM ": error setting file name (msg): %s\n",
+                           gpgme_strerror (err));
+                  exit (1);
+                }
+            }
         }
 
-      err = gpgme_op_verify (ctx, sig, msg, NULL);
+      if (output && !(flags & GPGME_VERIFY_ARCHIVE))
+        {
+          err = gpgme_data_new (&out);
+          if (err)
+            {
+              fprintf (stderr, PGM ": error allocating data object: %s\n",
+                       gpgme_strerror (err));
+              exit (1);
+            }
+          err = gpgme_data_set_file_name (out, output);
+          if (err)
+            {
+              fprintf (stderr, PGM ": error setting file name (out): %s\n",
+                      gpgme_strerror (err));
+              exit (1);
+            }
+        }
+      if (directory && (flags & GPGME_VERIFY_ARCHIVE))
+        {
+          err = gpgme_data_new (&out);
+          if (err)
+            {
+              fprintf (stderr, PGM ": error allocating data object: %s\n",
+                       gpgme_strerror (err));
+              exit (1);
+            }
+          err = gpgme_data_set_file_name (out, directory);
+          if (err)
+            {
+              fprintf (stderr, PGM ": error setting file name (out): %s\n",
+                       gpgme_strerror (err));
+              exit (1);
+            }
+        }
+
+      err = gpgme_op_verify_ext (ctx, flags, sig, msg, out);
       result = gpgme_op_verify_result (ctx);
+
+      if (diagnostics)
+        {
+          gpgme_data_t diag;
+          gpgme_error_t diag_err;
+
+          gpgme_data_new (&diag);
+          diag_err = gpgme_op_getauditlog (ctx, diag, GPGME_AUDITLOG_DIAG);
+          if (diag_err)
+            {
+              fprintf (stderr, PGM ": getting diagnostics failed: %s\n",
+                      gpgme_strerror (diag_err));
+            }
+          else
+            {
+              fputs ("Begin Diagnostics:\n", stdout);
+              print_data (diag);
+              fputs ("End Diagnostics.\n", stdout);
+            }
+          gpgme_data_release (diag);
+        }
+
       if (result)
         print_result (result);
       if (err)
@@ -425,6 +587,7 @@ main (int argc, char **argv)
           exit (1);
         }
 
+      gpgme_data_release (out);
       gpgme_data_release (msg);
       gpgme_data_release (sig);
 

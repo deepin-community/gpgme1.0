@@ -48,6 +48,9 @@ typedef struct
 
   /* The key parameters passed to the crypto engine.  */
   gpgme_data_t key_parameter;
+
+  /* Flag to indicate that an ADSK is to be added.  */
+  unsigned int adskmode : 1;
 } *op_data_t;
 
 
@@ -172,13 +175,15 @@ genkey_status_handler (void *priv, gpgme_status_code_t code, char *args)
       break;
 
     case GPGME_STATUS_FAILURE:
-      opd->failure_code = _gpgme_parse_failure (args);
+      if (!opd->failure_code
+          || gpg_err_code (opd->failure_code) == GPG_ERR_GENERAL)
+        opd->failure_code = _gpgme_parse_failure (args);
       break;
 
     case GPGME_STATUS_EOF:
       if (opd->error_code)
         return opd->error_code;
-      else if (!opd->uidmode && !opd->result.primary && !opd->result.sub)
+      else if (!opd->uidmode && !opd->adskmode && !opd->result.primary && !opd->result.sub)
 	return gpg_error (GPG_ERR_GENERAL);
       else if (opd->failure_code)
         return opd->failure_code;
@@ -442,6 +447,9 @@ createsubkey_start (gpgme_ctx_t ctx, int synchronous,
       if (err)
         return err;
     }
+
+  if (flags & GPGME_CREATE_ADSK)
+    opd->adskmode = 1;
 
   return _gpgme_engine_op_genkey (ctx->engine,
                                   NULL, algo, reserved, expires,

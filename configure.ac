@@ -1,6 +1,6 @@
 # configure.ac for GPGME
 # Copyright (C) 2000 Werner Koch (dd9jn)
-# Copyright (C) 2001-2021 g10 Code GmbH
+# Copyright (C) 2001-2025 g10 Code GmbH
 #
 # This file is part of GPGME.
 #
@@ -31,8 +31,8 @@ min_automake_version="1.14"
 # for the LT versions.
 m4_define([mym4_package],[gpgme])
 m4_define([mym4_major], [1])
-m4_define([mym4_minor], [18])
-m4_define([mym4_micro], [0])
+m4_define([mym4_minor], [24])
+m4_define([mym4_micro], [2])
 
 # Below is m4 magic to extract and compute the git revision number,
 # the decimalized short revision number, a beta version string and a
@@ -44,7 +44,9 @@ m4_define([mym4_isbeta],       m4_argn(2, mym4_verslist))
 m4_define([mym4_version],      m4_argn(4, mym4_verslist))
 m4_define([mym4_revision],     m4_argn(7, mym4_verslist))
 m4_define([mym4_revision_dec], m4_argn(8, mym4_verslist))
+m4_define([mym4_commitid],     m4_argn(9, mym4_verslist))
 m4_esyscmd([echo ]mym4_version[>VERSION])
+m4_esyscmd([echo ]mym4_commitid[>>VERSION])
 AC_INIT([mym4_package],[mym4_version],[https://bugs.gnupg.org])
 
 # LT Version numbers, remember to change them just *before* a release.
@@ -53,20 +55,20 @@ AC_INIT([mym4_package],[mym4_version],[https://bugs.gnupg.org])
 #   (Interfaces added:			AGE++)
 #   (Interfaces removed:		AGE=0)
 #
-LIBGPGME_LT_CURRENT=38
-LIBGPGME_LT_AGE=27
-LIBGPGME_LT_REVISION=0
+LIBGPGME_LT_CURRENT=44
+LIBGPGME_LT_AGE=33
+LIBGPGME_LT_REVISION=2
 
 # If there is an ABI break in gpgmepp or qgpgme also bump the
 # version in IMPORTED_LOCATION in the GpgmeppConfig-w32.cmake.in.in
 
-LIBGPGMEPP_LT_CURRENT=21
-LIBGPGMEPP_LT_AGE=15
-LIBGPGMEPP_LT_REVISION=0
+LIBGPGMEPP_LT_CURRENT=27
+LIBGPGMEPP_LT_AGE=21
+LIBGPGMEPP_LT_REVISION=2
 
-LIBQGPGME_LT_CURRENT=16
-LIBQGPGME_LT_AGE=1
-LIBQGPGME_LT_REVISION=0
+LIBQGPGME_LT_CURRENT=21
+LIBQGPGME_LT_AGE=6
+LIBQGPGME_LT_REVISION=2
 ################################################
 
 AC_SUBST(LIBGPGME_LT_CURRENT)
@@ -85,7 +87,7 @@ AC_SUBST(LIBQGPGME_LT_REVISION)
 GPGME_CONFIG_API_VERSION=1
 ##############################################
 
-NEED_GPG_ERROR_VERSION=1.36
+NEED_GPG_ERROR_VERSION=1.47
 NEED_LIBASSUAN_API=2
 NEED_LIBASSUAN_VERSION=2.4.2
 
@@ -103,6 +105,10 @@ AM_MAINTAINER_MODE
 AC_CANONICAL_HOST
 AM_SILENT_RULES
 AC_ARG_VAR(SYSROOT,[locate config scripts also below that directory])
+
+AC_PATH_PROG(YAT2M, [yat2m], [:], [$prefix/bin:$PATH])
+AC_ARG_VAR(YAT2M, [tool to convert texi to man pages])
+AM_CONDITIONAL(HAVE_YAT2M, test "$ac_cv_path_YAT2M" != ":")
 
 # Enable GNU extensions on systems that have them.
 AC_USE_SYSTEM_EXTENSIONS
@@ -206,6 +212,44 @@ esac
 
 AM_CONDITIONAL(HAVE_LD_VERSION_SCRIPT, test "$have_ld_version_script" = "yes")
 
+#
+# Specify how we support our local modification of libtool for Windows
+# 64-bit.  Options are:
+#
+# (1) apply: when appying patch fails, it results failure of entire build
+# (2) never: never apply the patch (no try)
+# (3) try: use patched if it goes well, use original if fails
+#
+AC_ARG_WITH([libtool-modification],
+  AS_HELP_STRING([--with-libtool-modification=apply|never|try],
+                 [how to handle libtool modification (default=never)]),
+                 build_libtool_modification=$withval,
+                 build_libtool_modification=never)
+
+#
+# Apply a patch (locally maintained one of ours) to libtool
+#
+case $host in
+  x86_64-*mingw32*)
+AC_CONFIG_COMMANDS([libtool-patch],[[
+  if test "$build_selection" = never; then
+    echo "patch not applied"
+  elif (mv -f libtool libtool.orig; \
+        sed -f $srcdir/build-aux/libtool-patch.sed libtool.orig >libtool); then
+    echo "applied successfully"
+  elif test "$build_selection" = try; then
+    mv -f libtool.orig libtool
+    echo "patch failed, thus, using original"
+  else
+    echo "patch failed"
+    as_fn_exit 1
+  fi
+]],[build_selection=$build_libtool_modification])
+  ;;
+  *)
+  ;;
+esac
+
 GPG_DEFAULT=no
 GPGSM_DEFAULT=no
 GPGCONF_DEFAULT=no
@@ -218,8 +262,8 @@ have_w64_system=no
 have_macos_system=no
 build_w32_glib=no
 build_w32_qt=no
-available_languages="cl cpp python qt"
-default_languages="cl cpp python qt"
+available_languages="cl cpp python qt qt5 qt6"
+default_languages="cl cpp python qt5 qt6"
 case "${host}" in
     x86_64-*mingw32*)
         have_w64_system=yes
@@ -300,12 +344,44 @@ if test x$fixed_search_path != x ; then
                     [Locate binaries only via this PATH])
 fi
 
+# Option --enable-reduce-relocations
+#
+# Allow building the Qt 6 bindings explicitly with -fPIC if the automatic
+# detection fails. Note: We assume that this flag is always available (unless
+# we built for Windows).
+AC_ARG_ENABLE([reduce-relocations],
+              AS_HELP_STRING([--enable-reduce-relocations],
+                             [build Qt 6 bindings with -fPIC (default is
+                              auto)]),
+              [use_reduce_relocations="$enableval"],
+              [use_reduce_relocations=""])
+
+# Option --enable-no-direct-extern-access
+#
+# Some distributions build Qt 6 with -mno-direct-extern-access. Libraries and
+# applications using Qt then must also be build with this flag. As workaround
+# for a bug in Qt's pkgconfig files which don't have this flag we allow
+# building with this flag explicitly.
+AC_LANG_PUSH(C++)
+AX_CHECK_COMPILE_FLAG([-mno-direct-extern-access],
+                      [have_no_direct_extern_access="yes"],
+                      [have_no_direct_extern_access="no"],
+                      [-Werror])
+AC_LANG_POP()
+AC_ARG_ENABLE([no-direct-extern-access],
+              AS_HELP_STRING([--enable-no-direct-extern-access],
+                             [build Qt 6 bindings with
+                              -mno-direct-extern-access (default is auto)]),
+              [use_no_direct_extern_access="$enableval"],
+              [use_no_direct_extern_access=""])
+
 
 # Note: You need to declare all possible languages also in
 #       lang/Makefile.am's DIST_SUBDIRS.
 AC_ARG_ENABLE([languages],
               AS_HELP_STRING([--enable-languages=languages],
-                             [enable only specific language bindings]),
+                             [enable only specific language bindings:
+                              cl cpp python qt5 qt6]),
                              [enabled_languages=`echo $enableval | \
                              tr ',:' '  ' | tr '[A-Z]' '[a-z]' | \
                              sed 's/c++/cpp/'`],
@@ -331,25 +407,148 @@ for language in $enabled_languages; do
     fi
 done
 
-# Enable C++ 11 if cpp language is requested
-LIST_MEMBER("cpp", $enabled_languages)
+# Check whether qt5 and/or qt6 are enabled
+want_qt5="no"
+LIST_MEMBER("qt5", $enabled_languages)
 if test "$found" = "1"; then
+    if test "$explicit_languages" = "1"; then
+        want_qt5="yes"
+    else
+        want_qt5="maybe"
+    fi
+    # Remove qt5; further down qt will be added
+    enabled_languages=$(echo $enabled_languages | sed 's/qt5//')
+fi
+want_qt6="no"
+LIST_MEMBER("qt6", $enabled_languages)
+if test "$found" = "1"; then
+    if test "$explicit_languages" = "1"; then
+        want_qt6="yes"
+    else
+        want_qt6="maybe"
+    fi
+    # Remove qt6; further down qt will be added
+    enabled_languages=$(echo $enabled_languages | sed 's/qt6//')
+fi
+
+# Check whether qt is enabled; if yes then it has been enabled explicitly
+want_qt="no"
+LIST_MEMBER("qt", $enabled_languages)
+if test "$found" = "1"; then
+    # Ignore qt if specified together with qt5 or qt6
+    if test "$want_qt5" = "no" -a "$want_qt6" = "no"; then
+        want_qt="yes"
+    fi
+    # Remove qt
+    enabled_languages=$(echo $enabled_languages | sed 's/qt//')
+    AC_MSG_WARN([[
+***
+*** Language binding "qt" is deprecated and will be removed in a future version.
+*** Use "qt5" and/or "qt6" instead.
+***]])
+fi
+
+# Ensure that pkg-config is available for all calls of FIND_QT5/FIND_QT6
+PKG_PROG_PKG_CONFIG
+
+# Check for Qt 5 (if qt5 or qt is enabled)
+if test "$want_qt" = "yes"; then
+    want_qt5="maybe"
+fi
+if test "$want_qt5" != "no"; then
+    FIND_QT5
+    if test "$have_qt5_libs" = "yes"; then
+        want_qt5="yes"
+    elif test "$want_qt5" = "yes"; then
+        AC_MSG_ERROR([[
+***
+*** Qt5 (Qt5Core) is required for the Qt 5 binding.
+***]])
+    else
+        want_qt5="no"
+    fi
+fi
+
+# Check for Qt 6 (if qt6 is enabled or if qt is enabled and Qt 5 wasn't found)
+if test "$want_qt" = "yes" -a "$have_qt5_libs" != "yes"; then
+    want_qt6="maybe"
+fi
+if test "$want_qt6" != "no"; then
+    FIND_QT6
+    if test "$have_qt6_libs" = "yes"; then
+        want_qt6="yes";
+    elif test "$want_qt6" = "yes"; then
+        AC_MSG_ERROR([[
+***
+*** Qt6 (Qt6Core) is required for the Qt 6 binding.
+***]])
+    else
+        want_qt6="no"
+    fi
+fi
+
+# Check if any Qt was found (if qt is enabled)
+if test "$want_qt" = "yes" -a "$have_qt5_libs" != "yes" -a "$have_qt6_libs" != "yes"; then
+    AC_MSG_ERROR([[
+***
+*** Qt5 (Qt5Core) or Qt6 (Qt6Core) is required for the Qt bindings.
+***]])
+fi
+
+# Check that cpp is enabled if qt5 or qt6 is enabled and was found
+if test "$want_qt5" = "yes" -o "$want_qt6" = "yes"; then
+    LIST_MEMBER("cpp", $enabled_languages)
+    if test "$found" = "0"; then
+        AC_MSG_ERROR([[
+***
+*** The Qt bindings depend on the C++ binding.
+***]])
+    fi
+fi
+
+# Enable C++ 17 if qt6 is requested
+if test "$want_qt6" = "yes"; then
+    AX_CXX_COMPILE_STDCXX(17, noext, optional)
+    if test "$HAVE_CXX17" != "1"; then
+        if test "$explicit_languages" = "1"; then
+            AC_MSG_ERROR([[
+***
+*** A compiler with c++17 support is required for the Qt 6 binding.
+***]])
+        else
+            want_qt6="no"
+            AC_MSG_WARN([[
+***
+*** No c++17 support detected. Qt 6 binding will be disabled.
+***]])
+        fi
+    fi
+fi
+
+# Enable C++ 11 if cpp is requested (unless C++ 17 was already enabled)
+LIST_MEMBER("cpp", $enabled_languages)
+if test "$found" = "1" -a "$HAVE_CXX17" != "1"; then
     AX_CXX_COMPILE_STDCXX(11, noext, optional)
     if test "$HAVE_CXX11" != "1"; then
         if test "$explicit_languages" = "1"; then
             AC_MSG_ERROR([[
 ***
-*** A compiler with c++11 support is required for the c++ binding.
+*** A compiler with c++11 support is required for the C++ binding.
 ***]])
         else
             enabled_languages=$(echo $enabled_languages | sed 's/cpp//')
-            enabled_languages=$(echo $enabled_languages | sed 's/qt//')
+            want_qt5="no"
             AC_MSG_WARN([[
 ***
-*** No c++11 support detected. C++ and Qt bindings will be disabled.
+*** No c++11 support detected. C++ and Qt 5 bindings will be disabled.
 ***]])
         fi
     fi
+fi
+
+# Now append qt to the list of language bindings (to enable the subdir in lang)
+if test "$want_qt5" = "yes" -o "$want_qt6" = "yes"; then
+    enabled_languages=$(echo $enabled_languages qt)
 fi
 
 # Check whether compiler supports visibility attribute (if cpp language is enabled)
@@ -358,57 +557,29 @@ if test "$found" = "1"; then
     AX_GCC_FUNC_ATTRIBUTE(visibility)
     if test "$ax_cv_have_func_attribute_visibility" = "yes"; then
         GPGME_CPP_CFLAGS="$GPGME_CPP_CFLAGS -fvisibility=hidden"
+        if test "$want_qt5" = "yes"; then
+            GPGME_QT5_CFLAGS="$GPGME_QT5_CFLAGS -fvisibility=hidden"
+        fi
+        if test "$want_qt6" = "yes"; then
+            GPGME_QT6_CFLAGS="$GPGME_QT6_CFLAGS -fvisibility=hidden"
+        fi
     fi
 fi
 AC_SUBST(GPGME_CPP_CFLAGS)
 
-# Check that if qt is enabled cpp also is enabled
-LIST_MEMBER("qt", $enabled_languages)
-if test "$found" = "1"; then
-    # We need to ensure that in the language order qt comes after cpp
-    # so we remove qt first and explicitly add it as last list member.
-    enabled_languages=$(echo $enabled_languages | sed 's/qt//')
-    LIST_MEMBER("cpp", $enabled_languages)
-    if test "$found" = "0"; then
-        AC_MSG_ERROR([[
-***
-*** Qt language binding depends on cpp binding.
-***]])
-    fi
-    FIND_QT
-    if test "$have_qt5_libs" != "yes"; then
-        if test "$explicit_languages" = "1"; then
-        AC_MSG_ERROR([[
-***
-*** Qt5 (Qt5Core) is required for Qt binding.
-***]])
-        else
-           AC_MSG_WARN([[
-***
-*** Qt5 (Qt5Core) not found Qt Binding will be disabled.
-***]])
-        fi
-    else
-        enabled_languages=`echo $enabled_languages qt`
+AM_CONDITIONAL(WANT_QT5, test "$want_qt5" = yes)
+AM_CONDITIONAL(WANT_QT6, test "$want_qt6" = yes)
 
-        AC_CHECK_PROGS([DOXYGEN], [doxygen])
-        if test -z "$DOXYGEN";
-            # This is not highlighted because it's not really important.
-            then AC_MSG_WARN([Doxygen not found - Qt binding doc will not be built.])
-        fi
-        AC_CHECK_PROGS([GRAPHVIZ], [dot])
-        if test -z "$GRAPHVIZ";
-            then AC_MSG_WARN([Graphviz not found - Qt binding doc will not have diagrams.])
-        fi
+# Check for tools for building the Qt binding docs
+if test "$want_qt5" = "yes" -o "$want_qt6" = "yes"; then
+    AC_CHECK_PROGS([DOXYGEN], [doxygen])
+    if test -z "$DOXYGEN"; then
+        # This is not highlighted because it's not really important.
+        AC_MSG_WARN([Doxygen not found - Qt binding doc will not be built.])
     fi
-fi
-
-# Check if compiler supports visibility attribute (if qt is enabled)
-LIST_MEMBER("qt", $enabled_languages)
-if test "$found" = "1"; then
-    AX_GCC_FUNC_ATTRIBUTE(visibility)
-    if test "$ax_cv_have_func_attribute_visibility" = "yes"; then
-        GPGME_QT_CFLAGS="$GPGME_QT_CFLAGS -fvisibility=hidden"
+    AC_CHECK_PROGS([GRAPHVIZ], [dot])
+    if test -z "$GRAPHVIZ"; then
+        AC_MSG_WARN([Graphviz not found - Qt binding doc will not have diagrams.])
     fi
 fi
 
@@ -443,11 +614,12 @@ if test "$found_py" = "1"; then
 	if test "$found_py" = "1" -o "$found_py3" = "1"; then
 	  # Reset everything, so that we can look for another Python.
           m4_foreach([mym4pythonver],
-                     [[2.7],[3.4],[3.5],[3.6],[3.7],[3.8],[3.9],[all]],
+                     [[2.7],[3.6],[3.9],[3.10],[3.11],[3.12],[3.13],[all]],
            [unset PYTHON
 	    unset PYTHON_VERSION
 	    unset PYTHON_CPPFLAGS
 	    unset PYTHON_LDFLAGS
+	    unset PYTHON_LIBS
 	    unset PYTHON_SITE_PKG
 	    unset PYTHON_EXTRA_LIBS
 	    unset PYTHON_EXTRA_LDFLAGS
@@ -458,7 +630,7 @@ if test "$found_py" = "1"; then
 	    unset am_cv_python_pythondir
 	    unset am_cv_python_pyexecdir
 	    AM_PATH_PYTHON(mym4pythonver, [
-		AX_PYTHON_DEVEL
+		AX_PYTHON_DEVEL([], [true])
 		if test "$PYTHON_VERSION"; then
 			PYTHONS="$(echo $PYTHONS $PYTHON)"
 			PYTHON_VERSIONS="$(echo $PYTHON_VERSIONS $PYTHON_VERSION)"
@@ -499,9 +671,12 @@ AC_SUBST(ENABLED_LANGUAGES, $enabled_languages)
 # Provide information about the build.
 #
 BUILD_REVISION="mym4_revision"
+BUILD_COMMITID="mym4_commitid"
 AC_SUBST(BUILD_REVISION)
 AC_DEFINE_UNQUOTED(BUILD_REVISION, "$BUILD_REVISION",
-                   [GIT commit id revision used to build this package])
+                   [GIT short commit id used to build this package])
+AC_DEFINE_UNQUOTED(BUILD_COMMITID, "$BUILD_COMMITID",
+                   [Git commit id used to build this package])
 
 changequote(,)dnl
 BUILD_VERSION=`echo "$PACKAGE_VERSION" | sed 's/\([0-9.]*\).*/\1./'`
@@ -744,6 +919,25 @@ fi
 # Check for getgid etc
 AC_CHECK_FUNCS(getgid getegid closefrom nanosleep)
 
+# Check for gettid - test taken from strongswan git
+AC_CHECK_FUNC(gettid,
+       [AC_DEFINE(HAVE_GETTID, 1, [Defined if gettid is available.])],
+       [AC_MSG_CHECKING([for SYS_gettid])
+        AC_COMPILE_IFELSE(
+               [AC_LANG_PROGRAM(
+                       [[#define _GNU_SOURCE
+                         #include <unistd.h>
+                         #include <sys/syscall.h>
+                       ]],
+                       [[int main() {
+                         return syscall(SYS_gettid);}]])],
+               [AC_MSG_RESULT([yes])
+                AC_DEFINE(HAVE_SYS_GETTID,1,
+                         [Defined is the system call gettid is available])],
+               [AC_MSG_RESULT([no])]
+       )]
+)
+
 
 # Replacement functions.
 AC_REPLACE_FUNCS(stpcpy)
@@ -842,24 +1036,80 @@ AH_BOTTOM([
 # define GPGME_GCC_A_PURE
 #endif
 
-/* Under WindowsCE we need gpg-error's strerror macro.  */
-#define GPG_ERR_ENABLE_ERRNO_MACROS 1
+/* Under Windows we use the gettext code from gpgrt.  */
+#define GPG_ERR_ENABLE_GETTEXT_MACROS 1
 
 #define CRIGHTBLURB "Copyright (C) 2000 Werner Koch\n" \
-                    "Copyright (C) 2001--2021 g10 Code GmbH\n"
+                    "Copyright (C) 2001--2025 g10 Code GmbH\n"
 ])
 
 
-# Substitution used for gpgme-config
+# Substitution used for gpgme-config and gpgme.pc and gpgmepp.pc
 GPGME_CONFIG_LIBS="-lgpgme"
 GPGME_CONFIG_CFLAGS=""
 GPGME_CONFIG_HOST="$host"
 GPGME_CONFIG_AVAIL_LANG="$enabled_languages"
+
+GPGMEPP_PKGCONFIG_LIBS="-lgpgmepp"
+GPGMEPP_PKGCONFIG_CFLAGS=""
+GPGMEPP_PKGCONFIG_HOST="$host"
+
+case "$includedir" in
+  /usr/include|/include) ;;
+  '${prefix}/include')
+    if test "$prefix" != / -a "$prefix" != /usr; then
+      if test -z "$GPGME_CONFIG_CFLAGS"; then
+        GPGME_CONFIG_CFLAGS="-I\${includedir}"
+      else
+        GPGME_CONFIG_CFLAGS="-I\${includedir} $GPGME_CONFIG_CFLAGS"
+      fi
+      if test -z "$GPGMEPP_PKGCONFIG_CFLAGS"; then
+        GPGMEPP_PKGCONFIG_CFLAGS="-I\${includedir}"
+      else
+        GPGMEPP_PKGCONFIG_CFLAGS="-I\${includedir} $GPGMEPP_PKGCONFIG_CFLAGS"
+      fi
+    fi
+    ;;
+  *)
+    if test -z "$GPGME_CONFIG_CFLAGS"; then
+      GPGME_CONFIG_CFLAGS="-I\${includedir}"
+    else
+      GPGME_CONFIG_CFLAGS="-I\${includedir} $GPGME_CONFIG_CFLAGS"
+    fi
+    if test -z "$GPGMEPP_PKGCONFIG_CFLAGS"; then
+      GPGMEPP_PKGCONFIG_CFLAGS="-I\${includedir}"
+    else
+      GPGMEPP_PKGCONFIG_CFLAGS="-I\${includedir} $GPGMEPP_PKGCONFIG_CFLAGS"
+    fi
+    ;;
+esac
+case "$libdir" in
+  /usr/lib|/usr/lib64|/lib|/lib64) ;;
+  '${exec_prefix}/lib'|'${exec_prefix}/lib64')
+    if test "$exec_prefix" = "NONE"; then
+      if test "$prefix" != / -a "$prefix" != /usr; then
+        GPGME_CONFIG_LIBS="-L\${libdir} $GPGME_CONFIG_LIBS"
+        GPGMEPP_PKGCONFIG_LIBS="-L\${libdir} $GPGMEPP_PKGCONFIG_LIBS"
+      fi
+    elif test "$exec_prefix" != / -a "$exec_prefix" != /usr; then
+      GPGME_CONFIG_LIBS="-L\${libdir} $GPGME_CONFIG_LIBS"
+      GPGMEPP_PKGCONFIG_LIBS="-L\${libdir} $GPGMEPP_PKGCONFIG_LIBS"
+    fi
+    ;;
+  *)
+    GPGME_CONFIG_LIBS="-L\${libdir} $GPGME_CONFIG_LIBS"
+    GPGMEPP_PKGCONFIG_LIBS="-L\${libdir} $GPGMEPP_PKGCONFIG_LIBS"
+    ;;
+esac
+
 AC_SUBST(GPGME_CONFIG_API_VERSION)
 AC_SUBST(GPGME_CONFIG_LIBS)
 AC_SUBST(GPGME_CONFIG_CFLAGS)
 AC_SUBST(GPGME_CONFIG_HOST)
 AC_SUBST(GPGME_CONFIG_AVAIL_LANG)
+AC_SUBST(GPGMEPP_PKGCONFIG_LIBS)
+AC_SUBST(GPGMEPP_PKGCONFIG_CFLAGS)
+AC_SUBST(GPGMEPP_PKGCONFIG_HOST)
 
 # Frob'da Variables
 LTLIBOBJS=`echo "$LIB@&t@OBJS" |
@@ -928,14 +1178,22 @@ AC_CONFIG_FILES(Makefile src/Makefile
 AC_CONFIG_FILES(src/gpgme-config, chmod +x src/gpgme-config)
 AC_CONFIG_FILES(lang/cpp/Makefile lang/cpp/src/Makefile)
 AC_CONFIG_FILES(lang/cpp/tests/Makefile)
+AC_CONFIG_FILES(lang/cpp/src/gpgmepp.pc)
 AC_CONFIG_FILES(lang/cpp/src/GpgmeppConfig-w32.cmake.in)
 AC_CONFIG_FILES(lang/cpp/src/GpgmeppConfig.cmake.in)
 AC_CONFIG_FILES(lang/cpp/src/GpgmeppConfigVersion.cmake)
 AC_CONFIG_FILES(lang/cpp/src/gpgmepp_version.h)
 AC_CONFIG_FILES(lang/qt/Makefile lang/qt/src/Makefile)
-AC_CONFIG_FILES(lang/qt/src/QGpgmeConfig-w32.cmake.in)
-AC_CONFIG_FILES(lang/qt/src/QGpgmeConfig.cmake.in)
-AC_CONFIG_FILES(lang/qt/src/QGpgmeConfigVersion.cmake)
+if test "$want_qt5" = "yes"; then
+    AC_CONFIG_FILES(lang/qt/src/QGpgmeConfig-w32.cmake.in)
+    AC_CONFIG_FILES(lang/qt/src/QGpgmeConfig.cmake.in)
+    AC_CONFIG_FILES(lang/qt/src/QGpgmeConfigVersion.cmake)
+fi
+if test "$want_qt6" = "yes"; then
+    AC_CONFIG_FILES(lang/qt/src/QGpgmeQt6Config-w32.cmake.in)
+    AC_CONFIG_FILES(lang/qt/src/QGpgmeQt6Config.cmake.in)
+    AC_CONFIG_FILES(lang/qt/src/QGpgmeQt6ConfigVersion.cmake)
+fi
 AC_CONFIG_FILES(lang/qt/tests/Makefile)
 AC_CONFIG_FILES(lang/qt/src/qgpgme_version.h)
 AC_CONFIG_FILES([lang/Makefile lang/cl/Makefile lang/cl/gpgme.asd])
@@ -952,6 +1210,14 @@ AC_CONFIG_FILES([lang/python/Makefile
 		 lang/python/doc/Makefile])
 AC_CONFIG_FILES([lang/python/setup.py], [chmod a+x lang/python/setup.py])
 AC_OUTPUT
+
+if test "$want_qt5" = "yes" -a "$want_qt6" = "yes"; then
+    enabled_languages_v=$(echo ${enabled_languages_v:-$enabled_languages} | sed "s/qt/qt (Qt 5, Qt 6)/")
+elif test "$want_qt5" = "yes"; then
+    enabled_languages_v=$(echo ${enabled_languages_v:-$enabled_languages} | sed "s/qt/qt (Qt 5)/")
+elif test "$want_qt6" = "yes"; then
+    enabled_languages_v=$(echo ${enabled_languages_v:-$enabled_languages} | sed "s/qt/qt (Qt 6)/")
+fi
 
 echo "
         GPGME v${VERSION} has been configured as follows:

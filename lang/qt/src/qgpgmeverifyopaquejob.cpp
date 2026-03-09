@@ -39,22 +39,51 @@
 #include "qgpgmeverifyopaquejob.h"
 
 #include "dataprovider.h"
+#include "util.h"
+#include "verifyopaquejob_p.h"
 
-#include "context.h"
-#include "verificationresult.h"
-#include "data.h"
+#include <gpgme++/context.h>
+#include <gpgme++/data.h>
+#include <gpgme++/verificationresult.h>
 
 #include <QBuffer>
-
+#include <QFile>
 
 #include <cassert>
 
 using namespace QGpgME;
 using namespace GpgME;
 
+namespace
+{
+
+class QGpgMEVerifyOpaqueJobPrivate : public VerifyOpaqueJobPrivate
+{
+    QGpgMEVerifyOpaqueJob *q = nullptr;
+
+public:
+    QGpgMEVerifyOpaqueJobPrivate(QGpgMEVerifyOpaqueJob *qq)
+        : q{qq}
+    {
+    }
+
+    ~QGpgMEVerifyOpaqueJobPrivate() override = default;
+
+private:
+    GpgME::Error startIt() override;
+
+    void startNow() override
+    {
+        q->run();
+    }
+};
+
+}
+
 QGpgMEVerifyOpaqueJob::QGpgMEVerifyOpaqueJob(Context *context)
     : mixin_type(context)
 {
+    setJobPrivate(this, std::unique_ptr<QGpgMEVerifyOpaqueJobPrivate>{new QGpgMEVerifyOpaqueJobPrivate{this}});
     lateInitialization();
 }
 
@@ -70,7 +99,10 @@ static QGpgMEVerifyOpaqueJob::result_type verify_opaque(Context *ctx, QThread *t
     const _detail::ToThreadMover sdMover(signedData, thread);
 
     QGpgME::QIODeviceDataProvider in(signedData);
-    const Data indata(&in);
+    Data indata(&in);
+    if (!signedData->isSequential()) {
+        indata.setSizeHint(signedData->size());
+    }
 
     if (!plainText) {
         QGpgME::QByteArrayDataProvider out;
@@ -102,29 +134,83 @@ static QGpgMEVerifyOpaqueJob::result_type verify_opaque_qba(Context *ctx, const 
     return verify_opaque(ctx, nullptr, buffer, std::shared_ptr<QIODevice>());
 }
 
+static QGpgMEVerifyOpaqueJob::result_type verify_from_filename(Context *ctx,
+                                                               const QString &inputFilePath,
+                                                               const QString &outputFilePath,
+                                                               bool processAllSignatures)
+{
+    Data indata;
+#ifdef Q_OS_WIN
+    indata.setFileName(inputFilePath.toUtf8().constData());
+#else
+    indata.setFileName(QFile::encodeName(inputFilePath).constData());
+#endif
+
+    PartialFileGuard partFileGuard{outputFilePath};
+    if (partFileGuard.tempFileName().isEmpty()) {
+        return std::make_tuple(VerificationResult{Error::fromCode(GPG_ERR_EEXIST)}, QByteArray{}, QString{}, Error{});
+    }
+
+    Data outdata;
+#ifdef Q_OS_WIN
+    outdata.setFileName(partFileGuard.tempFileName().toUtf8().constData());
+#else
+    outdata.setFileName(QFile::encodeName(partFileGuard.tempFileName()).constData());
+#endif
+
+    if (processAllSignatures) {
+        ctx->setFlag("proc-all-sigs", "1");
+    }
+    const auto verificationResult = ctx->verifyOpaqueSignature(indata, outdata);
+
+    if (!verificationResult.error().code()) {
+        // the operation succeeded -> save the result under the requested file name
+        partFileGuard.commit();
+    }
+
+    Error ae;
+    const QString log = _detail::audit_log_as_html(ctx, ae);
+    return std::make_tuple(verificationResult, QByteArray{}, log, ae);
+}
+
 Error QGpgMEVerifyOpaqueJob::start(const QByteArray &signedData)
 {
+    if (processAllSignatures()) {
+        context()->setFlag("proc-all-sigs", "1");
+    }
     run(std::bind(&verify_opaque_qba, std::placeholders::_1, signedData));
     return Error();
 }
 
 void QGpgMEVerifyOpaqueJob::start(const std::shared_ptr<QIODevice> &signedData, const std::shared_ptr<QIODevice> &plainText)
 {
+    if (processAllSignatures()) {
+        context()->setFlag("proc-all-sigs", "1");
+    }
     run(std::bind(&verify_opaque, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4), signedData, plainText);
 }
 
 GpgME::VerificationResult QGpgME::QGpgMEVerifyOpaqueJob::exec(const QByteArray &signedData, QByteArray &plainText)
 {
+    if (processAllSignatures()) {
+        context()->setFlag("proc-all-sigs", "1");
+    }
     const result_type r = verify_opaque_qba(context(), signedData);
     plainText = std::get<1>(r);
-    resultHook(r);
-    return mResult;
+    return std::get<0>(r);
 }
 
-//PENDING(marc) implement showErrorDialog()
-
-void QGpgME::QGpgMEVerifyOpaqueJob::resultHook(const result_type &tuple)
+GpgME::Error QGpgMEVerifyOpaqueJobPrivate::startIt()
 {
-    mResult = std::get<0>(tuple);
+    if (m_inputFilePath.isEmpty() || m_outputFilePath.isEmpty()) {
+        return Error::fromCode(GPG_ERR_INV_VALUE);
+    }
+
+    q->run([=](Context *ctx) {
+        return verify_from_filename(ctx, m_inputFilePath, m_outputFilePath, m_processAllSignatures);
+    });
+
+    return {};
 }
+
 #include "qgpgmeverifyopaquejob.moc"

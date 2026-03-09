@@ -60,7 +60,6 @@
 #include <shlobj.h>
 
 #include "util.h"
-#include "ath.h"
 #include "sema.h"
 #include "debug.h"
 #include "sys-util.h"
@@ -83,16 +82,27 @@
 # define GNUPG_REGKEY_3  "Software\\GnuPG"
 #endif
 
+/* Installation type constants.  */
+#define INST_TYPE_GPG4WIN  1
+#define INST_TYPE_GPGDESK  2
+
+/* Relative name parts for different installation types.  */
+#define INST_TYPE_GPG4WIN_DIR "\\..\\..\\GnuPG\\bin"
+#define INST_TYPE_GPGDESK_DIR "\\..\\GnuPG\\bin"
+
+
+
+
 DEFINE_STATIC_LOCK (get_path_lock);
 
 /* The module handle of this DLL.  If we are linked statically,
-   dllmain does not exists and thus the value of my_hmodule will be
+   dllmain does not exist and thus the value of my_hmodule will be
    NULL.  The effect is that a GetModuleFileName always returns the
    file name of the DLL or executable which contains the gpgme code.  */
 static HMODULE my_hmodule;
 
 /* These variables store the malloced name of alternative default
-   binaries.  The are set only once by gpgme_set_global_flag.  */
+   binaries.  They are set only once by gpgme_set_global_flag.  */
 static char *default_gpg_name;
 static char *default_gpgconf_name;
 /* If this variable is not NULL the value is assumed to be the
@@ -168,7 +178,7 @@ wchar_to_utf8 (const wchar_t *string)
 }
 
 
-/* Return a malloced wide char string from an UTF-8 encoded input
+/* Return a malloced wide char string from a UTF-8 encoded input
    string STRING.  Caller must free this value. On failure returns
    NULL; caller may use GetLastError to get the actual error number.
    Calling this function with STRING set to NULL is not defined. */
@@ -287,7 +297,7 @@ void
 _gpgme_w32_cancel_synchronous_io (HANDLE thread)
 {
   static int initialized;
-  static BOOL (WINAPI * func)(DWORD);
+  static BOOL (WINAPI * func)(HANDLE);
   void *handle;
 
   if (!initialized)
@@ -308,7 +318,7 @@ _gpgme_w32_cancel_synchronous_io (HANDLE thread)
 
   if (func)
     {
-      if (!func ((DWORD)thread) && GetLastError() != ERROR_NOT_FOUND)
+      if (!func (thread) && GetLastError() != ERROR_NOT_FOUND)
         {
           TRACE (DEBUG_ENGINE, "gpgme:CancelSynchronousIo", NULL,
                  "called for thread %p: ec=%u",
@@ -536,6 +546,27 @@ _gpgme_set_override_inst_dir (const char *dir)
 }
 
 
+/* Used by gpgme_set_global_flag to set the installation type.
+ * VALUE is a string interpreted as integer with this meaning:
+ *   0 = standard
+ *   1 = Gpg4win 4 style (INST_TYPE_GPG4WIN)
+ *   2 = GnuPG (VS-)Desktop style (INST_TYPE_GPGDESK)
+ * If VALUE is NULL, nothing is changed.  The return value is the
+ * previous value.
+ */
+int
+_gpgme_set_get_inst_type (const char *value)
+{
+  static int inst_type;
+  int previous_type;
+
+  previous_type = inst_type;
+  if (value)
+    inst_type = atoi (value);
+  return previous_type;
+}
+
+
 /* Return the full file name of the GPG binary.  This function is used
    iff gpgconf was not found and thus it can be assumed that gpg2 is
    not installed.  This function is only called by get_gpgconf_item
@@ -586,6 +617,33 @@ _gpgme_get_gpg_path (void)
 }
 
 
+/* Helper for _gpgme_get_gpgconf_path.  */
+static char *
+find_version_file (const char *inst_dir)
+{
+  char *fname;
+
+  fname = _gpgme_strconcat (inst_dir, "\\..\\", "VERSION.sig", NULL);
+  if (fname && !_gpgme_access (fname, F_OK))
+    {
+      fname[strlen(fname)-4] = 0;
+      if (!_gpgme_access (fname, F_OK))
+        return fname;
+    }
+  free (fname);
+  /* Check the case that a binary in gnupg/bin uses libgpgme.  */
+  fname = _gpgme_strconcat (inst_dir, "\\..\\..\\", "VERSION.sig", NULL);
+  if (fname && !_gpgme_access (fname, F_OK))
+    {
+      fname[strlen(fname)-4] = 0;
+      if (!_gpgme_access (fname, F_OK))
+        return fname;
+    }
+  free (fname);
+  return NULL;
+}
+
+
 /* This function is only called by get_gpgconf_item and may not be
    called concurrently.  */
 char *
@@ -593,12 +651,53 @@ _gpgme_get_gpgconf_path (void)
 {
   char *gpgconf = NULL;
   const char *inst_dir, *name;
+  int inst_type;
+  char *dir = NULL;
 
   name = default_gpgconf_name? get_basename(default_gpgconf_name):"gpgconf.exe";
 
-  /* 1. Try to find gpgconf.exe in the installation directory of gpgme.  */
   inst_dir = _gpgme_get_inst_dir ();
-  if (inst_dir)
+  inst_type = _gpgme_set_get_inst_type (NULL);
+
+  /* 0.0. If no installation type has been explicitly requested guess
+   * one by looking at files used by the installation type.  */
+  if (inst_dir && !inst_type)
+    {
+      gpgrt_stream_t fp;
+      char buffer[128];
+      int n;
+
+      free (dir);
+      dir = find_version_file (inst_dir);
+      if (dir && (fp = gpgrt_fopen (dir, "r")))
+        {
+          n = gpgrt_fread (buffer, 1, 128, fp);
+          if (n > 10)
+            {
+              buffer[n-1] = 0;
+              if (strstr (buffer, "GnuPG") && strstr (buffer, "Desktop"))
+                inst_type = INST_TYPE_GPGDESK;
+            }
+          gpgrt_fclose (fp);
+        }
+    }
+
+  /* 0.1. If an installation type was requested or guessed try to find
+   * gpgconf.exe depending on that installation type.  */
+  if (inst_dir
+      && (inst_type == INST_TYPE_GPG4WIN || inst_type == INST_TYPE_GPGDESK))
+    {
+      free (dir);
+      dir = _gpgme_strconcat
+        (inst_dir,
+         inst_type == INST_TYPE_GPG4WIN? INST_TYPE_GPG4WIN_DIR
+         /*                         */ : INST_TYPE_GPGDESK_DIR,
+         NULL);
+      gpgconf = find_program_in_dir (dir, name);
+    }
+
+  /* 1. Try to find gpgconf.exe in the installation directory of gpgme.  */
+  if (!gpgconf && inst_dir)
     {
       gpgconf = find_program_in_dir (inst_dir, name);
     }
@@ -614,8 +713,7 @@ _gpgme_get_gpgconf_path (void)
   /* 3. Try to find gpgconf.exe using the Windows registry. */
   if (!gpgconf)
     {
-      char *dir;
-
+      free (dir);
       dir = read_w32_registry_string (NULL,
                                       GNUPG_REGKEY_2,
                                       "Install Directory");
@@ -633,10 +731,7 @@ _gpgme_get_gpgconf_path (void)
             }
         }
       if (dir)
-        {
-          gpgconf = find_program_in_dir (dir, name);
-          free (dir);
-        }
+        gpgconf = find_program_in_dir (dir, name);
     }
 
   /* 4. Try to find gpgconf.exe from Gpg4win below CSIDL_PROGRAM_FILES.  */
@@ -645,19 +740,28 @@ _gpgme_get_gpgconf_path (void)
       gpgconf = find_program_at_standard_place ("GNU\\GnuPG\\gpgconf.exe");
     }
 
-  /* 5. Try to find gpgconf.exe relative to us.  */
+  /* 5. Try to find gpgconf.exe relative to us as Gpg4win installs it.  */
   if (!gpgconf && inst_dir)
     {
-      char *dir = _gpgme_strconcat (inst_dir, "\\..\\..\\GnuPG\\bin", NULL);
-      gpgconf = find_program_in_dir (dir, name);
       free (dir);
+      dir = _gpgme_strconcat (inst_dir, INST_TYPE_GPG4WIN_DIR, NULL);
+      gpgconf = find_program_in_dir (dir, name);
     }
 
-  /* 5. Print a debug message if not found.  */
+  /* 6. Try to find gpgconf.exe relative to us as GnuPG VSD installs it. */
+  if (!gpgconf && inst_dir)
+    {
+      free (dir);
+      dir = _gpgme_strconcat (inst_dir, INST_TYPE_GPGDESK_DIR, NULL);
+      gpgconf = find_program_in_dir (dir, name);
+    }
+
+  /* Print a debug message if not found.  */
   if (!gpgconf)
     _gpgme_debug (NULL, DEBUG_ENGINE, -1, NULL, NULL, NULL,
                   "_gpgme_get_gpgconf_path: '%s' not found",name);
 
+  free (dir);
   return gpgconf;
 }
 
@@ -753,7 +857,7 @@ my_mkstemp (char *tmpl)
     random_time_bits = (((uint64_t)ft.dwHighDateTime << 32)
                         | (uint64_t)ft.dwLowDateTime);
   }
-  value += random_time_bits ^ ath_self ();
+  value += random_time_bits ^ ((uintptr_t)GetCurrentThreadId ());
 
   for (count = 0; count < attempts; value += 7777, ++count)
     {

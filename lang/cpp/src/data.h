@@ -27,6 +27,7 @@
 #include "key.h"
 
 #include <sys/types.h> // for size_t, off_t
+#include <cstdint> // unit64_t
 #include <cstdio> // FILE
 #include <algorithm>
 #include <memory>
@@ -60,6 +61,7 @@ public:
 
     static const Null null;
 
+    Data(const Data &other) = default;
     const Data &operator=(Data other)
     {
         swap(other);
@@ -105,6 +107,7 @@ public:
 
     char *fileName() const;
     Error setFileName(const char *name);
+    Error setFileName(const std::string &name);
 
     ssize_t read(void *buffer, size_t length);
     ssize_t write(const void *buffer, size_t length);
@@ -119,6 +122,12 @@ public:
 
     /** Return a copy of the data as std::string. Sets seek pos to 0 */
     std::string toString();
+
+    /** See gpgme_data_set_flag */
+    Error setFlag(const char *name, const char *value);
+
+    /** Set a size hint for this data e.g. for progress calculations. */
+    Error setSizeHint(uint64_t size);
 
     class Private;
     Private *impl()

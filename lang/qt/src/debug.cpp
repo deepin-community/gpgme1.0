@@ -35,15 +35,21 @@
  #include "config.h"
 #endif
 
-#include "error.h"
+#include <gpgme++/error.h>
 #include "debug.h"
 
 #include <QDebug>
 
 QDebug operator<<(QDebug debug, const GpgME::Error &err)
 {
+#ifdef Q_OS_WIN
+    // On Windows, we tell libgpg-error to return (translated) error messages as UTF-8
+    const auto errAsString = QString::fromStdString(err.asStdString());
+#else
+    const auto errAsString = QString::fromLocal8Bit(err.asStdString().c_str());
+#endif
     const bool oldSetting = debug.autoInsertSpaces();
-    debug.nospace() << err.asString() << " (code: " << err.code() << ", source: " << err.source() << ")";
+    debug.nospace() << errAsString << " (code: " << err.code() << ", source: " << err.source() << ")";
     debug.setAutoInsertSpaces(oldSetting);
     return debug.maybeSpace();
 }

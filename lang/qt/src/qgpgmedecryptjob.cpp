@@ -40,9 +40,9 @@
 
 #include "dataprovider.h"
 
-#include "context.h"
-#include "decryptionresult.h"
-#include "data.h"
+#include <gpgme++/context.h>
+#include <gpgme++/decryptionresult.h>
+#include <gpgme++/data.h>
 
 #include <QBuffer>
 
@@ -71,7 +71,10 @@ static QGpgMEDecryptJob::result_type decrypt(Context *ctx, QThread *thread,
     const _detail::ToThreadMover ptMover(plainText,  thread);
 
     QGpgME::QIODeviceDataProvider in(cipherText);
-    const Data indata(&in);
+    Data indata(&in);
+    if (!cipherText->isSequential()) {
+        indata.setSizeHint(cipherText->size());
+    }
 
     if (!plainText) {
         QGpgME::QByteArrayDataProvider out;
@@ -119,15 +122,7 @@ GpgME::DecryptionResult QGpgME::QGpgMEDecryptJob::exec(const QByteArray &cipherT
 {
     const result_type r = decrypt_qba(context(), cipherText);
     plainText = std::get<1>(r);
-    resultHook(r);
-    return mResult;
-}
-
-//PENDING(marc) implement showErrorDialog()
-
-void QGpgMEDecryptJob::resultHook(const result_type &tuple)
-{
-    mResult = std::get<0>(tuple);
+    return std::get<0>(r);
 }
 
 #include "qgpgmedecryptjob.moc"

@@ -55,7 +55,7 @@ if HAVE_DOSISH_SYSTEM
 system_components = w32-util.c
 system_components_not_extra = w32-io.c
 else
-system_components = ath.h posix-util.c posix-io.c
+system_components = posix-util.c posix-io.c
 system_components_not_extra =
 endif
 
@@ -71,7 +71,7 @@ endif
 # right linking order with libtool, as the non-installed version has
 # unresolved symbols to the thread module.
 main_sources =								\
-	util.h conversion.c b64dec.c get-env.c context.h ops.h		\
+	util.h conversion.c get-env.c context.h ops.h			\
 	parsetlv.c parsetlv.h                                           \
 	mbox-util.c mbox-util.h                                         \
 	data.h data.c data-fd.c data-stream.c data-mem.c data-user.c	\
@@ -85,7 +85,7 @@ main_sources =								\
 	key.c keylist.c keysign.c trust-item.c trustlist.c tofupolicy.c	\
 	revsig.c							\
 	import.c export.c genkey.c delete.c edit.c getauditlog.c        \
-	setexpire.c							\
+	setexpire.c setownertrust.c					\
 	opassuan.c passwd.c spawn.c assuan-support.c                    \
 	engine.h engine-backend.h engine.c engine-gpg.c status-table.c	\
 	engine-gpgsm.c engine-assuan.c engine-gpgconf.c                 \
@@ -94,8 +94,7 @@ main_sources =								\
 	engine-spawn.c 	                                                \
 	gpgconf.c queryswdb.c						\
 	sema.h priv-io.h $(system_components) sys-util.h dirinfo.c	\
-	debug.c debug.h gpgme.c version.c error.c \
-	ath.h ath.c
+	debug.c debug.h gpgme.c version.c error.c
 
 libgpgme_la_SOURCES = $(main_sources) $(system_components_not_extra)
 
@@ -119,6 +118,8 @@ if HAVE_W32_SYSTEM
 # processes with a controlled set of inherited handles, we need a
 # wrapper process.
 libexec_PROGRAMS = gpgme-w32spawn
+
+gpgme_w32spawn_CFLAGS = -municode
 
 RCCOMPILE = $(RC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES)
 LTRCCOMPILE = $(LIBTOOL) --mode=compile --tag=RC $(RCCOMPILE)

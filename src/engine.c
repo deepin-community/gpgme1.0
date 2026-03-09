@@ -449,9 +449,16 @@ _gpgme_set_engine_info (gpgme_engine_info_t info, gpgme_protocol_t proto,
         new_home_dir = NULL;
     }
 
-  new_version = engine_get_version (proto, new_file_name);
+  if (info && info->version
+      && ((!info->file_name && !new_file_name)
+          || (info->file_name && new_file_name
+              && !strcmp (info->file_name, new_file_name))))
+    new_version = strdup (info->version);
+  else
+    new_version = engine_get_version (proto, new_file_name);
   if (!new_version)
     {
+      /* Note that we also get here on a ENOMEM in strdup.  */
       new_version = strdup ("1.0.0"); /* Fake one for dummy entries.  */
       if (!new_version)
         {
@@ -851,7 +858,8 @@ _gpgme_engine_op_tofu_policy (engine_t engine,
 gpgme_error_t
 _gpgme_engine_op_import (engine_t engine, gpgme_data_t keydata,
                          gpgme_key_t *keyarray, const char *keyids[],
-                         const char *import_filter, const char *key_origin)
+                         const char *import_filter, const char *import_options,
+                         const char *key_origin)
 {
   if (!engine)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -860,14 +868,13 @@ _gpgme_engine_op_import (engine_t engine, gpgme_data_t keydata,
     return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 
   return (*engine->ops->import) (engine->engine, keydata, keyarray, keyids,
-                                 import_filter, key_origin);
+                                 import_filter, import_options, key_origin);
 }
 
 
 gpgme_error_t
 _gpgme_engine_op_keylist (engine_t engine, const char *pattern,
-			  int secret_only, gpgme_keylist_mode_t mode,
-			  int engine_flags)
+			  int secret_only, gpgme_keylist_mode_t mode)
 {
   if (!engine)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -875,15 +882,14 @@ _gpgme_engine_op_keylist (engine_t engine, const char *pattern,
   if (!engine->ops->keylist)
     return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 
-  return (*engine->ops->keylist) (engine->engine, pattern, secret_only, mode,
-                                  engine_flags);
+  return (*engine->ops->keylist) (engine->engine, pattern, secret_only, mode);
 }
 
 
 gpgme_error_t
 _gpgme_engine_op_keylist_ext (engine_t engine, const char *pattern[],
 			      int secret_only, int reserved,
-			      gpgme_keylist_mode_t mode, int engine_flags)
+			      gpgme_keylist_mode_t mode)
 {
   if (!engine)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -892,7 +898,7 @@ _gpgme_engine_op_keylist_ext (engine_t engine, const char *pattern[],
     return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 
   return (*engine->ops->keylist_ext) (engine->engine, pattern, secret_only,
-				      reserved, mode, engine_flags);
+				      reserved, mode);
 }
 
 
@@ -912,7 +918,7 @@ _gpgme_engine_op_keylist_data (engine_t engine, gpgme_keylist_mode_t mode,
 
 gpgme_error_t
 _gpgme_engine_op_sign (engine_t engine, gpgme_data_t in, gpgme_data_t out,
-		       gpgme_sig_mode_t mode, int use_armor,
+		       gpgme_sig_mode_t flags, int use_armor,
 		       int use_textmode, int include_certs,
 		       gpgme_ctx_t ctx /* FIXME */)
 {
@@ -922,7 +928,7 @@ _gpgme_engine_op_sign (engine_t engine, gpgme_data_t in, gpgme_data_t out,
   if (!engine->ops->sign)
     return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 
-  return (*engine->ops->sign) (engine->engine, in, out, mode, use_armor,
+  return (*engine->ops->sign) (engine->engine, in, out, flags, use_armor,
 			       use_textmode, include_certs, ctx);
 }
 
@@ -940,9 +946,9 @@ _gpgme_engine_op_trustlist (engine_t engine, const char *pattern)
 
 
 gpgme_error_t
-_gpgme_engine_op_verify (engine_t engine, gpgme_data_t sig,
-			 gpgme_data_t signed_text, gpgme_data_t plaintext,
-                         gpgme_ctx_t ctx)
+_gpgme_engine_op_verify (engine_t engine, gpgme_verify_flags_t flags,
+                         gpgme_data_t sig, gpgme_data_t signed_text,
+                         gpgme_data_t plaintext, gpgme_ctx_t ctx)
 {
   if (!engine)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -950,8 +956,8 @@ _gpgme_engine_op_verify (engine_t engine, gpgme_data_t sig,
   if (!engine->ops->verify)
     return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 
-  return (*engine->ops->verify) (engine->engine, sig, signed_text, plaintext,
-                                 ctx);
+  return (*engine->ops->verify) (engine->engine, flags, sig, signed_text,
+                                 plaintext, ctx);
 }
 
 
@@ -1154,4 +1160,17 @@ _gpgme_engine_op_setexpire (engine_t engine, gpgme_key_t key,
     return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 
   return (*engine->ops->setexpire) (engine->engine, key, expires, subfprs, reserved);
+}
+
+gpgme_error_t
+_gpgme_engine_op_setownertrust (engine_t engine, gpgme_key_t key,
+                                const char *value)
+{
+  if (!engine)
+    return gpg_error (GPG_ERR_INV_VALUE);
+
+  if (!engine->ops->setownertrust)
+    return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
+
+  return (*engine->ops->setownertrust) (engine->engine, key, value);
 }
