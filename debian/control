@@ -75,10 +75,6 @@ Description: GPGME - GnuPG Made Easy (development files)
  against this library.
 
 Package: libgpgme11
-Replaces:
- libgpgme11,
-Breaks:
- libgpgme11 (<< ${source:Version}),
 Architecture: any
 Multi-Arch: same
 Pre-Depends:
@@ -125,10 +121,6 @@ Description: Python interface to the GPGME GnuPG encryption library (Python 3)
  This is the official upstream Python 3 binding for GPGME.
 
 Package: libqgpgme15
-Replaces:
- libqgpgme15,
-Breaks:
- libqgpgme15 (<< ${source:Version}),
 Architecture: any
 Multi-Arch: same
 Depends:
@@ -153,10 +145,6 @@ Description: library for GPGME integration with Qt 6
  This is the official upstream Qt 6 binding for GPGME.
 
 Package: libgpgmepp6
-Replaces:
- libgpgmepp6,
-Breaks:
- libgpgmepp6 (<< ${source:Version}),
 Architecture: any
 Multi-Arch: same
 Depends:

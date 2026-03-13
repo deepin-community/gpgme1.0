@@ -1,3 +1,9 @@
+gpgme1.0 (1.24.2-3deepin2) unstable; urgency=medium
+
+  * Delete unnecessary Replaces and Breaks in debian/control.
+
+ -- tunaichao <tunaichao@uniontech.com>  Fri, 13 Mar 2026 17:45:49 +0800
+
 gpgme1.0 (1.24.2-3deepin1) unstable; urgency=medium
 
   * Revert 64-bit time_t changes.
