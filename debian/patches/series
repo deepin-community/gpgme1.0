@@ -9,3 +9,4 @@
 30-0002-cpp-Validate-the-transition-map.patch
 30-0003-cpp-Add-missing-transition-remove-two-ignored-and-wr.patch
 31-cpp-Ensure-correct-expiration-time-on-32-bit-arch-wi.patch
+add_gnupg_in_defaultValue_test.patch

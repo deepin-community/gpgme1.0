@@ -1,3 +1,9 @@
+gpgme1.0 (1.24.2-3deepin3) unstable; urgency=medium
+
+  * fix t-config failed, add pnupg in defaultValue test.
+
+ -- tunaichao <tunaichao@uniontech.com>  Mon, 16 Mar 2026 16:52:16 +0800
+
 gpgme1.0 (1.24.2-3deepin2) unstable; urgency=medium
 
   * Delete unnecessary Replaces and Breaks in debian/control.
