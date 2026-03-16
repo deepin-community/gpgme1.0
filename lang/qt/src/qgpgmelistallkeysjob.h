@@ -39,16 +39,8 @@
 
 #include "threadedjobmixin.h"
 
-#ifdef BUILDING_QGPGME
-# include "keylistresult.h"
-#else
 #include <gpgme++/keylistresult.h>
-#endif
-#ifdef BUILDING_QGPGME
-# include "key.h"
-#else
 #include <gpgme++/key.h>
-#endif
 
 namespace QGpgME
 {
@@ -70,16 +62,10 @@ public:
     ~QGpgMEListAllKeysJob();
 
     /* from ListAllKeysJob */
-    GpgME::Error start(bool mergeKeys) Q_DECL_OVERRIDE;
+    GpgME::Error start(bool mergeKeys) override;
 
     /* from ListAllKeysJob */
-    GpgME::KeyListResult exec(std::vector<GpgME::Key> &pub, std::vector<GpgME::Key> &sec, bool mergeKeys) Q_DECL_OVERRIDE;
-
-    /* from ThreadedJobMixin */
-    void resultHook(const result_type &result) Q_DECL_OVERRIDE;
-
-private:
-    GpgME::KeyListResult mResult;
+    GpgME::KeyListResult exec(std::vector<GpgME::Key> &pub, std::vector<GpgME::Key> &sec, bool mergeKeys) override;
 };
 
 }

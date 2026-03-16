@@ -52,6 +52,7 @@ public:
     VerificationResult(gpgme_ctx_t ctx, const Error &error);
     explicit VerificationResult(const Error &err);
 
+    VerificationResult(const VerificationResult &other) = default;
     const VerificationResult &operator=(VerificationResult other)
     {
         swap(other);
@@ -86,10 +87,11 @@ class GPGMEPP_EXPORT Signature
     friend class ::GpgME::VerificationResult;
     Signature(const std::shared_ptr<VerificationResult::Private> &parent, unsigned int index);
 public:
-    typedef GPGMEPP_DEPRECATED GpgME::Notation Notation;
+    GPGMEPP_DEPRECATED typedef GpgME::Notation Notation;
 
     Signature();
 
+    Signature(const Signature &other) = default;
     const Signature &operator=(Signature other)
     {
         swap(other);
@@ -137,6 +139,7 @@ public:
     bool isWrongKeyUsage() const;
     bool isVerifiedUsingChainModel() const;
     bool isDeVs() const;
+    bool isBetaCompliance() const;
 
     enum PKAStatus {
         UnknownPKAStatus, PKAVerificationFailed, PKAVerificationSucceeded

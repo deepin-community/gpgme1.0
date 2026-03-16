@@ -1612,12 +1612,16 @@ of the entire public keybox.
 
 #+BEGIN_SRC python -i
 import gpg
+import os
 import os.path
 import sys
 
 print("""
 This script exports one or more public keys in minimised form.
 """)
+
+def open_0o600(path, flags):
+    return os.open(path, flags, mode=0o600)
 
 c = gpg.Context(armor=True)
 
@@ -1654,7 +1658,7 @@ except:
     result = c.key_export_minimal(pattern=None)
 
 if result is not None:
-    with open(keyfile, "wb") as f:
+    with open(keyfile, "wb", opener=open_0o600) as f:
         f.write(result)
 else:
     pass
@@ -1685,6 +1689,9 @@ This script exports one or more secret keys.
 
 The gpg-agent and pinentry are invoked to authorise the export.
 """)
+
+def open_0o600(path, flags):
+    return os.open(path, flags, mode=0o600)
 
 c = gpg.Context(armor=True)
 
@@ -1735,9 +1742,8 @@ except:
     result = c.key_export_secret(pattern=None)
 
 if result is not None:
-    with open(keyfile, "wb") as f:
+    with open(keyfile, "wb", opener=open_0o600)) as f:
         f.write(result)
-    os.chmod(keyfile, 0o600)
 else:
     pass
 #+END_SRC
@@ -2939,7 +2945,7 @@ Save that into a file called =keycount.pyx= and then create a
 =setup.py= file which contains this:
 
 #+BEGIN_SRC python -i
-from distutils.core import setup
+from setuptools import setup
 from Cython.Build import cythonize
 
 setup(
@@ -3124,7 +3130,7 @@ minimum required version of GPGME is in use.
 
 For the most part the =gpg.version.versionstr= and
 =gpg.version.versionlist= methods have been quite sufficient.  The
-former returns the same string as =gpgme-config --version=, while the
+former returns the same string as =pkg-config gpgme --modversion=, while the
 latter returns the major, minor and patch values in a list.
 
 To check if the installed bindings have actually been built against
@@ -3135,7 +3141,7 @@ import gpg
 import subprocess
 import sys
 
-gpgme_version_call = subprocess.Popen(["gpgme-config", "--version"],
+gpgme_version_call = subprocess.Popen(["pkg-config", "gpgme", "--modversion"],
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.PIPE)
 gpgme_version_str = gpgme_version_call.communicate()

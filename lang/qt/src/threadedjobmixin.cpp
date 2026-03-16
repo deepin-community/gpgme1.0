@@ -39,8 +39,9 @@
 #include "threadedjobmixin.h"
 
 #include "dataprovider.h"
+#include "util.h"
 
-#include "data.h"
+#include <gpgme++/data.h>
 
 #include <QString>
 #include <QStringList>
@@ -82,7 +83,7 @@ QString _detail::audit_log_as_html(Context *ctx, GpgME::Error &err)
 
     if (ctx->protocol() == OpenPGP) {
         if ((err = ctx->getAuditLog(data, OpenPGPAuditLogFlags))) {
-            return QString::fromLocal8Bit(err.asString());
+            return errorAsString(err);
         }
         const QByteArray ba = dp.data();
         return markupDiagnostics(stringFromGpgOutput(ba));
@@ -91,15 +92,14 @@ QString _detail::audit_log_as_html(Context *ctx, GpgME::Error &err)
     if (ctx->protocol() == CMS) {
         if ((err = ctx->lastError())) {
             if ((err = ctx->getAuditLog(data, Context::DiagnosticAuditLog))) {
-                return QString::fromLocal8Bit(err.asString());
+                return errorAsString(err);
             }
             const QByteArray ba = dp.data();
             return markupDiagnostics(stringFromGpgOutput(ba));
         } else if ((err = ctx->getAuditLog(data, CMSAuditLogFlags))) {
-            return QString::fromLocal8Bit(err.asString());
+            return errorAsString(err);
         }
-        const QByteArray ba = dp.data();
-        return QString::fromUtf8(ba.data(), ba.size());
+        return QString::fromUtf8(dp.data());
     }
 
     return QStringLiteral("Unsupported protocol for Audit Log");
@@ -108,7 +108,7 @@ QString _detail::audit_log_as_html(Context *ctx, GpgME::Error &err)
 static QList<QByteArray> from_sl(const QStringList &sl)
 {
     QList<QByteArray> result;
-    Q_FOREACH (const QString &str, sl) {
+    for (const QString &str : sl) {
         result.append(str.toUtf8());
     }
 

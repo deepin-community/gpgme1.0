@@ -143,7 +143,7 @@ static struct
   /* The context of an associated writer object or NULL.  */
   struct writer_context_s *writer;
 
-  /* A notification handler.  Noet that we current support only one
+  /* A notification handler.  Note that we currently support only one
    * callback per fd.  */
   struct {
     _gpgme_close_notify_handler_t handler;
@@ -410,7 +410,7 @@ reader (void *arg)
               else
                 {
                   /* Check whether the shutdown triggered the error -
-                     no need to to print a warning in this case.  */
+                     no need to print a warning in this case.  */
                   if ( ctx->error_code == WSAECONNABORTED
                        || ctx->error_code == WSAECONNRESET)
                     {
@@ -680,7 +680,7 @@ _gpgme_io_read (int fd, void *buffer, size_t count)
   int nread;
   struct reader_context_s *ctx;
   TRACE_BEG  (DEBUG_SYSIO, "_gpgme_io_read", fd,
-	      "buffer=%p, count=%u", buffer, count);
+	      "buffer=%p, count=%zd", buffer, count);
 
   ctx = find_reader (fd);
   if (!ctx)
@@ -749,8 +749,8 @@ _gpgme_io_read (int fd, void *buffer, size_t count)
 
 
 /* The writer does use a simple buffering strategy so that we are
-   informed about write errors as soon as possible (i. e. with the the
-   next call to the write function.  */
+   informed about write errors as soon as possible (i.e. with the
+   next call to the write function).  */
 static DWORD CALLBACK
 writer (void *arg)
 {
@@ -793,7 +793,7 @@ writer (void *arg)
         }
       UNLOCK (ctx->mutex);
 
-      TRACE_LOG  ("%s %d bytes", sock?"sending":"writing", ctx->nbytes);
+      TRACE_LOG  ("%s %zd bytes", sock?"sending":"writing", ctx->nbytes);
 
       /* Note that CTX->nbytes is not zero at this point, because
 	 _gpgme_io_write always writes at least 1 byte before waking
@@ -846,7 +846,7 @@ writer (void *arg)
   wait_for_single_object (ctx->close_ev, INFINITE);
 
   if (ctx->nbytes)
-    TRACE_LOG  ("still %d bytes in buffer at close time", ctx->nbytes);
+    TRACE_LOG  ("still %zd bytes in buffer at close time", ctx->nbytes);
 
   release_hddesc (ctx->hdd);
   close_handle (ctx->close_ev);
@@ -1013,7 +1013,7 @@ _gpgme_io_write (int fd, const void *buffer, size_t count)
 {
   struct writer_context_s *ctx;
   TRACE_BEG  (DEBUG_SYSIO, "_gpgme_io_write", fd,
-	      "buffer=%p, count=%u", buffer, count);
+	      "buffer=%p, count=%zd", buffer, count);
   TRACE_LOGBUFX (buffer, count);
 
   if (count == 0)
@@ -1275,7 +1275,7 @@ _gpgme_io_close (int fd)
 
 
 /* Set a close notification callback which is called right after FD
- * has been closed but before its slot (ie. the FD number) is being
+ * has been closed but before its slot (i.e. the FD number) is being
  * released.  The HANDLER may thus use the provided value of the FD
  * but it may not pass it to any I/O functions.  Note: Only the last
  * handler set for an FD is used.  */

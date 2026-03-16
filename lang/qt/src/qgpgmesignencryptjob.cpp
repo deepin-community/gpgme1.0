@@ -5,7 +5,7 @@
     Copyright (c) 2004, 2007 Klarälvdalens Datakonsult AB
     Copyright (c) 2016 by Bundesamt für Sicherheit in der Informationstechnik
     Software engineering by Intevation GmbH
-    Copyright (c) 2022 g10 Code GmbH
+    Copyright (c) 2022,2023 g10 Code GmbH
     Software engineering by Ingo Klöcker <dev@ingo-kloecker.de>
 
     QGpgME is free software; you can redistribute it and/or
@@ -41,11 +41,13 @@
 #include "qgpgmesignencryptjob.h"
 
 #include "dataprovider.h"
+#include "signencryptjob_p.h"
+#include "util.h"
 
-#include "context.h"
-#include "data.h"
-#include "key.h"
-#include "exception.h"
+#include <gpgme++/context.h>
+#include <gpgme++/data.h>
+#include <gpgme++/exception.h>
+#include <gpgme++/key.h>
 
 #include <QBuffer>
 #include <QFileInfo>
@@ -55,10 +57,37 @@
 using namespace QGpgME;
 using namespace GpgME;
 
+namespace
+{
+
+class QGpgMESignEncryptJobPrivate : public SignEncryptJobPrivate
+{
+    QGpgMESignEncryptJob *q = nullptr;
+
+public:
+    QGpgMESignEncryptJobPrivate(QGpgMESignEncryptJob *qq)
+        : q{qq}
+    {
+    }
+
+    ~QGpgMESignEncryptJobPrivate() override = default;
+
+private:
+    GpgME::Error startIt() override;
+
+    void startNow() override
+    {
+        q->run();
+    }
+};
+
+}
+
 QGpgMESignEncryptJob::QGpgMESignEncryptJob(Context *context)
     : mixin_type(context),
       mOutputIsBase64Encoded(false)
 {
+    setJobPrivate(this, std::unique_ptr<QGpgMESignEncryptJobPrivate>{new QGpgMESignEncryptJobPrivate{this}});
     lateInitialization();
 }
 
@@ -81,6 +110,9 @@ static QGpgMESignEncryptJob::result_type sign_encrypt(Context *ctx, QThread *thr
 
     QGpgME::QIODeviceDataProvider in(plainText);
     Data indata(&in);
+    if (!plainText->isSequential()) {
+        indata.setSizeHint(plainText->size());
+    }
 
     const auto pureFileName = QFileInfo{fileName}.fileName().toStdString();
     if (!pureFileName.empty()) {
@@ -88,11 +120,13 @@ static QGpgMESignEncryptJob::result_type sign_encrypt(Context *ctx, QThread *thr
     }
 
     ctx->clearSigningKeys();
-    Q_FOREACH (const Key &signer, signers)
-        if (!signer.isNull())
+    for (const Key &signer : signers) {
+        if (!signer.isNull()) {
             if (const Error err = ctx->addSigningKey(signer)) {
                 return std::make_tuple(SigningResult(err), EncryptionResult(), QByteArray(), QString(), Error());
             }
+        }
+    }
 
     if (!cipherText) {
         QGpgME::QByteArrayDataProvider out;
@@ -133,6 +167,60 @@ static QGpgMESignEncryptJob::result_type sign_encrypt_qba(Context *ctx, const st
     return sign_encrypt(ctx, nullptr, signers, recipients, buffer, std::shared_ptr<QIODevice>(), eflags, outputIsBsse64Encoded, fileName);
 }
 
+static QGpgMESignEncryptJob::result_type sign_encrypt_to_filename(Context *ctx,
+                                                                  const std::vector<Key> &signers,
+                                                                  const std::vector<Key> &recipients,
+                                                                  const QString &inputFilePath,
+                                                                  const QString &outputFilePath,
+                                                                  Context::EncryptionFlags flags)
+{
+    Data indata;
+#ifdef Q_OS_WIN
+    indata.setFileName(inputFilePath.toUtf8().constData());
+#else
+    indata.setFileName(QFile::encodeName(inputFilePath).constData());
+#endif
+
+    PartialFileGuard partFileGuard{outputFilePath};
+    if (partFileGuard.tempFileName().isEmpty()) {
+        return std::make_tuple(SigningResult{Error::fromCode(GPG_ERR_EEXIST)},
+                               EncryptionResult{Error::fromCode(GPG_ERR_EEXIST)},
+                               QByteArray{},
+                               QString{},
+                               Error{});
+    }
+
+    Data outdata;
+#ifdef Q_OS_WIN
+    outdata.setFileName(partFileGuard.tempFileName().toUtf8().constData());
+#else
+    outdata.setFileName(QFile::encodeName(partFileGuard.tempFileName()).constData());
+#endif
+
+    ctx->clearSigningKeys();
+    for (const Key &signer : signers) {
+        if (!signer.isNull()) {
+            if (const Error err = ctx->addSigningKey(signer)) {
+                return std::make_tuple(SigningResult{err}, EncryptionResult{}, QByteArray{}, QString{}, Error{});
+            }
+        }
+    }
+
+    flags = static_cast<Context::EncryptionFlags>(flags | Context::EncryptFile);
+    const auto results = ctx->signAndEncrypt(recipients, indata, outdata, flags);
+    const auto &signingResult = results.first;
+    const auto &encryptionResult = results.second;
+
+    if (!signingResult.error().code() && !encryptionResult.error().code()) {
+        // the operation succeeded -> save the result under the requested file name
+        partFileGuard.commit();
+    }
+
+    Error ae;
+    const QString log = _detail::audit_log_as_html(ctx, ae);
+    return std::make_tuple(signingResult, encryptionResult, QByteArray{}, log, ae);
+}
+
 Error QGpgMESignEncryptJob::start(const std::vector<Key> &signers, const std::vector<Key> &recipients, const QByteArray &plainText, bool alwaysTrust)
 {
     run(std::bind(&sign_encrypt_qba, std::placeholders::_1, signers, recipients, plainText, alwaysTrust ? Context::AlwaysTrust : Context::None, mOutputIsBase64Encoded, fileName()));
@@ -154,8 +242,7 @@ std::pair<SigningResult, EncryptionResult> QGpgMESignEncryptJob::exec(const std:
 {
     const result_type r = sign_encrypt_qba(context(), signers, recipients, plainText, eflags, mOutputIsBase64Encoded, fileName());
     cipherText = std::get<2>(r);
-    resultHook(r);
-    return mResult;
+    return std::make_pair(std::get<0>(r), std::get<1>(r));
 }
 
 std::pair<SigningResult, EncryptionResult> QGpgMESignEncryptJob::exec(const std::vector<Key> &signers, const std::vector<Key> &recipients, const QByteArray &plainText, bool alwaysTrust, QByteArray &cipherText)
@@ -163,21 +250,17 @@ std::pair<SigningResult, EncryptionResult> QGpgMESignEncryptJob::exec(const std:
     return exec(signers, recipients, plainText, alwaysTrust ? Context::AlwaysTrust : Context::None, cipherText);
 }
 
-
-#if 0
-
-TODO port?
-void QGpgMESignEncryptJob::showErrorDialog(QWidget *parent, const QString &caption) const
+GpgME::Error QGpgMESignEncryptJobPrivate::startIt()
 {
-    if ((mResult.first.error()  && !mResult.first.error().isCanceled()) ||
-            (mResult.second.error() && !mResult.second.error().isCanceled())) {
-        MessageBox::error(parent, mResult.first, mResult.second, this, caption);
+    if (m_inputFilePath.isEmpty() || m_outputFilePath.isEmpty()) {
+        return Error::fromCode(GPG_ERR_INV_VALUE);
     }
-}
-#endif
 
-void QGpgMESignEncryptJob::resultHook(const result_type &tuple)
-{
-    mResult = std::make_pair(std::get<0>(tuple), std::get<1>(tuple));
+    q->run([=](Context *ctx) {
+        return sign_encrypt_to_filename(ctx, m_signers, m_recipients, m_inputFilePath, m_outputFilePath, m_encryptionFlags);
+    });
+
+    return {};
 }
+
 #include "qgpgmesignencryptjob.moc"

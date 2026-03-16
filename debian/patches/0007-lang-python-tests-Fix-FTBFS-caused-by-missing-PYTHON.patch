@@ -8,7 +8,7 @@ Updated by Paul Gevers <elbrus@debian.org>
  1 file changed, 4 insertions(+), 2 deletions(-)
 
 diff --git a/lang/python/tests/Makefile.am b/lang/python/tests/Makefile.am
-index 62dddaa..6ca07c4 100644
+index 40a26e2..ca4a3de 100644
 --- a/lang/python/tests/Makefile.am
 +++ b/lang/python/tests/Makefile.am
 @@ -70,9 +70,11 @@ check: xcheck

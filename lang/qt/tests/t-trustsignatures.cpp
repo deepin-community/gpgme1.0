@@ -36,11 +36,13 @@
 
 #include "t-support.h"
 
-#include "context.h"
-#include "engineinfo.h"
+#include <gpgme++/context.h>
+#include <gpgme++/engineinfo.h>
 #include "protocol.h"
 #include "signkeyjob.h"
+#include "util.h"
 
+#include <QRegularExpression>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -82,7 +84,7 @@ private Q_SLOTS:
             QVERIFY(job);
             hookUpPassphraseProvider(job.get());
 
-            // Setup the job
+            // Set up the job
             job->setExportable(true);
             job->setSigningKey(seckey);
             job->setTrustSignature(TrustSignatureTrust::Complete, 1, QStringLiteral("example.org"));
@@ -93,9 +95,9 @@ private Q_SLOTS:
                         if (err2) {
                             if (err2.code() == GPG_ERR_GENERAL) {
                                 QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.\n"
-                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(err2.asString())));
+                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(errorAsString(err2))));
                             } else {
-                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(err2.asString())));
+                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(errorAsString(err2))));
                             }
                         }
                     });
@@ -113,9 +115,9 @@ private Q_SLOTS:
             QVERIFY(trustSignature.trustScope());
             const auto trustScope = QString::fromUtf8(trustSignature.trustScope());
             QVERIFY(!trustScope.isEmpty());
-            const QRegExp regex{trustScope};
+            const QRegularExpression regex{trustScope};
             QVERIFY(regex.isValid());
-            QVERIFY(regex.indexIn(QStringLiteral("Foo <foo@example.org>")) != -1);
+            QVERIFY(regex.match(QStringLiteral("Foo <foo@example.org>")).hasMatch());
         }
 
         // Create second trust signature
@@ -125,7 +127,7 @@ private Q_SLOTS:
             QVERIFY(job);
             hookUpPassphraseProvider(job.get());
 
-            // Setup the job
+            // Set up the job
             job->setExportable(true);
             job->setSigningKey(seckey);
             job->setDupeOk(true);
@@ -137,9 +139,9 @@ private Q_SLOTS:
                         if (err2) {
                             if (err2.code() == GPG_ERR_GENERAL) {
                                 QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.\n"
-                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(err2.asString())));
+                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(errorAsString(err2))));
                             } else {
-                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(err2.asString())));
+                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(errorAsString(err2))));
                             }
                         }
                     });
@@ -158,9 +160,9 @@ private Q_SLOTS:
             QVERIFY(trustSignature.trustScope());
             const auto trustScope = QString::fromUtf8(trustSignature.trustScope());
             QVERIFY(!trustScope.isEmpty());
-            const QRegExp regex{trustScope};
+            const QRegularExpression regex{trustScope};
             QVERIFY(regex.isValid());
-            QVERIFY(regex.indexIn(QStringLiteral("Foo <foo@example.net>")) != -1);
+            QVERIFY(regex.match(QStringLiteral("Foo <foo@example.net>")).hasMatch());
         }
     }
 
@@ -193,7 +195,7 @@ private Q_SLOTS:
             QVERIFY(job);
             hookUpPassphraseProvider(job);
 
-            // Setup the job
+            // Set up the job
             job->setExportable(true);
             job->setSigningKey(seckey);
             job->setTrustSignature(TrustSignatureTrust::Complete, 1, QStringLiteral("example.org"));
@@ -204,9 +206,9 @@ private Q_SLOTS:
                         if (err2) {
                             if (err2.code() == GPG_ERR_GENERAL) {
                                 QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.\n"
-                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(err2.asString())));
+                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(errorAsString(err2))));
                             } else {
-                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(err2.asString())));
+                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(errorAsString(err2))));
                             }
                         }
                     });
@@ -224,9 +226,9 @@ private Q_SLOTS:
             QVERIFY(trustSignature.trustScope());
             const auto trustScope = QString::fromUtf8(trustSignature.trustScope());
             QVERIFY(!trustScope.isEmpty());
-            const QRegExp regex{trustScope};
+            const QRegularExpression regex{trustScope};
             QVERIFY(regex.isValid());
-            QVERIFY(regex.indexIn(QStringLiteral("Foo <foo@example.org>")) != -1);
+            QVERIFY(regex.match(QStringLiteral("Foo <foo@example.org>")).hasMatch());
         }
 
         // Create second trust signature
@@ -236,7 +238,7 @@ private Q_SLOTS:
             QVERIFY(job);
             hookUpPassphraseProvider(job);
 
-            // Setup the job
+            // Set up the job
             job->setExportable(true);
             job->setSigningKey(seckey);
             job->setDupeOk(true);
@@ -248,9 +250,9 @@ private Q_SLOTS:
                         if (err2) {
                             if (err2.code() == GPG_ERR_GENERAL) {
                                 QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.\n"
-                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(err2.asString())));
+                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(errorAsString(err2))));
                             } else {
-                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(err2.asString())));
+                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(errorAsString(err2))));
                             }
                         }
                     });
@@ -269,9 +271,9 @@ private Q_SLOTS:
             QVERIFY(trustSignature.trustScope());
             const auto trustScope = QString::fromUtf8(trustSignature.trustScope());
             QVERIFY(!trustScope.isEmpty());
-            const QRegExp regex{trustScope};
+            const QRegularExpression regex{trustScope};
             QVERIFY(regex.isValid());
-            QVERIFY(regex.indexIn(QStringLiteral("Foo <foo@example.net>")) != -1);
+            QVERIFY(regex.match(QStringLiteral("Foo <foo@example.net>")).hasMatch());
         }
     }
 
@@ -304,7 +306,7 @@ private Q_SLOTS:
             QVERIFY(job);
             hookUpPassphraseProvider(job);
 
-            // Setup the job
+            // Set up the job
             job->setExportable(true);
             job->setSigningKey(seckey);
             job->setUserIDsToSign({0});
@@ -316,9 +318,9 @@ private Q_SLOTS:
                         if (err2) {
                             if (err2.code() == GPG_ERR_GENERAL) {
                                 QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.\n"
-                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(err2.asString())));
+                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(errorAsString(err2))));
                             } else {
-                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(err2.asString())));
+                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(errorAsString(err2))));
                             }
                         }
                     });
@@ -336,9 +338,9 @@ private Q_SLOTS:
             QVERIFY(trustSignature.trustScope());
             const auto trustScope = QString::fromUtf8(trustSignature.trustScope());
             QVERIFY(!trustScope.isEmpty());
-            const QRegExp regex{trustScope};
+            const QRegularExpression regex{trustScope};
             QVERIFY(regex.isValid());
-            QVERIFY(regex.indexIn(QStringLiteral("Foo <foo@example.org>")) != -1);
+            QVERIFY(regex.match(QStringLiteral("Foo <foo@example.org>")).hasMatch());
         }
 
         // Create second trust signature
@@ -348,7 +350,7 @@ private Q_SLOTS:
             QVERIFY(job);
             hookUpPassphraseProvider(job);
 
-            // Setup the job
+            // Set up the job
             job->setExportable(true);
             job->setSigningKey(seckey);
             job->setDupeOk(true);
@@ -360,9 +362,9 @@ private Q_SLOTS:
                         if (err2) {
                             if (err2.code() == GPG_ERR_GENERAL) {
                                 QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.\n"
-                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(err2.asString())));
+                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(errorAsString(err2))));
                             } else {
-                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(err2.asString())));
+                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(errorAsString(err2))));
                             }
                         }
                     });
@@ -381,9 +383,9 @@ private Q_SLOTS:
             QVERIFY(trustSignature.trustScope());
             const auto trustScope = QString::fromUtf8(trustSignature.trustScope());
             QVERIFY(!trustScope.isEmpty());
-            const QRegExp regex{trustScope};
+            const QRegularExpression regex{trustScope};
             QVERIFY(regex.isValid());
-            QVERIFY(regex.indexIn(QStringLiteral("Foo <foo@example.net>")) != -1);
+            QVERIFY(regex.match(QStringLiteral("Foo <foo@example.net>")).hasMatch());
         }
     }
 
@@ -416,7 +418,7 @@ private Q_SLOTS:
             QVERIFY(job);
             hookUpPassphraseProvider(job);
 
-            // Setup the job
+            // Set up the job
             job->setExportable(true);
             job->setSigningKey(seckey);
             job->setTrustSignature(TrustSignatureTrust::Complete, 1, QStringLiteral("example.org"));
@@ -427,9 +429,9 @@ private Q_SLOTS:
                         if (err2) {
                             if (err2.code() == GPG_ERR_GENERAL) {
                                 QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.\n"
-                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(err2.asString())));
+                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(errorAsString(err2))));
                             } else {
-                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(err2.asString())));
+                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(errorAsString(err2))));
                             }
                         }
                     });
@@ -447,9 +449,9 @@ private Q_SLOTS:
             QVERIFY(trustSignature.trustScope());
             const auto trustScope = QString::fromUtf8(trustSignature.trustScope());
             QVERIFY(!trustScope.isEmpty());
-            const QRegExp regex{trustScope};
+            const QRegularExpression regex{trustScope};
             QVERIFY(regex.isValid());
-            QVERIFY(regex.indexIn(QStringLiteral("Foo <foo@example.org>")) != -1);
+            QVERIFY(regex.match(QStringLiteral("Foo <foo@example.org>")).hasMatch());
         }
 
         // Create second trust signature
@@ -459,7 +461,7 @@ private Q_SLOTS:
             QVERIFY(job);
             hookUpPassphraseProvider(job);
 
-            // Setup the job
+            // Set up the job
             job->setExportable(true);
             job->setSigningKey(seckey);
             job->setUserIDsToSign({0});
@@ -472,9 +474,9 @@ private Q_SLOTS:
                         if (err2) {
                             if (err2.code() == GPG_ERR_GENERAL) {
                                 QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.\n"
-                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(err2.asString())));
+                                    "Hint: Run with GPGMEPP_INTERACTOR_DEBUG=stderr to debug the edit interaction.").arg(errorAsString(err2))));
                             } else {
-                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(err2.asString())));
+                                QFAIL(qPrintable(QString("The SignKeyJob failed with '%1'.").arg(errorAsString(err2))));
                             }
                         }
                     });
@@ -493,9 +495,9 @@ private Q_SLOTS:
             QVERIFY(trustSignature.trustScope());
             const auto trustScope = QString::fromUtf8(trustSignature.trustScope());
             QVERIFY(!trustScope.isEmpty());
-            const QRegExp regex{trustScope};
+            const QRegularExpression regex{trustScope};
             QVERIFY(regex.isValid());
-            QVERIFY(regex.indexIn(QStringLiteral("Foo <foo@example.net>")) != -1);
+            QVERIFY(regex.match(QStringLiteral("Foo <foo@example.net>")).hasMatch());
         }
     }
 

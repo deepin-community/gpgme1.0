@@ -41,13 +41,8 @@
 #include <QString>
 #include <QIODevice>
 
-#ifdef BUILDING_QGPGME
-# include "context.h"
-# include "interfaces/progressprovider.h"
-#else
-# include <gpgme++/context.h>
-# include <gpgme++/interfaces/progressprovider.h>
-#endif
+#include <gpgme++/context.h>
+#include <gpgme++/interfaces/progressprovider.h>
 
 #include "job.h"
 
@@ -95,12 +90,18 @@ template <typename T_result>
 class Thread : public QThread
 {
 public:
-    explicit Thread(QObject *parent = Q_NULLPTR) : QThread(parent) {}
+    explicit Thread(QObject *parent = nullptr) : QThread(parent) {}
 
     void setFunction(const std::function<T_result()> &function)
     {
         const QMutexLocker locker(&m_mutex);
         m_function = function;
+    }
+
+    bool hasFunction()
+    {
+        const QMutexLocker locker(&m_mutex);
+        return static_cast<bool>(m_function);
     }
 
     T_result result() const
@@ -110,7 +111,7 @@ public:
     }
 
 private:
-    void run() Q_DECL_OVERRIDE {
+    void run() override {
         const QMutexLocker locker(&m_mutex);
         m_result = m_function();
     }
@@ -126,6 +127,12 @@ class ThreadedJobMixin : public T_base, public GpgME::ProgressProvider
 public:
     typedef ThreadedJobMixin<T_base, T_result> mixin_type;
     typedef T_result result_type;
+
+    void run()
+    {
+        Q_ASSERT(m_thread.hasFunction() && "Call setWorkerFunction() before run()");
+        m_thread.start();
+    }
 
 protected:
     static_assert(std::tuple_size<T_result>::value > 2,
@@ -167,6 +174,13 @@ protected:
     }
 
     template <typename T_binder>
+    void setWorkerFunction(const T_binder &func)
+    {
+        m_thread.setFunction([this, func]() { return func(this->context()); });
+    }
+
+public:
+    template <typename T_binder>
     void run(const T_binder &func)
     {
         m_thread.setFunction(std::bind(func, this->context()));
@@ -201,6 +215,8 @@ protected:
         m_thread.setFunction(std::bind(func, this->context(), this->thread(), std::weak_ptr<QIODevice>(io1), std::weak_ptr<QIODevice>(io2)));
         m_thread.start();
     }
+
+protected:
     GpgME::Context *context() const
     {
         return m_ctx.get();
@@ -218,31 +234,35 @@ protected:
         doEmitResult(r);
         this->deleteLater();
     }
-    void slotCancel() Q_DECL_OVERRIDE {
+    void slotCancel() override {
         if (m_ctx)
         {
             m_ctx->cancelPendingOperation();
         }
     }
-    QString auditLogAsHtml() const Q_DECL_OVERRIDE
+    QString auditLogAsHtml() const override
     {
         return m_auditLog;
     }
-    GpgME::Error auditLogError() const Q_DECL_OVERRIDE
+    GpgME::Error auditLogError() const override
     {
         return m_auditLogError;
     }
-    void showProgress(const char * /*what*/,
-                      int /*type*/, int current, int total) Q_DECL_OVERRIDE {
-        // will be called from the thread exec'ing the operation, so
-        // just bounce everything to the owning thread:
-        // ### hope this is thread-safe (meta obj is const, and
-        // ### portEvent is thread-safe, so should be ok)
-        QMetaObject::invokeMethod(this, "progress", Qt::QueuedConnection,
-        // TODO port
-        Q_ARG(QString, QString()),
-        Q_ARG(int, current),
-        Q_ARG(int, total));
+    void showProgress(const char *what,
+                      int type, int current, int total) override {
+        QMetaObject::invokeMethod(this, [this, current, total]() {
+            Q_EMIT this->jobProgress(current, total);
+        }, Qt::QueuedConnection);
+        const QString what_ = QString::fromUtf8(what);
+        QMetaObject::invokeMethod(this, [this, what_, type, current, total]() {
+            Q_EMIT this->rawProgress(what_, type, current, total);
+        }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, [this, what_, current, total]() {
+            QT_WARNING_PUSH
+            QT_WARNING_DISABLE_DEPRECATED
+            Q_EMIT this->progress(what_, current, total);
+            QT_WARNING_POP
+        }, Qt::QueuedConnection);
     }
 private:
     template <typename T1, typename T2>

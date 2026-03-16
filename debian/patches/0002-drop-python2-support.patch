@@ -7,16 +7,18 @@ Forwarded: https://dev.gnupg.org/T5298
  configure.ac | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/configure.ac b/configure.ac
-index 9d696b9..581cc56 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -443,7 +443,7 @@ if test "$found_py" = "1"; then
+@@ -612,11 +612,11 @@ if test "$found_py" = "1"; then
+ 	PYTHON_VERSIONS=
+ 
  	if test "$found_py" = "1" -o "$found_py3" = "1"; then
  	  # Reset everything, so that we can look for another Python.
            m4_foreach([mym4pythonver],
--                     [[2.7],[3.4],[3.5],[3.6],[3.7],[3.8],[3.9],[all]],
-+                     [[3.4],[3.5],[3.6],[3.7],[3.8],[3.9],[all]],
+-                     [[2.7],[3.6],[3.9],[3.10],[3.11],[3.12],[3.13],[all]],
++                     [[3.6],[3.9],[3.10],[3.11],[3.12],[3.13],[all]],
             [unset PYTHON
  	    unset PYTHON_VERSION
  	    unset PYTHON_CPPFLAGS
+ 	    unset PYTHON_LDFLAGS
+ 	    unset PYTHON_LIBS

@@ -5,7 +5,7 @@
     Copyright (c) 2008 Klarälvdalens Datakonsult AB
     Copyright (c) 2016 by Bundesamt für Sicherheit in der Informationstechnik
     Software engineering by Intevation GmbH
-    Copyright (c) 2021 g10 Code GmbH
+    Copyright (c) 2021,2023 g10 Code GmbH
     Software engineering by Ingo Klöcker <dev@ingo-kloecker.de>
 
     QGpgME is free software; you can redistribute it and/or
@@ -40,17 +40,50 @@
 
 #include "qgpgmechangeexpiryjob.h"
 
-#include "context.h"
-#include "key.h"
+#include "changeexpiryjob_p.h"
+
+#include <gpgme++/context.h>
+#include <gpgme++/key.h>
 
 #include <QDateTime>
 
 using namespace QGpgME;
 using namespace GpgME;
 
+namespace
+{
+
+class QGpgMEChangeExpiryJobPrivate : public ChangeExpiryJobPrivate
+{
+    QGpgMEChangeExpiryJob *q = nullptr;
+
+public:
+    QGpgMEChangeExpiryJobPrivate(QGpgMEChangeExpiryJob *qq)
+        : q{qq}
+    {
+    }
+
+    ~QGpgMEChangeExpiryJobPrivate() override = default;
+
+private:
+    GpgME::Error startIt() override
+    {
+        Q_ASSERT(!"Not supported by this Job class.");
+        return Error::fromCode(GPG_ERR_NOT_SUPPORTED);
+    }
+
+    void startNow() override
+    {
+        q->run();
+    }
+};
+
+}
+
 QGpgMEChangeExpiryJob::QGpgMEChangeExpiryJob(Context *context)
     : mixin_type(context)
 {
+    setJobPrivate(this, std::unique_ptr<QGpgMEChangeExpiryJobPrivate>{new QGpgMEChangeExpiryJobPrivate{this}});
     lateInitialization();
 }
 
@@ -70,7 +103,7 @@ static QGpgMEChangeExpiryJob::result_type change_expiry(Context *ctx, const Key 
     if (subkeys.empty() || (options & ChangeExpiryJob::UpdatePrimaryKey)) {
         // update the expiration date of the primary key
         auto err = ctx->setExpire(key, expires);
-        if (err) {
+        if (err || err.isCanceled()) {
             return std::make_tuple(err, QString(), Error());
         }
     }

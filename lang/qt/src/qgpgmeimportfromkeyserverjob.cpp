@@ -40,9 +40,9 @@
 
 #include "dataprovider.h"
 
-#include "context.h"
-#include "data.h"
-#include "key.h"
+#include <gpgme++/context.h>
+#include <gpgme++/data.h>
+#include <gpgme++/key.h>
 
 #include <cassert>
 
@@ -74,14 +74,7 @@ Error QGpgMEImportFromKeyserverJob::start(const std::vector<Key> &keys)
 GpgME::ImportResult QGpgME::QGpgMEImportFromKeyserverJob::exec(const std::vector<Key> &keys)
 {
     const result_type r = importfromkeyserver(context(), keys);
-    resultHook(r);
-    return mResult;
+    return std::get<0>(r);
 }
 
-// PENDING(marc) implement showErrorDialog()
-
-void QGpgME::QGpgMEImportFromKeyserverJob::resultHook(const result_type &tuple)
-{
-    mResult = std::get<0>(tuple);
-}
 #include "qgpgmeimportfromkeyserverjob.moc"

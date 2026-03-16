@@ -41,11 +41,7 @@
 #include <QString>
 #include <QMap>
 
-#ifdef BUILDING_QGPGME
-# include "error.h"
-#else
-# include <gpgme++/error.h>
-#endif
+#include <gpgme++/error.h>
 
 class QWidget;
 
@@ -95,11 +91,58 @@ public:
      */
     static GpgME::Context *context(Job *job);
 
+    /** Starts the job.
+     *
+     * Starts the job with the values set for the concrete job. If starting
+     * the job failed then you are responsible for destroying it. Therefore,
+     * it's recommended to store the job in a std::unique_ptr until it has
+     * been started successfully.
+     */
+    GpgME::Error startIt();
+
+    /** Starts a deferred job.
+     *
+     * The job needs to have been prepared for a deferred start by calling the
+     * startLater() function instead of the start() function of a leaf class.
+     */
+    void startNow();
+
 public Q_SLOTS:
     virtual void slotCancel() = 0;
 
 Q_SIGNALS:
-    void progress(const QString &what, int current, int total);
+    /**
+     * This signal is emitted whenever the backend sends a progress status
+     * message. For most jobs, \a current is the amount of processed data
+     * (or files) and \a total is the total amount of data (of files). If
+     * \a total is 0, then the total amount is unknown or not yet known.
+     * For GnuPG 2.1.13 and later, \a current and \a total do not exceed
+     * 2^20, i.e. for larger values they are scaled down and you should not
+     * assume that they represent absolute values.
+     *
+     * Check the documentation on progress in the GpgME manual for details.
+     *
+     * Note: Some jobs provide special progress signals, e.g. for file-count-
+     * or data-based progress.
+     */
+    void jobProgress(int current, int total);
+
+    /**
+     * This signal is emitted whenever the backend sends a progress status
+     * message. Compared to the jobProgress signal this signal also provides the
+     * what value and the type value reported by the backend. Usually, these
+     * values can safely be ignored, so that you are better off using the
+     * simpler jobProgress signal.
+     * Check the documentation on progress in the GpgME manual for details
+     * on what and type.
+     *
+     * Note: Some jobs provide special progress signals, so that you do not
+     * have to deal with what and type yourself.
+     */
+    void rawProgress(const QString &what, int type, int current, int total);
+
+    QGPGME_DEPRECATED void progress(const QString &what, int current, int total);
+
     void done();
 };
 

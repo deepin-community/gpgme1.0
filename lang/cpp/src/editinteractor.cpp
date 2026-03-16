@@ -52,6 +52,7 @@ using namespace GpgME;
 
 static const char *status_to_string(unsigned int status);
 static Error status_to_error(unsigned int status);
+static Error parse_sc_op_failure(const char *args);
 
 class EditInteractor::Private
 {
@@ -96,7 +97,19 @@ public:
 
             // advance to next state based on input:
             const unsigned int oldState = ei->state;
-            ei->state = ei->q->nextState(status, args, err);
+
+            if (ei->q->needsNoResponse(status)) {
+                // keep state
+            } else if (status == GPGME_STATUS_ERROR) {
+                err = ei->q->parseStatusError(args);
+                ei->state = EditInteractor::ErrorState;
+            } else if (status == GPGME_STATUS_SC_OP_FAILURE) {
+                err = parse_sc_op_failure(args);
+                ei->state = EditInteractor::ErrorState;
+            } else {
+                ei->state = ei->q->nextState(status, args, err);
+            }
+
             if (ei->debug) {
                 std::fprintf(ei->debug, "EditInteractor: %u -> nextState( %s, %s ) -> %u\n",
                              oldState, status_to_string(status), args ? args : "<null>", ei->state);
@@ -125,7 +138,7 @@ public:
                         if (writeAll(fd, result, len) != len) {
                             err = Error::fromSystemError();
                             if (ei->debug) {
-                                std::fprintf(ei->debug, "EditInteractor: Could not write to fd %d (%s)\n", fd, err.asString());
+                                std::fprintf(ei->debug, "EditInteractor: Could not write to fd %d (%s)\n", fd, err.asStdString().c_str());
                             }
                             goto error;
                         }
@@ -134,7 +147,7 @@ public:
                     if (writeAll(fd, "\n", 1) != 1) {
                         err = Error::fromSystemError();
                         if (ei->debug) {
-                            std::fprintf(ei->debug, "EditInteractor: Could not write to fd %d (%s)\n", fd, err.asString());
+                            std::fprintf(ei->debug, "EditInteractor: Could not write to fd %d (%s)\n", fd, err.asStdString().c_str());
                         }
                         goto error;
                     }
@@ -154,6 +167,20 @@ public:
         }
 
     error:
+        if (err.code() == GPG_ERR_GENERAL) {
+            // gpg may have asked an unknown question; try to use the default answer
+            if (ei->debug) {
+                std::fprintf(ei->debug, "EditInteractor: action result \"%s\" (go with the default answer)\n", "");
+            }
+            if (writeAll(fd, "\n", 1) != 1) {
+                err = Error::fromSystemError();
+                if (ei->debug) {
+                    std::fprintf(ei->debug, "EditInteractor: Could not write to fd %d (%s)\n", fd, err.asStdString().c_str());
+                }
+            } else {
+                err = Error();
+            }
+        }
         if (err || err.isCanceled()) {
             ei->error = err;
             ei->state = EditInteractor::ErrorState;
@@ -266,6 +293,38 @@ GpgME::Error EditInteractor::parseStatusError(const char *args)
         err = Error{static_cast<unsigned int>(std::stoul(fields[1]))};
     } else {
         err = Error::fromCode(GPG_ERR_GENERAL);
+    }
+
+    return err;
+}
+
+static Error sc_op_failure_to_error(unsigned int status)
+{
+    switch (status) {
+    case 1:
+        // GPG_ERR_CANCELED or GPG_ERR_FULLY_CANCELED
+        return Error::fromCode(GPG_ERR_CANCELED);
+    case 2:
+        // GPG_ERR_BAD_PIN or GPG_ERR_BAD_RESET_CODE [sic]
+        return Error::fromCode(GPG_ERR_BAD_PIN);
+    case 3:
+        return Error::fromCode(GPG_ERR_PIN_BLOCKED);
+    case 4:
+        return Error::fromCode(GPG_ERR_NO_RESET_CODE);
+    }
+    return Error::fromCode(GPG_ERR_CARD);
+}
+
+// static
+Error parse_sc_op_failure(const char *args)
+{
+    Error err;
+
+    const auto fields = split(args, ' ');
+    if (fields.size() >= 1) {
+        err = sc_op_failure_to_error(static_cast<unsigned int>(std::stoul(fields[0])));
+    } else {
+        err = Error::fromCode(GPG_ERR_CARD);
     }
 
     return err;

@@ -39,25 +39,56 @@
 #include "qgpgmedecryptverifyjob.h"
 
 #include "dataprovider.h"
+#include "debug.h"
+#include "decryptverifyjob_p.h"
+#include "util.h"
 
-#include "context.h"
-#include "decryptionresult.h"
-#include "verificationresult.h"
-#include "data.h"
+#include <gpgme++/context.h>
+#include <gpgme++/decryptionresult.h>
+#include <gpgme++/verificationresult.h>
+#include <gpgme++/data.h>
 
 #include <QDebug>
 #include "qgpgme_debug.h"
 
 #include <QBuffer>
+#include <QFile>
 
 #include <cassert>
 
 using namespace QGpgME;
 using namespace GpgME;
 
+namespace
+{
+
+class QGpgMEDecryptVerifyJobPrivate : public DecryptVerifyJobPrivate
+{
+    QGpgMEDecryptVerifyJob *q = nullptr;
+
+public:
+    QGpgMEDecryptVerifyJobPrivate(QGpgMEDecryptVerifyJob *qq)
+        : q{qq}
+    {
+    }
+
+    ~QGpgMEDecryptVerifyJobPrivate() override = default;
+
+private:
+    GpgME::Error startIt() override;
+
+    void startNow() override
+    {
+        q->run();
+    }
+};
+
+}
+
 QGpgMEDecryptVerifyJob::QGpgMEDecryptVerifyJob(Context *context)
     : mixin_type(context)
 {
+    setJobPrivate(this, std::unique_ptr<QGpgMEDecryptVerifyJobPrivate>{new QGpgMEDecryptVerifyJobPrivate{this}});
     lateInitialization();
 }
 
@@ -76,7 +107,10 @@ static QGpgMEDecryptVerifyJob::result_type decrypt_verify(Context *ctx, QThread 
     const _detail::ToThreadMover ptMover(plainText,  thread);
 
     QGpgME::QIODeviceDataProvider in(cipherText);
-    const Data indata(&in);
+    Data indata(&in);
+    if (!cipherText->isSequential()) {
+        indata.setSizeHint(cipherText->size());
+    }
 
     if (!plainText) {
         QGpgME::QByteArrayDataProvider out;
@@ -85,7 +119,7 @@ static QGpgMEDecryptVerifyJob::result_type decrypt_verify(Context *ctx, QThread 
         const std::pair<DecryptionResult, VerificationResult> res = ctx->decryptAndVerify(indata, outdata);
         Error ae;
         const QString log = _detail::audit_log_as_html(ctx, ae);
-        qCDebug(QGPGME_LOG) << __func__ << "- End no plainText. Error:" << ae.asString();
+        qCDebug(QGPGME_LOG) << __func__ << "- End no plainText. Error:" << ae;
         return std::make_tuple(res.first, res.second, out.data(), log, ae);
     } else {
         QGpgME::QIODeviceDataProvider out(plainText);
@@ -94,7 +128,7 @@ static QGpgMEDecryptVerifyJob::result_type decrypt_verify(Context *ctx, QThread 
         const std::pair<DecryptionResult, VerificationResult> res = ctx->decryptAndVerify(indata, outdata);
         Error ae;
         const QString log = _detail::audit_log_as_html(ctx, ae);
-        qCDebug(QGPGME_LOG) << __func__ << "- End plainText. Error:" << ae.asString();
+        qCDebug(QGPGME_LOG) << __func__ << "- End plainText. Error:" << ae;
         return std::make_tuple(res.first, res.second, QByteArray(), log, ae);
     }
 }
@@ -109,30 +143,86 @@ static QGpgMEDecryptVerifyJob::result_type decrypt_verify_qba(Context *ctx, cons
     return decrypt_verify(ctx, nullptr, buffer, std::shared_ptr<QIODevice>());
 }
 
+static QGpgMEDecryptVerifyJob::result_type decrypt_verify_from_filename(Context *ctx,
+                                                                        const QString &inputFilePath,
+                                                                        const QString &outputFilePath,
+                                                                        bool processAllSignatures)
+{
+    Data indata;
+#ifdef Q_OS_WIN
+    indata.setFileName(inputFilePath.toUtf8().constData());
+#else
+    indata.setFileName(QFile::encodeName(inputFilePath).constData());
+#endif
+
+    PartialFileGuard partFileGuard{outputFilePath};
+    if (partFileGuard.tempFileName().isEmpty()) {
+        return std::make_tuple(DecryptionResult{Error::fromCode(GPG_ERR_EEXIST)}, VerificationResult{Error::fromCode(GPG_ERR_EEXIST)}, QByteArray{}, QString{}, Error{});
+    }
+
+    Data outdata;
+#ifdef Q_OS_WIN
+    outdata.setFileName(partFileGuard.tempFileName().toUtf8().constData());
+#else
+    outdata.setFileName(QFile::encodeName(partFileGuard.tempFileName()).constData());
+#endif
+
+    if (processAllSignatures) {
+        ctx->setFlag("proc-all-sigs", "1");
+    }
+    const auto results = ctx->decryptAndVerify(indata, outdata);
+    const auto &decryptionResult = results.first;
+    const auto &verificationResult = results.second;
+
+    if (!decryptionResult.error().code() && !verificationResult.error().code()) {
+        // the operation succeeded -> save the result under the requested file name
+        partFileGuard.commit();
+    }
+
+    Error ae;
+    const QString log = _detail::audit_log_as_html(ctx, ae);
+    return std::make_tuple(decryptionResult, verificationResult, QByteArray{}, log, ae);
+}
+
 Error QGpgMEDecryptVerifyJob::start(const QByteArray &cipherText)
 {
+    if (processAllSignatures()) {
+        context()->setFlag("proc-all-sigs", "1");
+    }
     run(std::bind(&decrypt_verify_qba, std::placeholders::_1, cipherText));
     return Error();
 }
 
 void QGpgMEDecryptVerifyJob::start(const std::shared_ptr<QIODevice> &cipherText, const std::shared_ptr<QIODevice> &plainText)
 {
+    if (processAllSignatures()) {
+        context()->setFlag("proc-all-sigs", "1");
+    }
     run(std::bind(&decrypt_verify, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4), cipherText, plainText);
 }
 
 std::pair<GpgME::DecryptionResult, GpgME::VerificationResult>
 QGpgME::QGpgMEDecryptVerifyJob::exec(const QByteArray &cipherText, QByteArray &plainText)
 {
+    if (processAllSignatures()) {
+        context()->setFlag("proc-all-sigs", "1");
+    }
     const result_type r = decrypt_verify_qba(context(), cipherText);
     plainText = std::get<2>(r);
-    resultHook(r);
-    return mResult;
+    return std::make_pair(std::get<0>(r), std::get<1>(r));
 }
 
-//PENDING(marc) implement showErrorDialog()
-
-void QGpgMEDecryptVerifyJob::resultHook(const result_type &tuple)
+GpgME::Error QGpgMEDecryptVerifyJobPrivate::startIt()
 {
-    mResult = std::make_pair(std::get<0>(tuple), std::get<1>(tuple));
+    if (m_inputFilePath.isEmpty() || m_outputFilePath.isEmpty()) {
+        return Error::fromCode(GPG_ERR_INV_VALUE);
+    }
+
+    q->run([=](Context *ctx) {
+        return decrypt_verify_from_filename(ctx, m_inputFilePath, m_outputFilePath, m_processAllSignatures);
+    });
+
+    return {};
 }
+
 #include "qgpgmedecryptverifyjob.moc"

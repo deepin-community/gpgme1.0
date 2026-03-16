@@ -5,6 +5,8 @@
     Copyright (c) 2004,2008 Klarälvdalens Datakonsult AB
     Copyright (c) 2016 by Bundesamt für Sicherheit in der Informationstechnik
     Software engineering by Intevation GmbH
+    Copyright (c) 2023 g10 Code GmbH
+    Software engineering by Ingo Klöcker <dev@ingo-kloecker.de>
 
     QGpgME is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -38,18 +40,51 @@
 
 #include "qgpgmeimportjob.h"
 
+#include "importjob_p.h"
+
 #include "dataprovider.h"
 
-#include <context.h>
-#include <data.h>
-#include <key.h>
+#include <gpgme++/context.h>
+#include <gpgme++/data.h>
+#include <gpgme++/key.h>
 
 using namespace QGpgME;
 using namespace GpgME;
 
+namespace
+{
+
+class QGpgMEImportJobPrivate : public ImportJobPrivate
+{
+    QGpgMEImportJob *q = nullptr;
+
+public:
+    QGpgMEImportJobPrivate(QGpgMEImportJob *qq)
+        : q{qq}
+    {
+    }
+
+    ~QGpgMEImportJobPrivate() override = default;
+
+private:
+    GpgME::Error startIt() override
+    {
+        Q_ASSERT(!"Not supported by this Job class.");
+        return Error::fromCode(GPG_ERR_NOT_SUPPORTED);
+    }
+
+    void startNow() override
+    {
+        q->run();
+    }
+};
+
+}
+
 QGpgMEImportJob::QGpgMEImportJob(Context *context)
     : mixin_type(context)
 {
+    setJobPrivate(this, std::unique_ptr<QGpgMEImportJobPrivate>{new QGpgMEImportJobPrivate{this}});
     lateInitialization();
 }
 
@@ -71,10 +106,14 @@ static const char *originToString(Key::Origin origin)
 }
 
 static QGpgMEImportJob::result_type import_qba(Context *ctx, const QByteArray &certData, const QString &importFilter,
-                                               Key::Origin keyOrigin, const QString &keyOriginUrl)
+                                               const QStringList &importOptions, Key::Origin keyOrigin,
+                                               const QString &keyOriginUrl)
 {
     if (!importFilter.isEmpty()) {
         ctx->setFlag("import-filter", importFilter.toStdString().c_str());
+    }
+    if (!importOptions.empty()) {
+        ctx->setFlag("import-options", importOptions.join(QLatin1Char{','}).toStdString().c_str());
     }
     if (keyOrigin != Key::OriginUnknown) {
         if (const auto origin = originToString(keyOrigin)) {
@@ -114,21 +153,20 @@ static QGpgMEImportJob::result_type import_qba(Context *ctx, const QByteArray &c
 
 Error QGpgMEImportJob::start(const QByteArray &certData)
 {
-    run(std::bind(&import_qba, std::placeholders::_1, certData, importFilter(), keyOrigin(), keyOriginUrl()));
+    run(std::bind(&import_qba, std::placeholders::_1, certData, importFilter(), importOptions(), keyOrigin(), keyOriginUrl()));
     return Error();
 }
 
 GpgME::ImportResult QGpgME::QGpgMEImportJob::exec(const QByteArray &keyData)
 {
-    const result_type r = import_qba(context(), keyData, importFilter(), keyOrigin(), keyOriginUrl());
-    resultHook(r);
-    return mResult;
+    const result_type r = import_qba(context(), keyData, importFilter(), importOptions(), keyOrigin(), keyOriginUrl());
+    return std::get<0>(r);
 }
 
-// PENDING(marc) implement showErrorDialog()
-
-void QGpgME::QGpgMEImportJob::resultHook(const result_type &tuple)
+Error QGpgMEImportJob::startLater(const QByteArray &certData)
 {
-    mResult = std::get<0>(tuple);
+    setWorkerFunction(std::bind(&import_qba, std::placeholders::_1, certData, importFilter(), importOptions(), keyOrigin(), keyOriginUrl()));
+    return {};
 }
+
 #include "qgpgmeimportjob.moc"

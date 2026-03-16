@@ -37,9 +37,10 @@
 #include "t-support.h"
 
 #include "changeexpiryjob.h"
-#include "context.h"
-#include "engineinfo.h"
+#include <gpgme++/context.h>
+#include <gpgme++/engineinfo.h>
 #include "protocol.h"
+#include "util.h"
 
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -70,7 +71,7 @@ private Q_SLOTS:
         QVERIFY(!key.isNull());
         QVERIFY(!key.subkey(0).isNull());
         QVERIFY(!key.subkey(1).isNull());
-        const auto subkeyExpiration = key.subkey(1).expirationTime();
+        const auto subkeyExpiration = uint_least32_t(key.subkey(1).expirationTime());
 
         {
             // Create the job
@@ -84,7 +85,7 @@ private Q_SLOTS:
                     this, [this] (const GpgME::Error &err2, const QString &, const GpgME::Error &) {
                         Q_EMIT asyncDone();
                         if (err2) {
-                            QFAIL(qPrintable(QString("The ChangeExpiryJob failed with '%1'.").arg(err2.asString())));
+                            QFAIL(qPrintable(QString("The ChangeExpiryJob failed with '%1'.").arg(errorAsString(err2))));
                         }
                     });
 
@@ -101,7 +102,7 @@ private Q_SLOTS:
                 newExpirationDate.toSecsSinceEpoch() - 10,
                 QDateTime::currentDateTime().addDays(1).toSecsSinceEpoch());
             {
-                const auto actualExpiration = key.subkey(0).expirationTime();
+                const auto actualExpiration = uint_least32_t(key.subkey(0).expirationTime());
                 QVERIFY2(actualExpiration >= expectedExpirationRange.first,
                         ("actual: " + std::to_string(actualExpiration) +
                          "; expected: " + std::to_string(expectedExpirationRange.first)).c_str());
@@ -110,7 +111,7 @@ private Q_SLOTS:
                          "; expected: " + std::to_string(expectedExpirationRange.second)).c_str());
             }
             {
-                const auto actualExpiration = key.subkey(1).expirationTime();
+                const auto actualExpiration = uint_least32_t(key.subkey(1).expirationTime());
                 QCOMPARE(actualExpiration, subkeyExpiration);  // unchanged
             }
         }
@@ -133,7 +134,7 @@ private Q_SLOTS:
         QVERIFY(!key.isNull());
         QVERIFY(!key.subkey(0).isNull());
         QVERIFY(!key.subkey(1).isNull());
-        const auto primaryKeyExpiration = key.subkey(0).expirationTime();
+        const auto primaryKeyExpiration = uint_least32_t(key.subkey(0).expirationTime());
 
         {
             // Create the job
@@ -147,7 +148,7 @@ private Q_SLOTS:
                     this, [this] (const GpgME::Error &err2, const QString &, const GpgME::Error &) {
                         Q_EMIT asyncDone();
                         if (err2) {
-                            QFAIL(qPrintable(QString("The ChangeExpiryJob failed with '%1'.").arg(err2.asString())));
+                            QFAIL(qPrintable(QString("The ChangeExpiryJob failed with '%1'.").arg(errorAsString(err2))));
                         }
                     });
 
@@ -164,11 +165,11 @@ private Q_SLOTS:
                 newExpirationDate.toSecsSinceEpoch() - 10,
                 QDateTime::currentDateTime().addDays(2).toSecsSinceEpoch());
             {
-                const auto actualExpiration = key.subkey(0).expirationTime();
+                const auto actualExpiration = uint_least32_t(key.subkey(0).expirationTime());
                 QCOMPARE(actualExpiration, primaryKeyExpiration);  // unchanged
             }
             {
-                const auto actualExpiration = key.subkey(1).expirationTime();
+                const auto actualExpiration = uint_least32_t(key.subkey(1).expirationTime());
                 QVERIFY2(actualExpiration >= expectedExpirationRange.first,
                         ("actual: " + std::to_string(actualExpiration) +
                          "; expected: " + std::to_string(expectedExpirationRange.first)).c_str());
@@ -196,7 +197,7 @@ private Q_SLOTS:
         QVERIFY(!key.isNull());
         QVERIFY(!key.subkey(0).isNull());
         QVERIFY(!key.subkey(1).isNull());
-        const auto subkeyExpiration = key.subkey(1).expirationTime();
+        const auto subkeyExpiration = uint_least32_t(key.subkey(1).expirationTime());
 
         {
             // Create the job
@@ -211,7 +212,7 @@ private Q_SLOTS:
                     this, [this] (const GpgME::Error &err2, const QString &, const GpgME::Error &) {
                         Q_EMIT asyncDone();
                         if (err2) {
-                            QFAIL(qPrintable(QString("The ChangeExpiryJob failed with '%1'.").arg(err2.asString())));
+                            QFAIL(qPrintable(QString("The ChangeExpiryJob failed with '%1'.").arg(errorAsString(err2))));
                         }
                     });
 
@@ -228,7 +229,7 @@ private Q_SLOTS:
                 newExpirationDate.toSecsSinceEpoch() - 10,
                 QDateTime::currentDateTime().addDays(3).toSecsSinceEpoch());
             {
-                const auto actualExpiration = key.subkey(0).expirationTime();
+                const auto actualExpiration = uint_least32_t(key.subkey(0).expirationTime());
                 QVERIFY2(actualExpiration >= expectedExpirationRange.first,
                         ("actual: " + std::to_string(actualExpiration) +
                          "; expected: " + std::to_string(expectedExpirationRange.first)).c_str());
@@ -237,7 +238,7 @@ private Q_SLOTS:
                          "; expected: " + std::to_string(expectedExpirationRange.second)).c_str());
             }
             {
-                const auto actualExpiration = key.subkey(1).expirationTime();
+                const auto actualExpiration = uint_least32_t(key.subkey(1).expirationTime());
                 QCOMPARE(actualExpiration, subkeyExpiration);  // unchanged
             }
         }
@@ -274,7 +275,7 @@ private Q_SLOTS:
                     this, [this] (const GpgME::Error &err2, const QString &, const GpgME::Error &) {
                         Q_EMIT asyncDone();
                         if (err2) {
-                            QFAIL(qPrintable(QString("The ChangeExpiryJob failed with '%1'.").arg(err2.asString())));
+                            QFAIL(qPrintable(QString("The ChangeExpiryJob failed with '%1'.").arg(errorAsString(err2))));
                         }
                     });
 
@@ -291,7 +292,7 @@ private Q_SLOTS:
                 newExpirationDate.toSecsSinceEpoch() - 10,
                 QDateTime::currentDateTime().addDays(4).toSecsSinceEpoch());
             {
-                const auto actualExpiration = key.subkey(0).expirationTime();
+                const auto actualExpiration = uint_least32_t(key.subkey(0).expirationTime());
                 QVERIFY2(actualExpiration >= expectedExpirationRange.first,
                         ("actual: " + std::to_string(actualExpiration) +
                          "; expected: " + std::to_string(expectedExpirationRange.first)).c_str());
@@ -300,7 +301,7 @@ private Q_SLOTS:
                          "; expected: " + std::to_string(expectedExpirationRange.second)).c_str());
             }
             {
-                const auto actualExpiration = key.subkey(1).expirationTime();
+                const auto actualExpiration = uint_least32_t(key.subkey(1).expirationTime());
                 QVERIFY2(actualExpiration >= expectedExpirationRange.first,
                         ("actual: " + std::to_string(actualExpiration) +
                           "; expected: " + std::to_string(expectedExpirationRange.first)).c_str());
@@ -342,7 +343,7 @@ private Q_SLOTS:
                     this, [this] (const GpgME::Error &err2, const QString &, const GpgME::Error &) {
                         Q_EMIT asyncDone();
                         if (err2) {
-                            QFAIL(qPrintable(QString("The ChangeExpiryJob failed with '%1'.").arg(err2.asString())));
+                            QFAIL(qPrintable(QString("The ChangeExpiryJob failed with '%1'.").arg(errorAsString(err2))));
                         }
                     });
 
@@ -359,7 +360,7 @@ private Q_SLOTS:
                 newExpirationDate.toSecsSinceEpoch() - 10,
                 QDateTime::currentDateTime().addDays(5).toSecsSinceEpoch());
             {
-                const auto actualExpiration = key.subkey(0).expirationTime();
+                const auto actualExpiration = uint_least32_t(key.subkey(0).expirationTime());
                 QVERIFY2(actualExpiration >= expectedExpirationRange.first,
                         ("actual: " + std::to_string(actualExpiration) +
                          "; expected: " + std::to_string(expectedExpirationRange.first)).c_str());
@@ -368,7 +369,7 @@ private Q_SLOTS:
                          "; expected: " + std::to_string(expectedExpirationRange.second)).c_str());
             }
             {
-                const auto actualExpiration = key.subkey(1).expirationTime();
+                const auto actualExpiration = uint_least32_t(key.subkey(1).expirationTime());
                 QVERIFY2(actualExpiration >= expectedExpirationRange.first,
                         ("actual: " + std::to_string(actualExpiration) +
                           "; expected: " + std::to_string(expectedExpirationRange.first)).c_str());

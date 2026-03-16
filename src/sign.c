@@ -60,6 +60,8 @@ typedef struct
   unsigned int ignore_inv_recp:1;
   unsigned int inv_sgnr_seen:1;
   unsigned int sig_created_seen:1;
+  /* Whether a SUCCESS status was seen.  Emitted by gpgtar.  */
+  unsigned int success_seen:1;
 } *op_data_t;
 
 
@@ -125,7 +127,7 @@ gpgme_op_sign_result (gpgme_ctx_t ctx)
   if (gpgme_signers_count (ctx)
       && signatures + inv_signers != gpgme_signers_count (ctx))
     {
-      /* In this case at least one signatures was not created perhaps
+      /* In this case at least one signature was not created perhaps
          due to a bad passphrase etc.  Thus the entire message is
          broken and should not be used.  We add the already created
          signatures to the invalid signers list and thus this case can
@@ -251,7 +253,16 @@ parse_sig_created (char *args, gpgme_new_signature_t *sigp,
     }
   args = tail;
 
+  /* strtol has been used wrongly here.  We can't change this anymore
+   * but we now take care of the 0x1f class which would otherwise let
+   * us run into an error.  */
   sig->sig_class = strtol (args, &tail, 0);
+  if (!errno && args != tail && sig->sig_class == 1
+      && (*tail == 'F' || *tail == 'f'))
+    {
+      tail++;
+      sig->sig_class = 131; /* Arbitrary unused value in rfc4880. */
+    }
   sig->class = sig->sig_class;
   sig->_obsolete_class = sig->sig_class;
   if (errno || args == tail || *tail != ' ')
@@ -354,7 +365,9 @@ _gpgme_sign_status_handler (void *priv, gpgme_status_code_t code, char *args)
       break;
 
     case GPGME_STATUS_FAILURE:
-      opd->failure_code = _gpgme_parse_failure (args);
+      if (!opd->failure_code
+          || gpg_err_code (opd->failure_code) == GPG_ERR_GENERAL)
+        opd->failure_code = _gpgme_parse_failure (args);
       break;
 
     case GPGME_STATUS_EOF:
@@ -366,11 +379,17 @@ _gpgme_sign_status_handler (void *priv, gpgme_status_code_t code, char *args)
       else if (!opd->sig_created_seen
                && ctx->protocol != GPGME_PROTOCOL_UISERVER)
 	err = opd->failure_code? opd->failure_code:gpg_error (GPG_ERR_GENERAL);
+      else if (!opd->success_seen)
+        err = opd->failure_code? opd->failure_code:gpg_error (GPG_ERR_EOF);
       break;
 
     case GPGME_STATUS_INQUIRE_MAXLEN:
       if (ctx->status_cb && !ctx->full_status)
         err = ctx->status_cb (ctx->status_cb_value, "INQUIRE_MAXLEN", args);
+      break;
+
+    case GPGME_STATUS_SUCCESS:
+      opd->success_seen = 1;
       break;
 
     default:
@@ -393,7 +412,7 @@ sign_status_handler (void *priv, gpgme_status_code_t code, char *args)
 
 
 static gpgme_error_t
-sign_init_result (gpgme_ctx_t ctx, int ignore_inv_recp)
+sign_init_result (gpgme_ctx_t ctx, int ignore_inv_recp, int success_required)
 {
   gpgme_error_t err;
   void *hook;
@@ -410,19 +429,20 @@ sign_init_result (gpgme_ctx_t ctx, int ignore_inv_recp)
   opd->ignore_inv_recp = !!ignore_inv_recp;
   opd->inv_sgnr_seen = 0;
   opd->sig_created_seen = 0;
+  opd->success_seen = !success_required;
   return 0;
 }
 
 gpgme_error_t
-_gpgme_op_sign_init_result (gpgme_ctx_t ctx)
+_gpgme_op_sign_init_result (gpgme_ctx_t ctx, int success_required)
 {
-  return sign_init_result (ctx, 0);
+  return sign_init_result (ctx, 0, success_required);
 }
 
 
 static gpgme_error_t
 sign_start (gpgme_ctx_t ctx, int synchronous, gpgme_data_t plain,
-	    gpgme_data_t sig, gpgme_sig_mode_t mode)
+	    gpgme_data_t sig, gpgme_sig_mode_t flags)
 {
   gpgme_error_t err;
 
@@ -433,12 +453,15 @@ sign_start (gpgme_ctx_t ctx, int synchronous, gpgme_data_t plain,
   /* If we are using the CMS protocol, we ignore the INV_RECP status
      code if a newer GPGSM is in use.  GPGMS does not support combined
      sign+encrypt and thus this can't harm.  */
-  err = sign_init_result (ctx, (ctx->protocol == GPGME_PROTOCOL_CMS));
+  err = sign_init_result (ctx, (ctx->protocol == GPGME_PROTOCOL_CMS),
+                          flags & GPGME_SIG_MODE_ARCHIVE);
   if (err)
     return err;
 
-  if (mode != GPGME_SIG_MODE_NORMAL && mode != GPGME_SIG_MODE_DETACH
-      && mode != GPGME_SIG_MODE_CLEAR)
+  if (flags & ~(GPGME_SIG_MODE_DETACH
+                |GPGME_SIG_MODE_CLEAR
+                |GPGME_SIG_MODE_ARCHIVE
+                |GPGME_SIG_MODE_FILE))
     return gpg_error (GPG_ERR_INV_VALUE);
 
   if (!plain)
@@ -457,7 +480,7 @@ sign_start (gpgme_ctx_t ctx, int synchronous, gpgme_data_t plain,
   _gpgme_engine_set_status_handler (ctx->engine, sign_status_handler,
 				    ctx);
 
-  return _gpgme_engine_op_sign (ctx->engine, plain, sig, mode, ctx->use_armor,
+  return _gpgme_engine_op_sign (ctx->engine, plain, sig, flags, ctx->use_armor,
 				ctx->use_textmode, ctx->include_certs,
 				ctx /* FIXME */);
 }
@@ -466,16 +489,16 @@ sign_start (gpgme_ctx_t ctx, int synchronous, gpgme_data_t plain,
 /* Sign the plaintext PLAIN and store the signature in SIG.  */
 gpgme_error_t
 gpgme_op_sign_start (gpgme_ctx_t ctx, gpgme_data_t plain, gpgme_data_t sig,
-		     gpgme_sig_mode_t mode)
+		     gpgme_sig_mode_t flags)
 {
   gpg_error_t err;
   TRACE_BEG  (DEBUG_CTX, "gpgme_op_sign_start", ctx,
-	      "plain=%p, sig=%p, mode=%i", plain, sig, mode);
+	      "plain=%p, sig=%p, flags=%i", plain, sig, flags);
 
   if (!ctx)
     return TRACE_ERR (gpg_error (GPG_ERR_INV_VALUE));
 
-  err = sign_start (ctx, 0, plain, sig, mode);
+  err = sign_start (ctx, 0, plain, sig, flags);
   return TRACE_ERR (err);
 }
 
@@ -483,17 +506,17 @@ gpgme_op_sign_start (gpgme_ctx_t ctx, gpgme_data_t plain, gpgme_data_t sig,
 /* Sign the plaintext PLAIN and store the signature in SIG.  */
 gpgme_error_t
 gpgme_op_sign (gpgme_ctx_t ctx, gpgme_data_t plain, gpgme_data_t sig,
-	       gpgme_sig_mode_t mode)
+	       gpgme_sig_mode_t flags)
 {
   gpgme_error_t err;
 
   TRACE_BEG  (DEBUG_CTX, "gpgme_op_sign", ctx,
-	      "plain=%p, sig=%p, mode=%i", plain, sig, mode);
+	      "plain=%p, sig=%p, flags=%i", plain, sig, flags);
 
   if (!ctx)
     return TRACE_ERR (gpg_error (GPG_ERR_INV_VALUE));
 
-  err = sign_start (ctx, 1, plain, sig, mode);
+  err = sign_start (ctx, 1, plain, sig, flags);
   if (!err)
     err = _gpgme_wait_one (ctx);
   return TRACE_ERR (err);

@@ -62,6 +62,14 @@ namespace QGpgME
    DecryptVerifyJob instance will have scheduled it's own destruction with
    a call to QObject::deleteLater().
 
+   Alternatively, the job can be started with startIt() after setting
+   an input file and an output file. If the job is started this way then
+   the backend reads the input and writes the output directly from/to the
+   specified input file and output file. In this case the plainText value of
+   the result signal will always be empty. This direct IO mode is currently
+   only supported for OpenPGP. Note that startIt() does not schedule the job's
+   destruction if starting the job failed.
+
    After result() is emitted, the DecryptVerifyJob will schedule it's own
    destruction by calling QObject::deleteLater().
 */
@@ -71,7 +79,41 @@ class QGPGME_EXPORT DecryptVerifyJob : public Job
 protected:
     explicit DecryptVerifyJob(QObject *parent);
 public:
-    ~DecryptVerifyJob();
+    ~DecryptVerifyJob() override;
+
+    /**
+     * Enables processing of all signatures if \a processAll is true.
+     *
+     * By default, gpg (in batch mode used by GpgME) stops the verification of
+     * data signatures when a bad signature is encountered. This can be changed
+     * by setting this flag. It's equivalent to setting the context flag
+     * "proc-all-sigs".
+     *
+     * This is only supported for OpenPGP and requires GnuPG 2.2.45, 2.4.6, or
+     * 2.5.1.
+     */
+    void setProcessAllSignatures(bool processAll);
+    bool processAllSignatures() const;
+
+    /**
+     * Sets the path of the file to decrypt (and verify).
+     *
+     * Used if the job is started with startIt().
+     */
+    void setInputFile(const QString &path);
+    QString inputFile() const;
+
+    /**
+     * Sets the path of the file to write the result to.
+     *
+     * Used if the job is started with startIt().
+     *
+     * \note If a file with this path exists, then the job will fail, i.e. you
+     * need to delete an existing file that shall be overwritten before you
+     * start the job.
+     */
+    void setOutputFile(const QString &path);
+    QString outputFile() const;
 
     /**
        Starts the combined decryption and verification operation.

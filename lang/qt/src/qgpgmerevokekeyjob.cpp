@@ -39,10 +39,10 @@
 
 #include "dataprovider.h"
 
-#include <context.h>
-#include <data.h>
-#include <gpgrevokekeyeditinteractor.h>
-#include <key.h>
+#include <gpgme++/context.h>
+#include <gpgme++/data.h>
+#include <gpgme++/gpgrevokekeyeditinteractor.h>
+#include <gpgme++/key.h>
 
 #include <gpg-error.h>
 
@@ -119,7 +119,6 @@ Error QGpgMERevokeKeyJob::exec(const GpgME::Key &key,
     Error err = check_arguments(key, reason, description);
     if (!err) {
         const result_type r = revoke_key(context(), key, reason, description);
-        resultHook(r);
         err = std::get<0>(r);
     }
     return err;

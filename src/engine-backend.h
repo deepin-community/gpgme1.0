@@ -98,14 +98,13 @@ struct engine_ops
                            gpgme_key_t *keyarray,
                            const char *keyids[],
                            const char *import_filter,
+                           const char *import_options,
                            const char *key_origin);
   gpgme_error_t (*keylist) (void *engine, const char *pattern,
-			    int secret_only, gpgme_keylist_mode_t mode,
-			    int engine_flags);
+			    int secret_only, gpgme_keylist_mode_t mode);
   gpgme_error_t (*keylist_ext) (void *engine, const char *pattern[],
 				int secret_only, int reserved,
-				gpgme_keylist_mode_t mode,
-				int engine_flags);
+				gpgme_keylist_mode_t mode);
   gpgme_error_t (*keylist_data) (void *engine, gpgme_keylist_mode_t mode,
 				 gpgme_data_t data);
   gpgme_error_t (*keysign) (void *engine,
@@ -119,17 +118,19 @@ struct engine_ops
                                 gpgme_key_t key,
                                 gpgme_tofu_policy_t policy);
   gpgme_error_t (*sign) (void *engine, gpgme_data_t in, gpgme_data_t out,
-			 gpgme_sig_mode_t mode, int use_armor,
+			 gpgme_sig_mode_t flags, int use_armor,
 			 int use_textmode, int include_certs,
 			 gpgme_ctx_t ctx /* FIXME */);
-  gpgme_error_t (*verify) (void *engine, gpgme_data_t sig,
-			   gpgme_data_t signed_text, gpgme_data_t plaintext,
-                           gpgme_ctx_t ctx);
+  gpgme_error_t (*verify) (void *engine, gpgme_verify_flags_t flags,
+                           gpgme_data_t sig, gpgme_data_t signed_text,
+                           gpgme_data_t plaintext, gpgme_ctx_t ctx);
   gpgme_error_t  (*getauditlog) (void *engine, gpgme_data_t output,
                                  unsigned int flags);
   gpgme_error_t (*setexpire) (void *engine, gpgme_key_t key,
                               unsigned long expires, const char *subfprs,
                               unsigned int reserved);
+  gpgme_error_t (*setownertrust) (void *engine, gpgme_key_t key,
+                                  const char *value);
   gpgme_error_t  (*opassuan_transact) (void *engine,
                                        const char *command,
                                        gpgme_assuan_data_cb_t data_cb,

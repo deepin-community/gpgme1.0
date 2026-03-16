@@ -39,21 +39,9 @@
 
 #include "threadedjobmixin.h"
 
-#ifdef BUILDING_QGPGME
-# include "signingresult.h"
-#else
 #include <gpgme++/signingresult.h>
-#endif
-#ifdef BUILDING_QGPGME
-# include "encryptionresult.h"
-#else
 #include <gpgme++/encryptionresult.h>
-#endif
-#ifdef BUILDING_QGPGME
-# include "key.h"
-#else
 #include <gpgme++/key.h>
-#endif
 
 #include <utility>
 
@@ -79,42 +67,38 @@ public:
     /* from SignEncryptJob */
     GpgME::Error start(const std::vector<GpgME::Key> &signers,
                        const std::vector<GpgME::Key> &recipients,
-                       const QByteArray &plainText, bool alwaysTrust) Q_DECL_OVERRIDE;
+                       const QByteArray &plainText, bool alwaysTrust) override;
 
     /* from SignEncryptJob */
     void start(const std::vector<GpgME::Key> &signers,
                const std::vector<GpgME::Key> &recipients,
                const std::shared_ptr<QIODevice> &plainText,
                const std::shared_ptr<QIODevice> &cipherText,
-               bool alwaysTrust) Q_DECL_OVERRIDE;
+               bool alwaysTrust) override;
 
     void start(const std::vector<GpgME::Key> &signers,
                const std::vector<GpgME::Key> &recipients,
                const std::shared_ptr<QIODevice> &plainText,
                const std::shared_ptr<QIODevice> &cipherText,
-               const GpgME::Context::EncryptionFlags flags) Q_DECL_OVERRIDE;
+               const GpgME::Context::EncryptionFlags flags) override;
 
     std::pair<GpgME::SigningResult, GpgME::EncryptionResult>
     exec(const std::vector<GpgME::Key> &signers,
          const std::vector<GpgME::Key> &recipients,
          const QByteArray &plainText, bool alwaysTrust,
-         QByteArray &cipherText) Q_DECL_OVERRIDE;
+         QByteArray &cipherText) override;
 
     std::pair<GpgME::SigningResult, GpgME::EncryptionResult>
     exec(const std::vector<GpgME::Key> &signers,
          const std::vector<GpgME::Key> &recipients,
          const QByteArray &plainText, const GpgME::Context::EncryptionFlags flags,
-         QByteArray &cipherText) Q_DECL_OVERRIDE;
+         QByteArray &cipherText) override;
 
     /* from SignEncryptJob */
-    void setOutputIsBase64Encoded(bool on) Q_DECL_OVERRIDE;
-
-    /* from ThreadedJobMixin */
-    void resultHook(const result_type &r) Q_DECL_OVERRIDE;
+    void setOutputIsBase64Encoded(bool on) override;
 
 private:
     bool mOutputIsBase64Encoded;
-    std::pair<GpgME::SigningResult, GpgME::EncryptionResult> mResult;
 };
 
 }

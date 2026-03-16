@@ -43,14 +43,8 @@
 
 #include "keylistjob.h"
 #include "listallkeysjob.h"
-#include "encryptjob.h"
 #include "decryptjob.h"
-#include "decryptverifyjob.h"
-#include "signjob.h"
 #include "signkeyjob.h"
-#include "signencryptjob.h"
-#include "verifydetachedjob.h"
-#include "verifyopaquejob.h"
 #include "keygenerationjob.h"
 #include "importjob.h"
 #include "importfromkeyserverjob.h"
@@ -69,7 +63,6 @@
 #include "wkspublishjob.h"
 #include "tofupolicyjob.h"
 #include "threadedjobmixin.h"
-#include "quickjob.h"
 #include "gpgcardjob.h"
 #include "receivekeysjob.h"
 #include "revokekeyjob.h"
@@ -94,7 +87,12 @@ void QGpgME::setJobPrivate(const Job *job, std::unique_ptr<JobPrivate> d)
     ref = std::move(d);
 }
 
-QGpgME::JobPrivate *QGpgME::getJobPrivate(const Job *job)
+const QGpgME::JobPrivate *QGpgME::getJobPrivate(const Job *job)
+{
+    return d_func()->operator[](job).get();
+}
+
+QGpgME::JobPrivate *QGpgME::getJobPrivate(Job *job)
 {
     return d_func()->operator[](job).get();
 }
@@ -137,6 +135,20 @@ GpgME::Context *QGpgME::Job::context(QGpgME::Job *job)
     return QGpgME::g_context_map.value (job, nullptr);
 }
 
+GpgME::Error QGpgME::Job::startIt()
+{
+    auto d = getJobPrivate(this);
+    Q_ASSERT(d && "This Job class has no JobPrivate class");
+    return d->startIt();
+}
+
+void QGpgME::Job::startNow()
+{
+    auto d = getJobPrivate(this);
+    Q_ASSERT(d && "This Job class has no JobPrivate class");
+    d->startNow();
+}
+
 #define make_job_subclass_ext(x,y)                \
     QGpgME::x::x( QObject * parent ) : y( parent ) {} \
     QGpgME::x::~x() {}
@@ -145,14 +157,8 @@ GpgME::Context *QGpgME::Job::context(QGpgME::Job *job)
 
 make_job_subclass(KeyListJob)
 make_job_subclass(ListAllKeysJob)
-make_job_subclass(EncryptJob)
 make_job_subclass(DecryptJob)
-make_job_subclass(DecryptVerifyJob)
-make_job_subclass(SignJob)
-make_job_subclass(SignEncryptJob)
 make_job_subclass(SignKeyJob)
-make_job_subclass(VerifyDetachedJob)
-make_job_subclass(VerifyOpaqueJob)
 make_job_subclass(KeyGenerationJob)
 make_job_subclass(AbstractImportJob)
 make_job_subclass_ext(ImportJob, AbstractImportJob)
@@ -172,7 +178,6 @@ make_job_subclass(KeyForMailboxJob)
 make_job_subclass(WKDLookupJob)
 make_job_subclass(WKSPublishJob)
 make_job_subclass(TofuPolicyJob)
-make_job_subclass(QuickJob)
 make_job_subclass(GpgCardJob)
 make_job_subclass(RevokeKeyJob)
 make_job_subclass(SetPrimaryUserIDJob)
@@ -183,14 +188,8 @@ make_job_subclass(SetPrimaryUserIDJob)
 
 #include "keylistjob.moc"
 #include "listallkeysjob.moc"
-#include "encryptjob.moc"
 #include "decryptjob.moc"
-#include "decryptverifyjob.moc"
-#include "signjob.moc"
-#include "signencryptjob.moc"
 #include "signkeyjob.moc"
-#include "verifydetachedjob.moc"
-#include "verifyopaquejob.moc"
 #include "keygenerationjob.moc"
 #include "abstractimportjob.moc"
 #include "importjob.moc"
@@ -209,7 +208,6 @@ make_job_subclass(SetPrimaryUserIDJob)
 #include "wkdlookupjob.moc"
 #include "wkspublishjob.moc"
 #include "tofupolicyjob.moc"
-#include "quickjob.moc"
 #include "gpgcardjob.moc"
 #include "receivekeysjob.moc"
 #include "revokekeyjob.moc"

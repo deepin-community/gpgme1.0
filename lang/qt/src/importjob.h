@@ -5,6 +5,8 @@
     Copyright (c) 2004 Klarälvdalens Datakonsult AB
     Copyright (c) 2016 by Bundesamt für Sicherheit in der Informationstechnik
     Software engineering by Intevation GmbH
+    Copyright (c) 2023 g10 Code GmbH
+    Software engineering by Ingo Klöcker <dev@ingo-kloecker.de>
 
     QGpgME is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -38,11 +40,7 @@
 #include "abstractimportjob.h"
 #include "qgpgme_export.h"
 
-#ifdef BUILDING_QGPGME
-# include <key.h>
-#else
-# include <gpgme++/key.h>
-#endif
+#include <gpgme++/key.h>
 
 namespace GpgME
 {
@@ -77,6 +75,9 @@ public:
     void setImportFilter(const QString &filter);
     QString importFilter() const;
 
+    void setImportOptions(const QStringList &options);
+    QStringList importOptions() const;
+
     void setKeyOrigin(GpgME::Key::Origin origin, const QString &url = {});
     GpgME::Key::Origin keyOrigin() const;
     QString keyOriginUrl() const;
@@ -88,6 +89,8 @@ public:
     virtual GpgME::Error start(const QByteArray &keyData) = 0;
 
     virtual GpgME::ImportResult exec(const QByteArray &keyData) = 0;
+
+    virtual GpgME::Error startLater(const QByteArray &keyData) = 0;
 };
 
 }

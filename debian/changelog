@@ -1,22 +1,169 @@
-gpgme1.0 (1.18.0-4deepin4) unstable; urgency=medium
+gpgme1.0 (1.24.2-3deepin3) unstable; urgency=medium
 
-  * Apply changes from gpgme1.0_1.18.0-6:
-    - Cherry-pick patch from upstream GIT master to fix FTBFS against
-      python3-setuptools 73.0.1. Closes: #1079928
+  * fix t-config failed, add pnupg in defaultValue test.
 
- -- Tianyu Chen <sweetyfish@deepin.org>  Thu, 16 Oct 2025 21:33:46 +0800
+ -- tunaichao <tunaichao@uniontech.com>  Mon, 16 Mar 2026 16:52:16 +0800
 
-gpgme1.0 (1.18.0-4deepin2) unstable; urgency=medium
+gpgme1.0 (1.24.2-3deepin2) unstable; urgency=medium
 
-  * update version for rebuild.
+  * Delete unnecessary Replaces and Breaks in debian/control.
 
- -- liujianqiang <liujianqiang@uniontech.com>  Tue, 10 Jun 2025 15:36:18 +0800
+ -- tunaichao <tunaichao@uniontech.com>  Fri, 13 Mar 2026 17:45:49 +0800
 
-gpgme1.0 (1.18.0-4deepin1) unstable; urgency=medium
+gpgme1.0 (1.24.2-3deepin1) unstable; urgency=medium
 
-  * No source change upload to rebuild with python 3.12
+  * Revert 64-bit time_t changes.
 
- -- Tianyu Chen <sweetyfish@deepin.org>  Tue, 11 Jun 2024 10:53:55 +0800
+ -- tunaichao <tunaichao@uniontech.com>  Fri, 13 Mar 2026 11:05:34 +0800
+
+gpgme1.0 (1.24.2-3) unstable; urgency=medium
+
+  * Fix hanging state machine.
+    https://dev.gnupg.org/T7600 Fix picked from gpgme-1.24-branch
+  * Fix 64bit time_t overflow bug on 32 bit archs (Closes: #1103787) (Also
+    from upstream gpgme-1.24-branch)
+
+ -- Andreas Metzler <ametzler@debian.org>  Wed, 07 May 2025 17:49:48 +0200
+
+gpgme1.0 (1.24.2-2) unstable; urgency=medium
+
+  * Adapt testsuite to changed gnupg 2.4 defaults in Debian.
+    (Closes: #1103189)
+
+ -- Andreas Metzler <ametzler@debian.org>  Sun, 20 Apr 2025 12:08:55 +0200
+
+gpgme1.0 (1.24.2-1) unstable; urgency=medium
+
+  * New upstream version.
+    + Drop superfluous patches, unfuzz.
+
+ -- Andreas Metzler <ametzler@debian.org>  Sun, 16 Feb 2025 13:32:04 +0100
+
+gpgme1.0 (1.24.1-4) unstable; urgency=high
+
+  * Fix regression in 1.24.1 for RSA in gpgme_pubkey_algo_string.
+    https://dev.gnupg.org/T7508
+
+ -- Andreas Metzler <ametzler@debian.org>  Thu, 06 Feb 2025 06:53:51 +0100
+
+gpgme1.0 (1.24.1-3) unstable; urgency=medium
+
+  * Cherry-pick fix for testsuite timebomb from upstream (Closes: 1091499)
+
+ -- Andreas Metzler <ametzler@debian.org>  Sat, 01 Feb 2025 13:16:51 +0100
+
+gpgme1.0 (1.24.1-2) unstable; urgency=low
+
+  * Upload to unstable.
+
+ -- Andreas Metzler <ametzler@debian.org>  Mon, 23 Dec 2024 11:36:48 +0100
+
+gpgme1.0 (1.24.1-1) experimental; urgency=low
+
+  * New upstream version.
+  * Update libgpgme11t64 symbol file for extension of gpgme_pubkey_algo_t.
+
+ -- Andreas Metzler <ametzler@debian.org>  Sat, 14 Dec 2024 07:42:09 +0100
+
+gpgme1.0 (1.24.0-2) unstable; urgency=low
+
+  * Upload to unstable.
+
+ -- Andreas Metzler <ametzler@debian.org>  Wed, 13 Nov 2024 17:47:53 +0100
+
+gpgme1.0 (1.24.0-1) experimental; urgency=medium
+
+  * New upstream version.
+  * Update patches for 1.24.0, drop superfluous ones.
+  * Run wrap-and-sort -ast
+  * Ship newly available gpgmepp pkg-config file in libgpgmepp-dev.
+  * Add new symbols to libgpgme11t64 symbol file.
+  * Simplify package build/test/install. 1.24.0 supports building qt5 and
+    qt6 bindings in one go.
+  * Update copyright info for 1.24.0.
+  * Ship newly available upstream version of gpgme-json.1.  Also add a b-d on
+    gpgrt-tools since yat2m is needed to generate the manpage.
+
+ -- Andreas Metzler <ametzler@debian.org>  Mon, 11 Nov 2024 13:28:58 +0100
+
+gpgme1.0 (1.23.2-5) unstable; urgency=low
+
+  * Add b-d on python3-setuptools. Closes: #1080871
+  * Upload to unstable.
+
+ -- Andreas Metzler <ametzler@debian.org>  Sun, 20 Oct 2024 14:29:00 +0200
+
+gpgme1.0 (1.23.2-4) experimental; urgency=medium
+
+  [ Sébastien Noel ]
+  * Add a new gpgme-json package. Closes: #911189,#1028160
+
+  [ Daniel Kahn Gillmor ]
+  * clean up build-qt6/
+  * update copyright years in gpgme-json.1
+  * wrap-and-sort -ast
+
+ -- Daniel Kahn Gillmor <dkg@fifthhorseman.net>  Tue, 03 Sep 2024 19:16:58 -0400
+
+gpgme1.0 (1.23.2-3) experimental; urgency=medium
+
+  * tell gpg to --verify (Closes: #1080430)
+
+ -- Daniel Kahn Gillmor <dkg@fifthhorseman.net>  Tue, 03 Sep 2024 18:28:07 -0400
+
+gpgme1.0 (1.23.2-2) experimental; urgency=medium
+
+  * Add dependency on libgpg-error-dev to libgpgmepp-dev.  Closes: #1078464
+  * Cherry-pick patch from upstream GIT master to fix FTBFS against
+    python3-setuptools 73.0.1 Closes: #1079928
+
+ -- Andreas Metzler <ametzler@debian.org>  Tue, 03 Sep 2024 19:19:03 +0200
+
+gpgme1.0 (1.23.2-1) experimental; urgency=low
+
+  * New upstream version.
+    + Unfuzz patches, drop cherry-picked patches.
+    + Update libgpgme11t64 symbol file.
+    + Update copyright info.
+  * b-d on pkgconf instead of pkg-config.
+  * Use wildcards in no-symbols-control-file overrides.
+  * Bump Standards-Version to 4.7.0.
+  * Split off libqgpgme-dev (QT5) package from libgpgmepp-dev.
+    Closes: #863149
+  * Fix README links in lib(q)gpgme development packages (broken by t64
+    package rename).
+  * Package QT6 bindings, cherrypicking the upstream change to install QT5 and
+    QT6 headers in separate directories. Closes: #1073255
+  * Update gpgme.m4 from upstream GIT master.
+  * Add myself to uploaders.
+
+ -- Andreas Metzler <ametzler@debian.org>  Sat, 10 Aug 2024 13:28:58 +0200
+
+gpgme1.0 (1.18.0-6) unstable; urgency=high
+
+  * Delete outdated m4/libassuan.m4 to allow building against libassuan 3.
+  * Cherry-pick patch from upstream GIT master to fix FTBFS against
+    python3-setuptools 73.0.1 Closes: #1079928
+
+ -- Andreas Metzler <ametzler@debian.org>  Tue, 03 Sep 2024 19:06:41 +0200
+
+gpgme1.0 (1.18.0-5) unstable; urgency=medium
+
+  * Add dependency on libgpg-error-dev to libgpgmepp-dev. -
+    libgpgmepp-dev's error.h #includes gpg-error.h. (Thanks, John Scott)
+    Closes: #1078464
+  * Let libgpgmepp-dev Provide libqgpgme-dev, the latter has been
+    split-off to a separate package in experimental. (See #863149)
+  * Add myself to uploaders.
+
+ -- Andreas Metzler <ametzler@debian.org>  Sun, 11 Aug 2024 10:12:45 +0200
+
+gpgme1.0 (1.18.0-4.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Rename libraries for 64-bit time_t transition.  Closes: #1062119
+
+ -- Steve Langasek <vorlon@debian.org>  Wed, 28 Feb 2024 23:10:53 +0000
 
 gpgme1.0 (1.18.0-4) unstable; urgency=medium
 
