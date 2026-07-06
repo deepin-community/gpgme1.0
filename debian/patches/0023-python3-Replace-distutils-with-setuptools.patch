@@ -1,0 +1,31 @@
+Description: Replace distutils with setuptools in setup.py.in
+ Python 3.12 removed the distutils module from the standard library
+ (PEP 632). The gpgme Python bindings still import from distutils.core
+ and distutils.command.build, which fails on Python 3.12:
+ .
+   ModuleNotFoundError: No module named 'distutils'
+ .
+ Replace the distutils imports with their setuptools equivalents.
+ setuptools provides drop-in replacements for both distutils.core
+ (setup, Extension) and distutils.command.build (build).  The build
+ dependency python3-setuptools is already pulled in transitively via
+ dh-python, and is now also declared explicitly in Build-Depends.
+Author: st0nie <st0nie@users.noreply.github.com>
+Bug-Debian: https://bugs.debian.org/1039724
+Origin: vendor
+Forwarded: not-needed
+Last-Update: 2026-07-06
+
+--- a/lang/python/setup.py.in
++++ b/lang/python/setup.py.in
+@@ -18,8 +18,8 @@
+ #    License along with this library; if not, write to the Free Software
+ #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
+ 
+-from distutils.core import setup, Extension
+-from distutils.command.build import build
++from setuptools import setup, Extension
++from setuptools.command.build import build
+ 
+ import glob
+ import os
