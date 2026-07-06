@@ -16,6 +16,7 @@ Build-Depends:
  libpython3-all-dev,
  pkg-config,
  python3-all-dev:any,
+ python3-setuptools,
  qtbase5-dev,
  scdaemon,
  swig,

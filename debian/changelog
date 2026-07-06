@@ -1,3 +1,11 @@
+gpgme1.0 (1.18.0-4deepin5) unstable; urgency=medium
+
+  * Add patch to replace distutils with setuptools in setup.py.in to fix
+    FTBFS on Python 3.12 (distutils was removed per PEP 632).
+  * Add python3-setuptools to Build-Depends.
+
+ -- jiabowen <jiabowen@uniontech.com>  Mon, 06 Jul 2026 16:14:54 +0800
+
 gpgme1.0 (1.18.0-4deepin4) unstable; urgency=medium
 
   * Apply changes from gpgme1.0_1.18.0-6:
