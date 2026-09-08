@@ -1,3 +1,10 @@
+gpgme1.0 (1.24.2-3deepin1) unstable; urgency=medium
+
+  * Revert 64-bit time_t transition (restore libgpgme11, libqgpgme15 and libgpgmepp6 package names).
+  * Drop 0025_debian_default_is_openpgp.diff: deepin's gpg 2.4.5 still defaults --compliance to gnupg, so the Debian openpgp expectation makes the t-config qt test fail.
+
+ -- lichenggang <lichenggang@uniontech.com>  Tue, 08 Sep 2026 21:42:05 +0800
+
 gpgme1.0 (1.24.2-3) unstable; urgency=medium
 
   * Fix hanging state machine.
