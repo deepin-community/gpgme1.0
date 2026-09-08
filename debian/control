@@ -58,7 +58,7 @@ Depends:
  libassuan-dev,
  libc6-dev,
  libgpg-error-dev,
- libgpgme11t64 (= ${binary:Version}),
+ libgpgme11 (= ${binary:Version}),
  ${misc:Depends},
  ${shlibs:Depends},
 Breaks:
@@ -74,13 +74,7 @@ Description: GPGME - GnuPG Made Easy (development files)
  This package contains the headers and other files needed to compile
  against this library.
 
-Package: libgpgme11t64
-Provides:
- ${t64:Provides},
-Replaces:
- libgpgme11,
-Breaks:
- libgpgme11 (<< ${source:Version}),
+Package: libgpgme11
 Architecture: any
 Multi-Arch: same
 Pre-Depends:
@@ -126,13 +120,7 @@ Description: Python interface to the GPGME GnuPG encryption library (Python 3)
  .
  This is the official upstream Python 3 binding for GPGME.
 
-Package: libqgpgme15t64
-Provides:
- ${t64:Provides},
-Replaces:
- libqgpgme15,
-Breaks:
- libqgpgme15 (<< ${source:Version}),
+Package: libqgpgme15
 Architecture: any
 Multi-Arch: same
 Depends:
@@ -156,13 +144,7 @@ Description: library for GPGME integration with Qt 6
  .
  This is the official upstream Qt 6 binding for GPGME.
 
-Package: libgpgmepp6t64
-Provides:
- ${t64:Provides},
-Replaces:
- libgpgmepp6,
-Breaks:
- libgpgmepp6 (<< ${source:Version}),
+Package: libgpgmepp6
 Architecture: any
 Multi-Arch: same
 Depends:
@@ -180,7 +162,7 @@ Architecture: any
 Multi-Arch: same
 Depends:
  libgpg-error-dev,
- libgpgmepp6t64 (= ${binary:Version}),
+ libgpgmepp6 (= ${binary:Version}),
  ${misc:Depends},
 Recommends:
  libgpgmepp-doc (= ${binary:Version}),
@@ -196,7 +178,7 @@ Section: libdevel
 Architecture: any
 Depends:
  libgpgmepp-dev (= ${binary:Version}),
- libqgpgme15t64 (= ${binary:Version}),
+ libqgpgme15 (= ${binary:Version}),
  qtbase5-dev,
  ${misc:Depends},
 Conflicts:

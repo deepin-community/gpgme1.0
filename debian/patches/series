@@ -4,7 +4,6 @@
 0004-Avoid-the-hardcoded-list-of-Python-versions.patch
 0007-lang-python-tests-Fix-FTBFS-caused-by-missing-PYTHON.patch
 0020-python3-setuptools.diff
-0025_debian_default_is_openpgp.diff
 30-0001-cpp-Ensure-that-all-transitions-go-from-one-state-to.patch
 30-0002-cpp-Validate-the-transition-map.patch
 30-0003-cpp-Add-missing-transition-remove-two-ignored-and-wr.patch
