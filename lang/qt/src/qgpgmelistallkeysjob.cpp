@@ -5,6 +5,8 @@
     Copyright (c) 2004,2008 Klarälvdalens Datakonsult AB
     Copyright (c) 2016 by Bundesamt für Sicherheit in der Informationstechnik
     Software engineering by Intevation GmbH
+    Copyright (c) 2022,2023 g10 Code GmbH
+    Software engineering by Ingo Klöcker <dev@ingo-kloecker.de>
 
     QGpgME is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -38,11 +40,15 @@
 
 #include "qgpgmelistallkeysjob.h"
 
-#include "key.h"
-#include "context.h"
-#include "engineinfo.h"
-#include "global.h"
-#include "keylistresult.h"
+#include "listallkeysjob_p.h"
+
+#include "debug.h"
+#include <gpgme++/key.h>
+#include <gpgme++/context.h>
+#include <gpgme++/engineinfo.h>
+#include <gpgme++/global.h>
+#include <gpgme++/keylistresult.h>
+#include "qgpgme_debug.h"
 
 #include <gpg-error.h>
 
@@ -55,10 +61,40 @@
 using namespace QGpgME;
 using namespace GpgME;
 
-QGpgMEListAllKeysJob::QGpgMEListAllKeysJob(Context *context)
-    : mixin_type(context),
-      mResult()
+namespace
 {
+
+class QGpgMEListAllKeysJobPrivate : public ListAllKeysJobPrivate
+{
+    QGpgMEListAllKeysJob *q = nullptr;
+
+public:
+    QGpgMEListAllKeysJobPrivate(QGpgMEListAllKeysJob *qq)
+        : q{qq}
+    {
+    }
+
+    ~QGpgMEListAllKeysJobPrivate() override = default;
+
+private:
+    GpgME::Error startIt() override
+    {
+        Q_ASSERT(!"Not supported by this Job class.");
+        return Error::fromCode(GPG_ERR_NOT_SUPPORTED);
+    }
+
+    void startNow() override
+    {
+        q->run();
+    }
+};
+
+}
+
+QGpgMEListAllKeysJob::QGpgMEListAllKeysJob(Context *context)
+    : mixin_type(context)
+{
+    setJobPrivate(this, std::unique_ptr<QGpgMEListAllKeysJobPrivate>{new QGpgMEListAllKeysJobPrivate{this}});
     lateInitialization();
 }
 
@@ -162,10 +198,18 @@ static KeyListResult do_list_keys(Context *ctx, std::vector<Key> &keys)
     return result;
 }
 
-static QGpgMEListAllKeysJob::result_type list_keys(Context *ctx, bool mergeKeys)
+static QGpgMEListAllKeysJob::result_type list_keys(Context *ctx, bool mergeKeys, ListAllKeysJob::Options options)
 {
     if (GpgME::engineInfo(GpgME::GpgEngine).engineVersion() < "2.1.0") {
         return list_keys_legacy(ctx, mergeKeys);
+    }
+
+    if (options & ListAllKeysJob::DisableAutomaticTrustDatabaseCheck) {
+        auto err = ctx->setFlag("no-auto-check-trustdb", "1");
+        if (err) {
+            // ignore error, but log a warning
+            qCWarning(QGPGME_LOG) << "Setting context flag no-auto-check-trustdb failed:" << err;
+        }
     }
 
     std::vector<Key> keys;
@@ -182,35 +226,16 @@ static QGpgMEListAllKeysJob::result_type list_keys(Context *ctx, bool mergeKeys)
 
 Error QGpgMEListAllKeysJob::start(bool mergeKeys)
 {
-    run(std::bind(&list_keys, std::placeholders::_1, mergeKeys));
+    run(std::bind(&list_keys, std::placeholders::_1, mergeKeys, options()));
     return Error();
 }
 
 KeyListResult QGpgMEListAllKeysJob::exec(std::vector<Key> &pub, std::vector<Key> &sec, bool mergeKeys)
 {
-    const result_type r = list_keys(context(), mergeKeys);
-    resultHook(r);
+    const result_type r = list_keys(context(), mergeKeys, options());
     pub = std::get<1>(r);
     sec = std::get<2>(r);
     return std::get<0>(r);
 }
 
-void QGpgMEListAllKeysJob::resultHook(const result_type &tuple)
-{
-    mResult = std::get<0>(tuple);
-}
-
-#if 0
-void QGpgMEListAllKeysJob::showErrorDialog(QWidget *parent, const QString &caption) const
-{
-    if (!mResult.error() || mResult.error().isCanceled()) {
-        return;
-    }
-    const QString msg = i18n("<qt><p>An error occurred while fetching "
-                             "the keys from the backend:</p>"
-                             "<p><b>%1</b></p></qt>",
-                             QString::fromLocal8Bit(mResult.error().asString()));
-    KMessageBox::error(parent, msg, caption);
-}
-#endif
 #include "qgpgmelistallkeysjob.moc"

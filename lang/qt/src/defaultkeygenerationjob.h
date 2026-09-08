@@ -44,29 +44,31 @@ namespace QGpgME{
 
 /**
  * Generates a PGP RSA/2048 bit key pair for given name and email address.
+ *
+ * This job is deprecated. Use QuickJob::startCreate instead.
  */
-class QGPGME_EXPORT DefaultKeyGenerationJob : public Job
+class QGPGME_DEPRECATED_EXPORT DefaultKeyGenerationJob : public Job
 {
     Q_OBJECT
 public:
-    explicit DefaultKeyGenerationJob(QObject *parent = Q_NULLPTR);
+    explicit DefaultKeyGenerationJob(QObject *parent = nullptr);
     ~DefaultKeyGenerationJob();
 
     GpgME::Error start(const QString &email, const QString &name);
 
-    QString auditLogAsHtml() const Q_DECL_OVERRIDE;
-    GpgME::Error auditLogError() const Q_DECL_OVERRIDE;
+    QString auditLogAsHtml() const override;
+    GpgME::Error auditLogError() const override;
 
 
 public Q_SLOTS:
-    void slotCancel() Q_DECL_OVERRIDE;
+    void slotCancel() override;
 
 Q_SIGNALS:
     void result(const GpgME::KeyGenerationResult &result, const QByteArray &pubkeyData,
                 const QString &auditLogAsHtml, const GpgME::Error &auditLogError);
 
 protected:
-    bool eventFilter(QObject *watched, QEvent *event) Q_DECL_OVERRIDE;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
     class Private;

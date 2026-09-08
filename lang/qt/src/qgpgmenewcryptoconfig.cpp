@@ -45,8 +45,8 @@
 #include <QDir>
 #include <QList>
 
-#include "global.h"
-#include "error.h"
+#include <gpgme++/global.h>
+#include <gpgme++/error.h>
 #include "debug.h"
 
 #include <sstream>
@@ -58,22 +58,6 @@
 using namespace QGpgME;
 using namespace GpgME;
 using namespace GpgME::Configuration;
-
-namespace
-{
-struct Select1St {
-    template <typename U, typename V>
-    const U &operator()(const std::pair<U, V> &p) const
-    {
-        return p.first;
-    }
-    template <typename U, typename V>
-    const U &operator()(const QPair<U, V> &p) const
-    {
-        return p.first;
-    }
-};
-}
 
 // Just for the Q_ASSERT in the dtor. Not thread-safe, but who would
 // have 2 threads talking to gpgconf anyway? :)
@@ -113,7 +97,7 @@ void QGpgMENewCryptoConfig::reloadConfiguration(bool)
         KMessageBox::error(0, wmsg);
     }
 #endif
-    Q_FOREACH(const Component & c, components) {
+    for (const Component &c : components) {
         const std::shared_ptr<QGpgMENewCryptoConfigComponent> comp(new QGpgMENewCryptoConfigComponent);
         comp->setComponent(c);
         m_componentsByName[ comp->name() ] = comp;
@@ -143,8 +127,9 @@ QGpgMENewCryptoConfigComponent *QGpgMENewCryptoConfig::component(const QString &
 
 void QGpgMENewCryptoConfig::sync(bool runtime)
 {
-    Q_FOREACH(const std::shared_ptr<QGpgMENewCryptoConfigComponent> &c, m_componentsByName)
-    c->sync(runtime);
+    for (const std::shared_ptr<QGpgMENewCryptoConfigComponent> &c : qAsConst(m_componentsByName)) {
+        c->sync(runtime);
+    }
 }
 
 void QGpgMENewCryptoConfig::clear()
@@ -172,19 +157,20 @@ void QGpgMENewCryptoConfigComponent::setComponent(const Component &component)
     std::shared_ptr<QGpgMENewCryptoConfigGroup> group;
 
     const std::vector<Option> options = m_component.options();
-    Q_FOREACH(const Option & o, options)
-    if (o.flags() & Group) {
-        if (group) {
-            m_groupsByName[group->name()] = group;
+    for (const Option &o : options) {
+        if (o.flags() & Group) {
+            if (group) {
+                m_groupsByName[group->name()] = group;
+            }
+            group.reset(new QGpgMENewCryptoConfigGroup(shared_from_this(), o));
+        } else if (group) {
+            const std::shared_ptr<QGpgMENewCryptoConfigEntry> entry(new QGpgMENewCryptoConfigEntry(group, o));
+            const QString name = entry->name();
+            group->m_entryNames.push_back(name);
+            group->m_entriesByName[name] = entry;
+        } else {
+            qCWarning(QGPGME_LOG) << "found no group for entry" << o.name() << "of component" << name();
         }
-        group.reset(new QGpgMENewCryptoConfigGroup(shared_from_this(), o));
-    } else if (group) {
-        const std::shared_ptr<QGpgMENewCryptoConfigEntry> entry(new QGpgMENewCryptoConfigEntry(group, o));
-        const QString name = entry->name();
-        group->m_entryNames.push_back(name);
-        group->m_entriesByName[name] = entry;
-    } else {
-        qCWarning(QGPGME_LOG) << "found no group for entry" << o.name() << "of component" << name();
     }
     if (group) {
         m_groupsByName[group->name()] = group;
@@ -225,7 +211,7 @@ void QGpgMENewCryptoConfigComponent::sync(bool runtime)
     if (const Error err = m_component.save()) {
         qCWarning(QGPGME_LOG) << ":"
             << "Error from gpgconf while saving configuration: %1"
-            << QString::fromLocal8Bit(err.asString());
+            << err;
     }
 }
 
@@ -594,13 +580,14 @@ QList<QUrl> QGpgMENewCryptoConfigEntry::urlValueList() const
     const Argument arg = m_option.currentValue();
     const std::vector<const char *> values = arg.stringValues();
     QList<QUrl> ret;
-    Q_FOREACH(const char *value, values)
-    if (type == FilenameType) {
-        QUrl url;
-        url.setPath(QFile::decodeName(value));
-        ret << url;
-    } else {
-        ret << parseURL(type, QString::fromUtf8(value));
+    for (const char *value : values) {
+        if (type == FilenameType) {
+            QUrl url;
+            url.setPath(QFile::decodeName(value));
+            ret << url;
+        } else {
+            ret << parseURL(type, QString::fromUtf8(value));
+        }
     }
     return ret;
 }
@@ -660,7 +647,7 @@ void QGpgMENewCryptoConfigEntry::setURLValue(const QUrl &url)
     if (str.isEmpty() && !isOptional()) {
         m_option.resetToDefaultValue();
     } else if (type == FilenameType) {
-        m_option.setNewValue(m_option.createStringArgument(QDir::toNativeSeparators(url.toLocalFile()).toUtf8().constData()));
+        m_option.setNewValue(m_option.createStringArgument(url.toLocalFile().toUtf8().constData()));
     } else {
         m_option.setNewValue(m_option.createStringArgument(str.toUtf8().constData()));
     }
@@ -694,12 +681,13 @@ void QGpgMENewCryptoConfigEntry::setURLValueList(const QList<QUrl> &urls)
     Q_ASSERT(isList());
     std::vector<std::string> values;
     values.reserve(urls.size());
-    Q_FOREACH (const QUrl &url, urls)
+    for (const QUrl &url : urls) {
         if (type == FilenameType) {
             values.push_back(QFile::encodeName(url.path()).constData());
         } else {
             values.push_back(splitURL(type, url).toUtf8().constData());
         }
+    }
     const auto err = m_option.setNewValue(m_option.createStringListArgument(values));
     if (err) {
         qCWarning(QGPGME_LOG) << "setURLValueList: failed to set new value:" << err;

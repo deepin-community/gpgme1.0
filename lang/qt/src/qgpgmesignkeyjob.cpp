@@ -43,9 +43,9 @@
 
 #include "dataprovider.h"
 
-#include "context.h"
-#include "data.h"
-#include "gpgsignkeyeditinteractor.h"
+#include <gpgme++/context.h>
+#include <gpgme++/data.h>
+#include <gpgme++/gpgsignkeyeditinteractor.h>
 
 #include "qgpgme_debug.h"
 
@@ -57,6 +57,15 @@ using namespace GpgME;
 namespace
 {
 struct TrustSignatureProperties {
+    TrustSignatureProperties() = default;
+    // needed for C++11 because until C++14 "aggregate initialization requires
+    // class type, that has no default member initializers"
+    TrustSignatureProperties(TrustSignatureTrust trust_, unsigned int depth_, const QString &scope_)
+        : trust{trust_}
+        , depth{depth_}
+        , scope{scope_}
+    {}
+
     TrustSignatureTrust trust = TrustSignatureTrust::None;
     unsigned int depth = 0;
     QString scope;

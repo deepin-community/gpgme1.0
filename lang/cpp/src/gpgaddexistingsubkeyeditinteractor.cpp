@@ -105,10 +105,6 @@ unsigned int GpgAddExistingSubkeyEditInteractor::Private::nextState(unsigned int
     static const Error NO_KEY_ERROR = Error::fromCode(GPG_ERR_NO_KEY);
     static const Error INV_TIME_ERROR = Error::fromCode(GPG_ERR_INV_TIME);
 
-    if (q->needsNoResponse(status)) {
-        return q->state();
-    }
-
     switch (q->state()) {
     case START:
         if (status == GPGME_STATUS_GET_LINE &&
@@ -136,7 +132,7 @@ unsigned int GpgAddExistingSubkeyEditInteractor::Private::nextState(unsigned int
                 strcmp(args, "keygen.flags") == 0) {
             return FLAGS;
         } else if (status == GPGME_STATUS_GET_LINE &&
-                   strcmp(args, "keygen.keygrip")) {
+                   strcmp(args, "keygen.keygrip") == 0) {
             err = NO_KEY_ERROR;
             return ERROR;
         }
@@ -157,7 +153,7 @@ unsigned int GpgAddExistingSubkeyEditInteractor::Private::nextState(unsigned int
                 strcmp(args, "keyedit.prompt") == 0) {
             return QUIT;
         } else if (status == GPGME_STATUS_GET_LINE &&
-                   strcmp(args, "keygen.valid")) {
+                   strcmp(args, "keygen.valid") == 0) {
             err = INV_TIME_ERROR;
             return ERROR;
         }

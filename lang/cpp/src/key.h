@@ -29,12 +29,12 @@
 
 #include "gpgmefw.h"
 
-#include <memory>
-#include <sys/time.h>
-
-#include <vector>
 #include <algorithm>
+#include <memory>
 #include <string>
+#include <vector>
+
+#include <ctime>
 
 namespace GpgME
 {
@@ -44,6 +44,7 @@ class Context;
 class Subkey;
 class UserID;
 class TofuInfo;
+class RevocationKey;
 
 typedef std::shared_ptr< std::remove_pointer<gpgme_key_t>::type > shared_gpgme_key_t;
 
@@ -71,6 +72,7 @@ public:
 
     static const Null null;
 
+    Key(const Key &other) = default;
     const Key &operator=(Key other)
     {
         swap(other);
@@ -99,6 +101,10 @@ public:
     std::vector<UserID> userIDs() const;
     std::vector<Subkey> subkeys() const;
 
+    RevocationKey revocationKey(unsigned int index) const;
+    unsigned int numRevocationKeys() const;
+    std::vector<RevocationKey> revocationKeys() const;
+
     bool isRevoked() const;
     bool isExpired() const;
     bool isDisabled() const;
@@ -108,21 +114,31 @@ public:
      *                          isDisabled || isInvalid */
     bool isBad() const;
 
+    /** Returns true, if the key can be used for encryption (i.e. it's not bad
+     *  and has an encryption subkey) or if the primary subkey can encrypt. */
     bool canEncrypt() const;
-    /*!
-      This function contains a workaround for old gpgme's: all secret
-      OpenPGP keys canSign() == true, which canReallySign() doesn't
-      have. I don't have time to find what breaks when I remove this
-      workaround, but since Kleopatra merges secret into public keys,
-      the workaround is not necessary there (and actively harms), I've
-      added a new function instead.
-     */
+    /** Returns true, if the key can be used for signing (i.e. it's not bad
+     *  and has a signing subkey) or if the primary subkey can sign. */
     bool canSign() const;
-    bool canReallySign() const;
+    GPGMEPP_DEPRECATED bool canReallySign() const;
+    /** Returns true, if the key can be used for certification (i.e. it's not bad
+     *  and has a certification subkey) or if the primary subkey can certify. */
     bool canCertify() const;
+    /** Returns true, if the key can be used for authentication (i.e. it's not bad
+     *  and has a authentication subkey) or if the primary subkey can authenticate. */
     bool canAuthenticate() const;
     bool isQualified() const;
     bool isDeVs() const;
+    bool isBetaCompliance() const;
+
+    /** Returns true, if the key has a certification subkey. */
+    bool hasCertify() const;
+    /** Returns true, if the key has a signing subkey. */
+    bool hasSign() const;
+    /** Returns true, if the key has an encryption subkey. */
+    bool hasEncrypt() const;
+    /** Returns true, if the key has an authentication subkey. */
+    bool hasAuthenticate() const;
 
     bool hasSecret() const;
     GPGMEPP_DEPRECATED bool isSecret() const
@@ -228,6 +244,7 @@ public:
     Subkey(const shared_gpgme_key_t &key, gpgme_sub_key_t subkey);
     Subkey(const shared_gpgme_key_t &key, unsigned int idx);
 
+    Subkey(const Subkey &other) = default;
     const Subkey &operator=(Subkey other)
     {
         swap(other);
@@ -268,8 +285,12 @@ public:
     bool canSign() const;
     bool canCertify() const;
     bool canAuthenticate() const;
+    bool canRenc() const;
+    bool canTimestamp() const;
+    bool isGroupOwned() const;
     bool isQualified() const;
     bool isDeVs() const;
+    bool isBetaCompliance() const;
     bool isCardKey() const;
 
     bool isSecret() const;
@@ -280,6 +301,7 @@ public:
         AlgoRSA     = 1,
         AlgoRSA_E   = 2,
         AlgoRSA_S   = 3,
+        AlgoKyber   = 8,
         AlgoELG_E   = 16,
         AlgoDSA     = 17,
         AlgoECC     = 18,
@@ -341,6 +363,7 @@ public:
     UserID(const shared_gpgme_key_t &key, gpgme_user_id_t uid);
     UserID(const shared_gpgme_key_t &key, unsigned int idx);
 
+    UserID(const UserID &other) = default;
     const UserID &operator=(UserID other)
     {
         swap(other);
@@ -453,12 +476,13 @@ private:
 class GPGMEPP_EXPORT UserID::Signature
 {
 public:
-    typedef GPGMEPP_DEPRECATED GpgME::Notation Notation;
+    GPGMEPP_DEPRECATED typedef GpgME::Notation Notation;
 
     Signature();
     Signature(const shared_gpgme_key_t &key, gpgme_user_id_t uid, gpgme_key_sig_t sig);
     Signature(const shared_gpgme_key_t &key, gpgme_user_id_t uid, unsigned int idx);
 
+    Signature(const Signature &other) = default;
     const Signature &operator=(Signature other)
     {
         swap(other);
@@ -531,9 +555,53 @@ private:
     gpgme_key_sig_t sig;
 };
 
+//
+// class RevocationKey
+//
+
+class GPGMEPP_EXPORT RevocationKey
+{
+public:
+    RevocationKey();
+    RevocationKey(const shared_gpgme_key_t &key, gpgme_revocation_key_t revkey);
+    RevocationKey(const shared_gpgme_key_t &key, unsigned int idx);
+
+    // Rule of Zero
+
+    void swap(RevocationKey &other)
+    {
+        using std::swap;
+        swap(this->key, other.key);
+        swap(this->revkey, other.revkey);
+    }
+
+    bool isNull() const
+    {
+        return !key || !revkey;
+    }
+
+    Key parent() const;
+
+    const char *fingerprint() const;
+
+    bool isSensitive() const;
+
+    int algorithm() const;
+
+private:
+    shared_gpgme_key_t key;
+    gpgme_revocation_key_t revkey;
+};
+
+inline void swap(RevocationKey& v1, RevocationKey& v2)
+{
+    v1.swap(v2);
+}
+
 GPGMEPP_EXPORT std::ostream &operator<<(std::ostream &os, const UserID &uid);
 GPGMEPP_EXPORT std::ostream &operator<<(std::ostream &os, const Subkey &subkey);
 GPGMEPP_EXPORT std::ostream &operator<<(std::ostream &os, const Key &key);
+GPGMEPP_EXPORT std::ostream &operator<<(std::ostream &os, const RevocationKey &revkey);
 
 } // namespace GpgME
 

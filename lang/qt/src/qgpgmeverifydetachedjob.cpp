@@ -39,10 +39,14 @@
 #include "qgpgmeverifydetachedjob.h"
 
 #include "dataprovider.h"
+#include "util.h"
+#include "verifydetachedjob_p.h"
 
-#include "context.h"
-#include "verificationresult.h"
-#include "data.h"
+#include <QFile>
+
+#include <gpgme++/context.h>
+#include <gpgme++/data.h>
+#include <gpgme++/verificationresult.h>
 
 #include <cassert>
 
@@ -50,9 +54,36 @@
 using namespace QGpgME;
 using namespace GpgME;
 
+namespace
+{
+
+class QGpgMEVerifyDetachedJobPrivate : public VerifyDetachedJobPrivate
+{
+    QGpgMEVerifyDetachedJob *q = nullptr;
+
+public:
+    QGpgMEVerifyDetachedJobPrivate(QGpgMEVerifyDetachedJob *qq)
+        : q{qq}
+    {
+    }
+
+    ~QGpgMEVerifyDetachedJobPrivate() override = default;
+
+private:
+    GpgME::Error startIt() override;
+
+    void startNow() override
+    {
+        q->run();
+    }
+};
+
+}
+
 QGpgMEVerifyDetachedJob::QGpgMEVerifyDetachedJob(Context *context)
     : mixin_type(context)
 {
+    setJobPrivate(this, std::unique_ptr<QGpgMEVerifyDetachedJobPrivate>{new QGpgMEVerifyDetachedJobPrivate{this}});
     lateInitialization();
 }
 
@@ -71,6 +102,9 @@ static QGpgMEVerifyDetachedJob::result_type verify_detached(Context *ctx, QThrea
 
     QGpgME::QIODeviceDataProvider dataDP(signedData);
     Data data(&dataDP);
+    if (!signedData->isSequential()) {
+        data.setSizeHint(signedData->size());
+    }
 
     const VerificationResult res = ctx->verifyDetachedSignature(sig, data);
     Error ae;
@@ -95,29 +129,73 @@ static QGpgMEVerifyDetachedJob::result_type verify_detached_qba(Context *ctx, co
 
 }
 
+static QGpgMEVerifyDetachedJob::result_type verify_from_filename(Context *ctx,
+                                                                 const QString &signatureFilePath,
+                                                                 const QString &signedFilePath,
+                                                                 bool processAllSignatures)
+{
+    Data signatureData;
+#ifdef Q_OS_WIN
+    signatureData.setFileName(signatureFilePath.toUtf8().constData());
+#else
+    signatureData.setFileName(QFile::encodeName(signatureFilePath).constData());
+#endif
+
+    Data signedData;
+#ifdef Q_OS_WIN
+    signedData.setFileName(signedFilePath.toUtf8().constData());
+#else
+    signedData.setFileName(QFile::encodeName(signedFilePath).constData());
+#endif
+
+    if (processAllSignatures) {
+        ctx->setFlag("proc-all-sigs", "1");
+    }
+    const auto verificationResult = ctx->verifyDetachedSignature(signatureData, signedData);
+
+    Error ae;
+    const QString log = _detail::audit_log_as_html(ctx, ae);
+    return std::make_tuple(verificationResult, log, ae);
+}
+
 Error QGpgMEVerifyDetachedJob::start(const QByteArray &signature, const QByteArray &signedData)
 {
+    if (processAllSignatures()) {
+        context()->setFlag("proc-all-sigs", "1");
+    }
     run(std::bind(&verify_detached_qba, std::placeholders::_1, signature, signedData));
     return Error();
 }
 
 void QGpgMEVerifyDetachedJob::start(const std::shared_ptr<QIODevice> &signature, const std::shared_ptr<QIODevice> &signedData)
 {
+    if (processAllSignatures()) {
+        context()->setFlag("proc-all-sigs", "1");
+    }
     run(std::bind(&verify_detached, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4), signature, signedData);
 }
 
 GpgME::VerificationResult QGpgME::QGpgMEVerifyDetachedJob::exec(const QByteArray &signature,
         const QByteArray &signedData)
 {
+    if (processAllSignatures()) {
+        context()->setFlag("proc-all-sigs", "1");
+    }
     const result_type r = verify_detached_qba(context(), signature, signedData);
-    resultHook(r);
-    return mResult;
+    return std::get<0>(r);
 }
 
-//PENDING(marc) implement showErrorDialog()
-
-void QGpgME::QGpgMEVerifyDetachedJob::resultHook(const result_type &tuple)
+GpgME::Error QGpgMEVerifyDetachedJobPrivate::startIt()
 {
-    mResult = std::get<0>(tuple);
+    if (m_signatureFilePath.isEmpty() || m_signedFilePath.isEmpty()) {
+        return Error::fromCode(GPG_ERR_INV_VALUE);
+    }
+
+    q->run([=](Context *ctx) {
+        return verify_from_filename(ctx, m_signatureFilePath, m_signedFilePath, m_processAllSignatures);
+    });
+
+    return {};
 }
+
 #include "qgpgmeverifydetachedjob.moc"

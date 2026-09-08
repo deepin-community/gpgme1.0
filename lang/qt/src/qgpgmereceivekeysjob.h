@@ -38,11 +38,7 @@
 
 #include "threadedjobmixin.h"
 
-#ifdef BUILDING_QGPGME
-# include "importresult.h"
-#else
-# include <gpgme++/importresult.h>
-#endif
+#include <gpgme++/importresult.h>
 
 namespace QGpgME
 {
@@ -66,12 +62,6 @@ public:
     GpgME::Error start(const QStringList &keyIds) override;
 
     GpgME::ImportResult exec(const QStringList &keyIds) override;
-
-    /* from ThreadedJobMixin */
-    void resultHook(const result_type &r) override;
-
-private:
-    GpgME::ImportResult mResult;
 };
 
 }

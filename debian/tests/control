@@ -1,9 +1,11 @@
-Tests: python3
+Tests:
+ python3,
 Depends:
  python3-all,
  python3-gpg,
 
-Tests: checky2106
+Tests:
+ checky2106,
 Restrictions:
  skippable,
 Depends:

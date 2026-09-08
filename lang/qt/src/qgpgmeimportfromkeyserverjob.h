@@ -39,11 +39,7 @@
 
 #include "threadedjobmixin.h"
 
-#ifdef BUILDING_QGPGME
-# include "importresult.h"
-#else
 #include <gpgme++/importresult.h>
-#endif
 
 namespace QGpgME
 {
@@ -65,16 +61,10 @@ public:
     ~QGpgMEImportFromKeyserverJob();
 
     /* from ImportFromKeyserverJob */
-    GpgME::Error start(const std::vector<GpgME::Key> &keys) Q_DECL_OVERRIDE;
+    GpgME::Error start(const std::vector<GpgME::Key> &keys) override;
 
     /* from ImportFromKeyserverJob */
-    GpgME::ImportResult exec(const std::vector<GpgME::Key> &keys) Q_DECL_OVERRIDE;
-
-    /* from ThreadedJobMixin */
-    void resultHook(const result_type &r) Q_DECL_OVERRIDE;
-
-private:
-    GpgME::ImportResult mResult;
+    GpgME::ImportResult exec(const std::vector<GpgME::Key> &keys) override;
 };
 
 }

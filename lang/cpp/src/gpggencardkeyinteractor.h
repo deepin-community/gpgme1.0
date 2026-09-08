@@ -24,7 +24,7 @@
 #ifndef __GPGMEPP_GPGGENCARDKEYEDITINTERACTOR_H__
 #define __GPGMEPP_GPGGENCARDKEYEDITINTERACTOR_H__
 
-#include <editinteractor.h>
+#include "editinteractor.h"
 
 #include <string>
 #include <memory>
@@ -58,9 +58,26 @@ public:
 
     enum Algo {
         RSA = 1,
-        ECC = 2
+        ECC = 2,
     };
     void setAlgo(Algo algo);
+
+    // the enum values minus 1 have to match the indexes of the curves used by
+    // ask_curve() in gnupg's g10/keygen.c
+    enum Curve {
+        DefaultCurve = 0, // currently Curve25519
+        Curve25519 = 1,
+        Curve448,
+        NISTP256,
+        NISTP384,
+        NISTP521,
+        BrainpoolP256,
+        BrainpoolP384,
+        BrainpoolP512,
+        Secp256k1,
+        LastCurve = Secp256k1,
+    };
+    void setCurve(Curve curve);
 
     std::string backupFileName() const;
 

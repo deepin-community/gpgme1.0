@@ -979,7 +979,7 @@ _gpgme_verify_status_handler (void *priv, gpgme_status_code_t code, char *args)
     case GPGME_STATUS_UNEXPECTED:
       opd->only_newsig_seen = 0;
       if (!sig)
-	return gpg_error (GPG_ERR_GENERAL);
+	return gpg_error (GPG_ERR_BAD_DATA);
       sig->status = gpg_error (GPG_ERR_NO_DATA);
       break;
 
@@ -1055,7 +1055,9 @@ _gpgme_verify_status_handler (void *priv, gpgme_status_code_t code, char *args)
       return parse_error (sig, args, !!sig );
 
     case GPGME_STATUS_FAILURE:
-      opd->failure_code = _gpgme_parse_failure (args);
+      if (!opd->failure_code
+          || gpg_err_code (opd->failure_code) == GPG_ERR_GENERAL)
+        opd->failure_code = _gpgme_parse_failure (args);
       break;
 
     case GPGME_STATUS_EOF:
@@ -1135,8 +1137,9 @@ _gpgme_op_verify_init_result (gpgme_ctx_t ctx)
 
 
 static gpgme_error_t
-verify_start (gpgme_ctx_t ctx, int synchronous, gpgme_data_t sig,
-	      gpgme_data_t signed_text, gpgme_data_t plaintext)
+verify_start (gpgme_ctx_t ctx, int synchronous, gpgme_verify_flags_t flags,
+              gpgme_data_t sig, gpgme_data_t signed_text,
+              gpgme_data_t plaintext)
 {
   gpgme_error_t err;
 
@@ -1153,26 +1156,45 @@ verify_start (gpgme_ctx_t ctx, int synchronous, gpgme_data_t sig,
   if (!sig)
     return gpg_error (GPG_ERR_NO_DATA);
 
-  return _gpgme_engine_op_verify (ctx->engine, sig, signed_text, plaintext,
-                                  ctx);
+  return _gpgme_engine_op_verify (ctx->engine, flags, sig, signed_text,
+                                  plaintext, ctx);
 }
 
 
-/* Decrypt ciphertext CIPHER and make a signature verification within
-   CTX and store the resulting plaintext in PLAIN.  */
+/* Old version of gpgme_op_verify_ext_start without FLAGS.  */
 gpgme_error_t
 gpgme_op_verify_start (gpgme_ctx_t ctx, gpgme_data_t sig,
 		       gpgme_data_t signed_text, gpgme_data_t plaintext)
 {
+  return gpgme_op_verify_ext_start (ctx, 0, sig, signed_text, plaintext);
+}
+
+
+/* Old version of gpgme_op_verify_ext without FLAGS.  */
+gpgme_error_t
+gpgme_op_verify (gpgme_ctx_t ctx, gpgme_data_t sig, gpgme_data_t signed_text,
+		 gpgme_data_t plaintext)
+{
+  return gpgme_op_verify_ext (ctx, 0, sig, signed_text, plaintext);
+}
+
+
+/* Decrypt ciphertext CIPHER and make a signature verification within
+   CTX and store the resulting plaintext in PLAIN.  */
+gpgme_error_t
+gpgme_op_verify_ext_start (gpgme_ctx_t ctx, gpgme_verify_flags_t flags,
+                           gpgme_data_t sig, gpgme_data_t signed_text,
+                           gpgme_data_t plaintext)
+{
   gpg_error_t err;
   TRACE_BEG  (DEBUG_CTX, "gpgme_op_verify_start", ctx,
-	      "sig=%p, signed_text=%p, plaintext=%p",
-	      sig, signed_text, plaintext);
+	      "flags=0x%x, sig=%p, signed_text=%p, plaintext=%p",
+	      flags, sig, signed_text, plaintext);
 
   if (!ctx)
     return TRACE_ERR (gpg_error (GPG_ERR_INV_VALUE));
 
-  err = verify_start (ctx, 0, sig, signed_text, plaintext);
+  err = verify_start (ctx, 0, flags, sig, signed_text, plaintext);
   return TRACE_ERR (err);
 }
 
@@ -1180,19 +1202,20 @@ gpgme_op_verify_start (gpgme_ctx_t ctx, gpgme_data_t sig,
 /* Decrypt ciphertext CIPHER and make a signature verification within
    CTX and store the resulting plaintext in PLAIN.  */
 gpgme_error_t
-gpgme_op_verify (gpgme_ctx_t ctx, gpgme_data_t sig, gpgme_data_t signed_text,
-		 gpgme_data_t plaintext)
+gpgme_op_verify_ext (gpgme_ctx_t ctx, gpgme_verify_flags_t flags,
+                     gpgme_data_t sig, gpgme_data_t signed_text,
+                     gpgme_data_t plaintext)
 {
   gpgme_error_t err;
 
   TRACE_BEG  (DEBUG_CTX, "gpgme_op_verify", ctx,
-	      "sig=%p, signed_text=%p, plaintext=%p",
-	      sig, signed_text, plaintext);
+	      "flags=0x%x, sig=%p, signed_text=%p, plaintext=%p",
+	      flags, sig, signed_text, plaintext);
 
   if (!ctx)
     return TRACE_ERR (gpg_error (GPG_ERR_INV_VALUE));
 
-  err = verify_start (ctx, 1, sig, signed_text, plaintext);
+  err = verify_start (ctx, 1, flags, sig, signed_text, plaintext);
   if (!err)
     err = _gpgme_wait_one (ctx);
   return TRACE_ERR (err);

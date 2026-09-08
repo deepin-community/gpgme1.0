@@ -102,7 +102,8 @@ void _gpgme_signers_clear (gpgme_ctx_t ctx);
 
 /* Create an initial op data object for signing.  Needs to be called
    once before calling _gpgme_sign_status_handler.  */
-gpgme_error_t _gpgme_op_sign_init_result (gpgme_ctx_t ctx);
+gpgme_error_t _gpgme_op_sign_init_result (gpgme_ctx_t ctx,
+                                          int success_required);
 
 /* Process a status line for signing operations.  */
 gpgme_error_t _gpgme_sign_status_handler (void *priv,
@@ -114,7 +115,8 @@ gpgme_error_t _gpgme_sign_status_handler (void *priv,
 
 /* Create an initial op data object for encrypt.  Needs to be called
    once before calling _gpgme_encrypt_status_handler.  */
-gpgme_error_t _gpgme_op_encrypt_init_result (gpgme_ctx_t ctx);
+gpgme_error_t _gpgme_op_encrypt_init_result (gpgme_ctx_t ctx,
+                                             int success_required);
 
 /* Process a status line for encryption operations.  */
 gpgme_error_t _gpgme_encrypt_status_handler (void *priv,
@@ -145,6 +147,7 @@ gpgme_error_t _gpgme_key_add_subkey (gpgme_key_t key,
 gpgme_error_t _gpgme_key_append_name (gpgme_key_t key,
                                       const char *src, int convert);
 gpgme_key_sig_t _gpgme_key_add_sig (gpgme_key_t key, char *src);
+gpgme_error_t _gpgme_key_add_rev_key (gpgme_key_t key, const char *src);
 
 
 

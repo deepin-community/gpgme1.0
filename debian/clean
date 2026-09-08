@@ -1,4 +1,5 @@
 aclocal.m4
+build-qt6/
 config.h.in
 configure
 doc/gpgme.info*

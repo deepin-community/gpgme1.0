@@ -1,4 +1,4 @@
-This is gpgme.info, produced by makeinfo version 6.5 from gpgme.texi.
+This is gpgme.info, produced by makeinfo version 6.8 from gpgme.texi.
 
 Copyright © 2002–2008, 2010, 2012–2018 g10 Code GmbH.
 
@@ -19,8 +19,8 @@ END-INFO-DIR-ENTRY
 
    This file documents the GPGME library.
 
-   This is Edition 1.18.0, last updated 3 February 2022, of ‘The ‘GnuPG
-Made Easy’ Reference Manual’, for Version 1.18.0.
+   This is Edition 1.24.2, last updated 29 October 2024, of ‘The ‘GnuPG
+Made Easy’ Reference Manual’, for Version 1.24.2.
 
    Copyright © 2002–2008, 2010, 2012–2018 g10 Code GmbH.
 
@@ -34,6 +34,384 @@ Made Easy’ Reference Manual’, for Version 1.18.0.
 WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 Public License for more details.
+
+
+File: gpgme.info,  Node: I/O Callback Example GTK+,  Next: I/O Callback Example GDK,  Prev: I/O Callback Example,  Up: Using External Event Loops
+
+7.8.2.4 I/O Callback Example GTK+
+.................................
+
+The I/O callback interface can be used to integrate GPGME with the GTK+
+event loop.  The following code snippets shows how this can be done
+using the appropriate register and remove I/O callback functions.  In
+this example, the private data of the register I/O callback function is
+unused.  The event notifications is missing because it does not require
+any GTK+ specific setup.
+
+     #include <gtk/gtk.h>
+
+     struct my_gpgme_io_cb
+     {
+       gpgme_io_cb_t fnc;
+       void *fnc_data;
+       guint input_handler_id
+     };
+
+     void
+     my_gpgme_io_cb (gpointer data, gint source, GdkInputCondition condition)
+     {
+       struct my_gpgme_io_cb *iocb = data;
+       (*(iocb->fnc)) (iocb->data, source);
+     }
+
+     void
+     my_gpgme_remove_io_cb (void *data)
+     {
+       struct my_gpgme_io_cb *iocb = data;
+       gtk_input_remove (data->input_handler_id);
+     }
+
+     void
+     my_gpgme_register_io_callback (void *data, int fd, int dir, gpgme_io_cb_t fnc,
+                                    void *fnc_data, void **tag)
+     {
+       struct my_gpgme_io_cb *iocb = g_malloc (sizeof (struct my_gpgme_io_cb));
+       iocb->fnc = fnc;
+       iocb->data = fnc_data;
+       iocb->input_handler_id = gtk_input_add_full (fd, dir
+                                                        ? GDK_INPUT_READ
+                                                        : GDK_INPUT_WRITE,
+                                                    my_gpgme_io_callback,
+                                                    0, iocb, NULL);
+       *tag = iocb;
+       return 0;
+     }
+
+
+File: gpgme.info,  Node: I/O Callback Example GDK,  Next: I/O Callback Example Qt,  Prev: I/O Callback Example GTK+,  Up: Using External Event Loops
+
+7.8.2.5 I/O Callback Example GDK
+................................
+
+The I/O callback interface can also be used to integrate GPGME with the
+GDK event loop.  The following code snippets shows how this can be done
+using the appropriate register and remove I/O callback functions.  In
+this example, the private data of the register I/O callback function is
+unused.  The event notifications is missing because it does not require
+any GDK specific setup.
+
+   It is very similar to the GTK+ example in the previous section.
+
+     #include <gdk/gdk.h>
+
+     struct my_gpgme_io_cb
+     {
+       gpgme_io_cb_t fnc;
+       void *fnc_data;
+       gint tag;
+     };
+
+     void
+     my_gpgme_io_cb (gpointer data, gint source, GdkInputCondition condition)
+     {
+       struct my_gpgme_io_cb *iocb = data;
+       (*(iocb->fnc)) (iocb->data, source);
+     }
+
+     void
+     my_gpgme_remove_io_cb (void *data)
+     {
+       struct my_gpgme_io_cb *iocb = data;
+       gdk_input_remove (data->tag);
+     }
+
+     void
+     my_gpgme_register_io_callback (void *data, int fd, int dir, gpgme_io_cb_t fnc,
+                                    void *fnc_data, void **tag)
+     {
+       struct my_gpgme_io_cb *iocb = g_malloc (sizeof (struct my_gpgme_io_cb));
+       iocb->fnc = fnc;
+       iocb->data = fnc_data;
+       iocb->tag = gtk_input_add_full (fd, dir ? GDK_INPUT_READ : GDK_INPUT_WRITE,
+                                       my_gpgme_io_callback, iocb, NULL);
+       *tag = iocb;
+       return 0;
+     }
+
+
+File: gpgme.info,  Node: I/O Callback Example Qt,  Prev: I/O Callback Example GDK,  Up: Using External Event Loops
+
+7.8.2.6 I/O Callback Example Qt
+...............................
+
+The I/O callback interface can also be used to integrate GPGME with the
+Qt event loop.  The following code snippets show how this can be done
+using the appropriate register and remove I/O callback functions.  In
+this example, the private data of the register I/O callback function is
+unused.  The event notifications is missing because it does not require
+any Qt specific setup.
+
+     #include <qsocketnotifier.h>
+     #include <qapplication.h>
+
+     struct IOCB {
+       IOCB( GpgmeIOCb f, void * d, QSocketNotifier * n )
+         : func( f ), data( d ), notifier( n ) {}
+       GpgmeIOCb func;
+       void * data;
+       QSocketNotifier * notifier;
+     }
+
+     class MyApp : public QApplication {
+
+       // ...
+
+       static void registerGpgmeIOCallback( void * data, int fd, int dir,
+                                            GpgmeIOCb func, void * func_data,
+                                            void ** tag ) {
+         QSocketNotifier * n =
+           new QSocketNotifier( fd, dir ? QSocketNotifier::Read
+                                        : QSocketNotifier::Write );
+         connect( n, SIGNAL(activated(int)),
+                  qApp, SLOT(slotGpgmeIOCallback(int)) );
+         qApp->mIOCBs.push_back( IOCB( func, func_data, n ) );
+         *tag = (void*)n;
+       }
+
+       static void removeGpgmeIOCallback( void * tag ) {
+         if ( !tag ) return;
+         QSocketNotifier * n = static_cast<QSocketNotifier*>( tag );
+         for ( QValueList<IOCB>::iterator it = qApp->mIOCBs.begin() ;
+               it != qApp->mIOCBs.end() ; ++it )
+           if ( it->notifier == n ) {
+             delete it->notifier;
+             qApp->mIOCBs.erase( it );
+             return;
+           }
+       }
+
+     public slots:
+       void slotGpgmeIOCallback( int fd ) {
+         for ( QValueList<IOCB>::const_iterator it = mIOCBs.begin() ;
+               it != mIOCBs.end() ; ++it )
+           if ( it->notifier && it->notifier->socket() == fd )
+             (*(it->func)) ( it->func_data, fd );
+       }
+
+       // ...
+
+     private:
+       QValueList<IOCB> mIOCBs;
+       // ...
+     };
+
+
+File: gpgme.info,  Node: Cancellation,  Prev: Using External Event Loops,  Up: Run Control
+
+7.8.3 Cancellation
+------------------
+
+Sometimes you do not want to wait for an operation to finish.  GPGME
+provides two different functions to achieve that.  The function
+‘gpgme_cancel’ takes effect immediately.  When it returns, the operation
+is effectively canceled.  However, it has some limitations and can not
+be used with synchronous operations.  In contrast, the function
+‘gpgme_cancel_async’ can be used with any context and from any thread,
+but it is not guaranteed to take effect immediately.  Instead,
+cancellation occurs at the next possible time (typically the next time
+I/O occurs in the target context).
+
+ -- Function: gpgme_ctx_t gpgme_cancel (gpgme_ctx_t CTX)
+     SINCE: 0.4.5
+
+     The function ‘gpgme_cancel’ attempts to cancel a pending operation
+     in the context CTX.  This only works if you use the global event
+     loop or your own event loop.
+
+     If you use the global event loop, you must not call ‘gpgme_wait’
+     during cancellation.  After successful cancellation, you can call
+     ‘gpgme_wait’ (optionally waiting on CTX), and the context CTX will
+     appear as if it had finished with the error code ‘GPG_ERR_CANCEL’.
+
+     If you use an external event loop, you must ensure that no I/O
+     callbacks are invoked for this context (for example by halting the
+     event loop).  On successful cancellation, all registered I/O
+     callbacks for this context will be unregistered, and a
+     ‘GPGME_EVENT_DONE’ event with the error code ‘GPG_ERR_CANCEL’ will
+     be signalled.
+
+     The function returns an error code if the cancellation failed (in
+     this case the state of CTX is not modified).
+
+ -- Function: gpgme_ctx_t gpgme_cancel_async (gpgme_ctx_t CTX)
+     SINCE: 1.1.7
+
+     The function ‘gpgme_cancel_async’ attempts to cancel a pending
+     operation in the context CTX.  This can be called by any thread at
+     any time after starting an operation on the context, but will not
+     take effect immediately.  The actual cancellation happens at the
+     next time GPGME processes I/O in that context.
+
+     The function returns an error code if the cancellation failed (in
+     this case the state of CTX is not modified).
+
+
+File: gpgme.info,  Node: UI Server Protocol,  Next: Debugging,  Prev: Contexts,  Up: Top
+
+Appendix A The GnuPG UI Server Protocol
+***************************************
+
+This section specifies the protocol used between clients and a User
+Interface Server (UI server).  This protocol helps to build a system
+where all cryptographic operations are done by a server and the server
+is responsible for all dialogs.  Although GPGME has no direct support
+for this protocol it is believed that servers will utilize the GPGME
+library; thus having the specification included in this manual is an
+appropriate choice.  This protocol should be referenced as ‘The GnuPG UI
+Server Protocol’.
+
+A server needs to implement these commands:(1)
+
+* Menu:
+
+* UI Server Encrypt::                Encrypt a message.
+* UI Server Sign::                   Sign a message.
+* UI Server Decrypt::                Decrypt a message.
+* UI Server Verify::                 Verify a message.
+* UI Server Set Input Files::        Specifying the input files to operate on.
+* UI Server Sign/Encrypt Files::     Encrypting and signing files.
+* UI Server Verify/Decrypt Files::   Decrypting and verifying files.
+* UI Server Import/Export Keys::     Managing certificates.
+* UI Server Checksum Files::         Create and verify checksums for files.
+* Miscellaneous UI Server Commands::   Commands not related to a specific operation.
+
+   ---------- Footnotes ----------
+
+   (1) In all examples we assume that the connection has already been
+established; see the Assuan manual for details.
+
+
+File: gpgme.info,  Node: UI Server Encrypt,  Next: UI Server Sign,  Up: UI Server Protocol
+
+A.1 UI Server: Encrypt a Message
+================================
+
+Before encryption can be done the recipients must be set using the
+command:
+
+ -- Command: RECIPIENT STRING
+
+     Set the recipient for the encryption.  STRING is an RFC-2822
+     recipient name ("mailbox" as per section 3.4).  This command may or
+     may not check the recipient for validity right away; if it does not
+     all recipients are expected to be checked at the time of the
+     ‘ENCRYPT’ command.  All ‘RECIPIENT’ commands are cumulative until a
+     successful ‘ENCRYPT’ command or until a ‘RESET’ command.  Linefeeds
+     are obviously not allowed in STRING and should be folded into
+     spaces (which are equivalent).
+
+To tell the server the source and destination of the data, the next two
+commands are to be used:
+
+ -- Command: INPUT FD=N
+     Set the file descriptor for the message to be encrypted to N.  The
+     message send to the server is binary encoded.
+
+     GpgOL is a Windows only program, thus N is not a libc file
+     descriptor but a regular system handle.  Given that the Assuan
+     connection works over a socket, it is not possible to use regular
+     inheritance to make the file descriptor available to the server.
+     Thus ‘DuplicateHandle’ needs to be used to duplicate a handle to
+     the server process.  This is the reason that the server needs to
+     implement the ‘GETINFO pid’ command.  Sending this command a second
+     time replaces the file descriptor set by the last one.
+
+ -- Command: OUTPUT FD=N [--binary]
+     Set the file descriptor to be used for the output (i.e.  the
+     encrypted message) to N.  If the option ‘--binary’ is given the
+     output shall be in binary format; if not given, the output for
+     OpenPGP needs to be ASCII armored and for CMS Base-64 encoded.  For
+     details on the file descriptor, see the ‘INPUT’ command.
+
+The setting of the recipients, the data source and destination may
+happen in any order, even intermixed.  If this has been done the actual
+encryption operation is called using:
+
+ -- Command: ENCRYPT --protocol=NAME
+
+     This command reads the plaintext from the file descriptor set by
+     the ‘INPUT’ command, encrypts it and writes the ciphertext to the
+     file descriptor set by the ‘OUTPUT’ command.  The server may (and
+     should) overlap reading and writing.  The recipients used for the
+     encryption are all the recipients set so far.  If any recipient is
+     not usable the server should take appropriate measures to notify
+     the user about the problem and may cancel the operation by
+     returning an error code.  The used file descriptors are void after
+     this command; the recipient list is only cleared if the server
+     returns success.
+
+     Because GpgOL uses a streaming mode of operation the server is not
+     allowed to auto select the protocol and must obey to the mandatory
+     PROTOCOL parameter:
+
+     ‘OpenPGP’
+          Use the OpenPGP protocol (RFC-2440).
+     ‘CMS’
+          Use the CMS (PKCS#7) protocol (RFC-3852).
+
+   To support automagically selection of the protocol depending on the
+selected keys, the server MAY implement the command:
+
+ -- Command: PREP_ENCRYPT [--protocol=NAME] [--expect-sign]
+
+     This commands considers all recipients set so far and decides
+     whether it is able to take input and start the actual encryption.
+     This is kind of a dry-run ‘ENCRYPT’ without requiring or using the
+     input and output file descriptors.  The server shall cache the
+     result of any user selection to avoid asking this again when the
+     actual ‘ENCRYPT’ command is send.  The ‘--protocol’ option is
+     optional; if it is not given, the server should allow the user to
+     select the protocol to be used based on the recipients given or by
+     any other means.
+
+     If ‘--expect-sign’ is given the server should expect that the
+     message will also be signed and use this hint to present a unified
+     recipient and signer selection dialog if possible and desired.  A
+     selected signer should then be cached for the expected SIGN command
+     (which is expected in the same session but possible on another
+     connection).
+
+     If this command is given again before a successful ‘ENCRYPT’
+     command, the second one takes effect.
+
+     Before sending the OK response the server shall tell the client the
+     protocol to be used (either the one given by the argument or the
+     one selected by the user) by means of a status line:
+
+ -- Status line: PROTOCOL NAME
+     Advise the client to use the protocol NAME for the ‘ENCRYPT’
+     command.  The valid protocol names are listed under the description
+     of the ‘ENCRYPT’ command.  The server shall emit exactly one
+     PROTOCOL status line.
+
+Here is an example of a complete encryption sequence; client lines are
+indicated by a C:, server responses by C::
+
+         C: RESET
+         S: OK
+         C: RECIPIENT foo@example.net
+         S: OK
+         C: RECIPIENT bar@example.com
+         S: OK
+         C: PREP_ENCRYPT
+         S: S PROTOCOL OpenPGP
+         S: OK
+         C: INPUT FD=17
+         S: OK
+         C: OUTPUT FD=18
+         S: OK
+         C: ENCRYPT
+         S: OK
 
 
 File: gpgme.info,  Node: UI Server Sign,  Next: UI Server Decrypt,  Prev: UI Server Encrypt,  Up: UI Server Protocol
@@ -483,6 +861,14 @@ understand what is going going on.  Warning: The trace log may reveal
 sensitive details like passphrases or other data you use in your
 application.  If you are asked to send a log file, make sure that you
 run your tests only with play data.
+
+   The trace function makes use of gpgrt’s logging function and thus the
+special ‘socket://’ and ‘tcp://’ files may be used.  Because this
+conflicts with the use of colons to separate fields, the following hack
+is used: If the file name contains the string ‘^//’ all carets are
+replaced by colons.  For example to log to TCP port 42042 this can be
+used:
+     GPGME_DEBUG=5:tcp^//127.0.0.1^42042
 
 
 File: gpgme.info,  Node: Deprecated Functions,  Next: Library Copying,  Prev: Debugging,  Up: Top
@@ -2543,9 +2929,7 @@ Function and Data Index
  [index ]
 * Menu:
 
-* AM_PATH_GPGME:                         Using Automake.      (line  11)
-* AM_PATH_GPGME_PTH:                     Using Automake.      (line  13)
-* AM_PATH_GPGME_PTHREAD:                 Using Automake.      (line  15)
+* AM_PATH_GPGME:                         Using Automake.      (line  14)
 * CHECKSUM_CREATE_FILES:                 UI Server Checksum Files.
                                                               (line   9)
 * CHECKSUM_VERIFY_FILES:                 UI Server Checksum Files.
@@ -2561,11 +2945,11 @@ Function and Data Index
 * ENCRYPT_SIGN_FILES:                    UI Server Sign/Encrypt Files.
                                                               (line  11)
 * enum gpgme_data_encoding_t:            Data Buffer Meta-Data.
-                                                              (line  31)
+                                                              (line  36)
 * enum gpgme_data_type_t:                Data Buffer Convenience.
                                                               (line   6)
 * enum gpgme_event_io_t:                 I/O Callback Interface.
-                                                              (line  58)
+                                                              (line  57)
 * enum gpgme_hash_algo_t:                Hash Algorithms.     (line   9)
 * enum gpgme_pinentry_mode_t:            Pinentry Mode.       (line  25)
 * enum gpgme_protocol_t:                 Protocols and Engines.
@@ -2575,17 +2959,17 @@ Function and Data Index
 * enum gpgme_sig_mode_t:                 Creating a Signature.
                                                               (line   6)
 * enum gpgme_sig_stat_t:                 Deprecated Functions.
-                                                              (line 387)
+                                                              (line 381)
 * enum gpgme_tofu_policy_t:              Changing TOFU Data.  (line  10)
 * FILE:                                  UI Server Set Input Files.
                                                               (line   9)
 * GETINFO:                               Miscellaneous UI Server Commands.
                                                               (line   9)
-* gpgme_addrspec_from_uid:               Decrypt and Verify.  (line  48)
+* gpgme_addrspec_from_uid:               Decrypt and Verify.  (line  47)
 * gpgme_attr_t:                          Deprecated Functions.
-                                                              (line 140)
+                                                              (line 138)
 * gpgme_attr_t <1>:                      Deprecated Functions.
-                                                              (line 301)
+                                                              (line 299)
 * gpgme_cancel:                          Cancellation.        (line  16)
 * gpgme_cancel_async:                    Cancellation.        (line  38)
 * gpgme_check_version:                   Library Version Check.
@@ -2594,9 +2978,9 @@ Function and Data Index
 * gpgme_ctx_set_engine_info:             Crypto Engine.       (line  26)
 * gpgme_ctx_t:                           Contexts.            (line  11)
 * gpgme_data_encoding_t:                 Data Buffer Meta-Data.
-                                                              (line  32)
+                                                              (line  37)
 * gpgme_data_get_encoding:               Data Buffer Meta-Data.
-                                                              (line  81)
+                                                              (line  86)
 * gpgme_data_get_file_name:              Data Buffer Meta-Data.
                                                               (line   6)
 * gpgme_data_identify:                   Data Buffer Convenience.
@@ -2604,7 +2988,7 @@ Function and Data Index
 * gpgme_data_new:                        Memory Based Data Buffers.
                                                               (line  12)
 * gpgme_data_new_from_cbs:               Callback Based Data Buffers.
-                                                              (line  80)
+                                                              (line  78)
 * gpgme_data_new_from_estream:           File Based Data Buffers.
                                                               (line  49)
 * gpgme_data_new_from_fd:                File Based Data Buffers.
@@ -2618,53 +3002,53 @@ Function and Data Index
 * gpgme_data_new_from_stream:            File Based Data Buffers.
                                                               (line  29)
 * gpgme_data_new_with_read_cb:           Deprecated Functions.
-                                                              (line 110)
+                                                              (line 109)
 * gpgme_data_read:                       Data Buffer I/O Operations.
                                                               (line   6)
 * gpgme_data_read_cb_t:                  Callback Based Data Buffers.
-                                                              (line  13)
+                                                              (line  12)
 * gpgme_data_release:                    Destroying Data Buffers.
                                                               (line   6)
 * gpgme_data_release_and_get_mem:        Destroying Data Buffers.
                                                               (line  11)
 * gpgme_data_release_cb_t:               Callback Based Data Buffers.
-                                                              (line  55)
+                                                              (line  53)
 * gpgme_data_rewind:                     Deprecated Functions.
-                                                              (line 134)
+                                                              (line 132)
 * gpgme_data_seek:                       Data Buffer I/O Operations.
-                                                              (line  26)
+                                                              (line  25)
 * gpgme_data_seek_cb_t:                  Callback Based Data Buffers.
-                                                              (line  46)
+                                                              (line  44)
 * gpgme_data_set_encoding:               Data Buffer Meta-Data.
-                                                              (line  87)
+                                                              (line  92)
 * gpgme_data_set_file_name:              Data Buffer Meta-Data.
                                                               (line  18)
 * gpgme_data_set_flag:                   Data Buffer Meta-Data.
-                                                              (line  92)
+                                                              (line  97)
 * gpgme_data_t:                          Exchanging Data.     (line  13)
 * gpgme_data_type_t:                     Data Buffer Convenience.
                                                               (line   7)
 * gpgme_data_write:                      Data Buffer I/O Operations.
                                                               (line  16)
 * gpgme_data_write_cb_t:                 Callback Based Data Buffers.
-                                                              (line  29)
-* gpgme_decrypt_result_t:                Decrypt.             (line 101)
+                                                              (line  28)
+* gpgme_decrypt_result_t:                Decrypt.             (line 117)
 * gpgme_edit_cb_t:                       Deprecated Functions.
                                                               (line  33)
 * gpgme_encrypt_result_t:                Encrypting a Plaintext.
-                                                              (line 241)
+                                                              (line 285)
 * gpgme_engine_check_version:            Engine Version Check.
-                                                              (line  82)
+                                                              (line  88)
 * gpgme_engine_info_t:                   Engine Information.  (line   6)
 * gpgme_error:                           Error Values.        (line  65)
-* gpgme_error_from_errno:                Error Values.        (line  89)
+* gpgme_error_from_errno:                Error Values.        (line  88)
 * gpgme_error_t:                         Error Values.        (line  24)
 * gpgme_error_t (*gpgme_assuan_data_cb_t) (void *OPAQUE, const void *DATA, size_t DATALEN): Using the Assuan protocol.
                                                               (line  15)
 * gpgme_error_t (*gpgme_assuan_inquire_cb_t) (void *OPAQUE, const char *NAME, const char *ARGS, gpgme_data_t *R_DATA): Using the Assuan protocol.
                                                               (line  24)
 * gpgme_error_t (*gpgme_assuan_status_cb_t) (void *OPAQUE, const char *STATUS, const char *ARGS): Using the Assuan protocol.
-                                                              (line  38)
+                                                              (line  37)
 * gpgme_error_t (*gpgme_edit_cb_t) (void *HANDLE, gpgme_status_code_t STATUS, const char *ARGS, int FD): Deprecated Functions.
                                                               (line  31)
 * gpgme_error_t (*gpgme_interact_cb_t) (void *HANDLE, const char *STATUS, const char *ARGS, int FD): Advanced Key Editing.
@@ -2678,135 +3062,135 @@ Function and Data Index
 * gpgme_error_t (*gpgme_status_cb_t)(void *HOOK, const char *KEYWORD, const char *ARGS): Status Message Callback.
                                                               (line   6)
 * gpgme_err_code:                        Error Values.        (line  42)
-* gpgme_err_code_from_errno:             Error Values.        (line  98)
+* gpgme_err_code_from_errno:             Error Values.        (line  97)
 * gpgme_err_code_t:                      Error Values.        (line   6)
-* gpgme_err_code_to_errno:               Error Values.        (line 103)
+* gpgme_err_code_to_errno:               Error Values.        (line 102)
 * gpgme_err_make:                        Error Values.        (line  57)
-* gpgme_err_make_from_errno:             Error Values.        (line  83)
+* gpgme_err_make_from_errno:             Error Values.        (line  82)
 * gpgme_err_source:                      Error Values.        (line  49)
 * gpgme_err_source_t:                    Error Values.        (line  13)
 * gpgme_event_io_t:                      I/O Callback Interface.
-                                                              (line  59)
+                                                              (line  58)
 * gpgme_event_io_t <1>:                  Registering I/O Callbacks.
                                                               (line   7)
 * gpgme_free:                            Destroying Data Buffers.
                                                               (line  25)
-* gpgme_genkey_result_t:                 Generating Keys.     (line 381)
+* gpgme_genkey_result_t:                 Generating Keys.     (line 389)
 * gpgme_get_armor:                       ASCII Armor.         (line  13)
-* gpgme_get_ctx_flag:                    Context Flags.       (line 153)
+* gpgme_get_ctx_flag:                    Context Flags.       (line 174)
 * gpgme_get_dirinfo:                     Engine Version Check.
                                                               (line   6)
 * gpgme_get_engine_info:                 Engine Information.  (line  46)
 * gpgme_get_include_certs:               Included Certificates.
-                                                              (line  37)
+                                                              (line  36)
 * gpgme_get_io_cbs:                      Registering I/O Callbacks.
                                                               (line  44)
-* gpgme_get_key:                         Listing Keys.        (line 178)
-* gpgme_get_keylist_mode:                Key Listing Mode.    (line 124)
+* gpgme_get_key:                         Listing Keys.        (line 177)
+* gpgme_get_keylist_mode:                Key Listing Mode.    (line 131)
 * gpgme_get_offline:                     Offline Mode.        (line  31)
-* gpgme_get_passphrase_cb:               Passphrase Callback. (line  63)
+* gpgme_get_passphrase_cb:               Passphrase Callback. (line  62)
 * gpgme_get_pinentry_mode:               Pinentry Mode.       (line  18)
 * gpgme_get_progress_cb:                 Progress Meter Callback.
                                                               (line  31)
 * gpgme_get_protocol:                    Protocol Selection.  (line  21)
 * gpgme_get_protocol_name:               Protocols and Engines.
                                                               (line  58)
-* gpgme_get_sender:                      Setting the Sender.  (line  29)
+* gpgme_get_sender:                      Setting the Sender.  (line  28)
 * gpgme_get_sig_key:                     Deprecated Functions.
-                                                              (line 587)
+                                                              (line 580)
 * gpgme_get_sig_status:                  Deprecated Functions.
-                                                              (line 435)
+                                                              (line 429)
 * gpgme_get_sig_string_attr:             Deprecated Functions.
-                                                              (line 491)
+                                                              (line 484)
 * gpgme_get_sig_ulong_attr:              Deprecated Functions.
-                                                              (line 525)
+                                                              (line 518)
 * gpgme_get_status_cb:                   Status Message Callback.
                                                               (line  31)
 * gpgme_get_textmode:                    Text Mode.           (line  20)
 * gpgme_hash_algo_name:                  Hash Algorithms.     (line  30)
 * gpgme_hash_algo_t:                     Hash Algorithms.     (line  10)
-* gpgme_import_result_t:                 Importing Keys.      (line 150)
-* gpgme_import_status_t:                 Importing Keys.      (line 110)
+* gpgme_import_result_t:                 Importing Keys.      (line 149)
+* gpgme_import_status_t:                 Importing Keys.      (line 109)
 * gpgme_interact_cb_t:                   Advanced Key Editing.
                                                               (line  11)
 * gpgme_invalid_key_t:                   Crypto Operations.   (line  10)
 * gpgme_io_cb_t:                         I/O Callback Interface.
                                                               (line   7)
-* gpgme_keylist_result_t:                Listing Keys.        (line 155)
+* gpgme_keylist_result_t:                Listing Keys.        (line 154)
 * gpgme_key_get_string_attr:             Deprecated Functions.
-                                                              (line 266)
+                                                              (line 264)
 * gpgme_key_get_ulong_attr:              Deprecated Functions.
-                                                              (line 280)
+                                                              (line 278)
 * gpgme_key_ref:                         Manipulating Keys.   (line   6)
 * gpgme_key_release:                     Deprecated Functions.
                                                               (line  14)
 * gpgme_key_sig_get_string_attr:         Deprecated Functions.
-                                                              (line 357)
+                                                              (line 355)
 * gpgme_key_sig_get_ulong_attr:          Deprecated Functions.
-                                                              (line 373)
-* gpgme_key_sig_t:                       Key objects.         (line 346)
+                                                              (line 369)
+* gpgme_key_sig_t:                       Key objects.         (line 387)
 * gpgme_key_t:                           Key objects.         (line  10)
 * gpgme_key_unref:                       Manipulating Keys.   (line  10)
 * gpgme_new:                             Creating Contexts.   (line   6)
 * gpgme_new_signature_t:                 Creating a Signature.
-                                                              (line  57)
+                                                              (line  89)
 * gpgme_off_t:                           Exchanging Data.     (line  24)
-* gpgme_op_adduid:                       Generating Keys.     (line 189)
-* gpgme_op_adduid_start:                 Generating Keys.     (line 215)
+* gpgme_op_adduid:                       Generating Keys.     (line 197)
+* gpgme_op_adduid_start:                 Generating Keys.     (line 223)
 * gpgme_op_assuan_transact_ext:          Using the Assuan protocol.
-                                                              (line  64)
+                                                              (line  60)
 * gpgme_op_assuan_transact_start:        Using the Assuan protocol.
-                                                              (line  47)
+                                                              (line  46)
 * gpgme_op_card_edit:                    Deprecated Functions.
-                                                              (line  85)
+                                                              (line  84)
 * gpgme_op_card_edit_start:              Deprecated Functions.
-                                                              (line  95)
+                                                              (line  94)
 * gpgme_op_createkey:                    Generating Keys.     (line  14)
-* gpgme_op_createkey_start:              Generating Keys.     (line 119)
-* gpgme_op_createsubkey:                 Generating Keys.     (line 132)
-* gpgme_op_createsubkey_start:           Generating Keys.     (line 176)
+* gpgme_op_createkey_start:              Generating Keys.     (line 126)
+* gpgme_op_createsubkey:                 Generating Keys.     (line 138)
+* gpgme_op_createsubkey_start:           Generating Keys.     (line 185)
 * gpgme_op_decrypt:                      Decrypt.             (line   6)
-* gpgme_op_decrypt_ext:                  Decrypt.             (line  30)
-* gpgme_op_decrypt_ext_start:            Decrypt.             (line  60)
-* gpgme_op_decrypt_result:               Decrypt.             (line 164)
-* gpgme_op_decrypt_start:                Decrypt.             (line  20)
+* gpgme_op_decrypt_ext:                  Decrypt.             (line  33)
+* gpgme_op_decrypt_ext_start:            Decrypt.             (line  77)
+* gpgme_op_decrypt_result:               Decrypt.             (line 185)
+* gpgme_op_decrypt_start:                Decrypt.             (line  23)
 * gpgme_op_decrypt_verify:               Decrypt and Verify.  (line   6)
 * gpgme_op_decrypt_verify_start:         Decrypt and Verify.  (line  30)
-* gpgme_op_delete:                       Deleting Keys.       (line  47)
+* gpgme_op_delete:                       Deleting Keys.       (line  48)
 * gpgme_op_delete_ext:                   Deleting Keys.       (line   6)
 * gpgme_op_delete_ext_start:             Deleting Keys.       (line  33)
-* gpgme_op_delete_start:                 Deleting Keys.       (line  52)
+* gpgme_op_delete_start:                 Deleting Keys.       (line  54)
 * gpgme_op_edit:                         Deprecated Functions.
                                                               (line  44)
 * gpgme_op_edit_start:                   Deprecated Functions.
-                                                              (line  68)
+                                                              (line  67)
 * gpgme_op_encrypt:                      Encrypting a Plaintext.
                                                               (line   6)
 * gpgme_op_encrypt_ext:                  Encrypting a Plaintext.
-                                                              (line 131)
+                                                              (line 178)
 * gpgme_op_encrypt_ext_start:            Encrypting a Plaintext.
-                                                              (line 224)
+                                                              (line 270)
 * gpgme_op_encrypt_result:               Encrypting a Plaintext.
-                                                              (line 252)
+                                                              (line 296)
 * gpgme_op_encrypt_sign:                 Encrypting a Plaintext.
-                                                              (line 263)
+                                                              (line 307)
 * gpgme_op_encrypt_sign_ext:             Encrypting a Plaintext.
-                                                              (line 288)
+                                                              (line 329)
 * gpgme_op_encrypt_sign_ext_start:       Encrypting a Plaintext.
-                                                              (line 304)
+                                                              (line 344)
 * gpgme_op_encrypt_sign_start:           Encrypting a Plaintext.
-                                                              (line 274)
+                                                              (line 317)
 * gpgme_op_encrypt_start:                Encrypting a Plaintext.
-                                                              (line 113)
+                                                              (line 161)
 * gpgme_op_export:                       Exporting Keys.      (line  65)
-* gpgme_op_export_ext:                   Exporting Keys.      (line  98)
-* gpgme_op_export_ext_start:             Exporting Keys.      (line 120)
-* gpgme_op_export_keys:                  Exporting Keys.      (line 132)
-* gpgme_op_export_keys_start:            Exporting Keys.      (line 159)
-* gpgme_op_export_start:                 Exporting Keys.      (line  86)
-* gpgme_op_genkey:                       Generating Keys.     (line 304)
-* gpgme_op_genkey_result:                Generating Keys.     (line 418)
-* gpgme_op_genkey_start:                 Generating Keys.     (line 369)
+* gpgme_op_export_ext:                   Exporting Keys.      (line  96)
+* gpgme_op_export_ext_start:             Exporting Keys.      (line 117)
+* gpgme_op_export_keys:                  Exporting Keys.      (line 128)
+* gpgme_op_export_keys_start:            Exporting Keys.      (line 153)
+* gpgme_op_export_start:                 Exporting Keys.      (line  85)
+* gpgme_op_genkey:                       Generating Keys.     (line 312)
+* gpgme_op_genkey_result:                Generating Keys.     (line 426)
+* gpgme_op_genkey_start:                 Generating Keys.     (line 377)
 * gpgme_op_getauditlog:                  Additional Logs.     (line   9)
 * gpgme_op_getauditlog_start:            Additional Logs.     (line  54)
 * gpgme_op_import:                       Importing Keys.      (line   9)
@@ -2814,17 +3198,17 @@ Function and Data Index
                                                               (line  18)
 * gpgme_op_import_keys:                  Importing Keys.      (line  35)
 * gpgme_op_import_keys_start:            Importing Keys.      (line  65)
-* gpgme_op_import_result:                Importing Keys.      (line 206)
+* gpgme_op_import_result:                Importing Keys.      (line 205)
 * gpgme_op_import_start:                 Importing Keys.      (line  24)
 * gpgme_op_interact:                     Advanced Key Editing.
                                                               (line  23)
 * gpgme_op_interact_start:               Advanced Key Editing.
                                                               (line  53)
-* gpgme_op_keylist_end:                  Listing Keys.        (line 111)
+* gpgme_op_keylist_end:                  Listing Keys.        (line 110)
 * gpgme_op_keylist_ext_start:            Listing Keys.        (line  34)
-* gpgme_op_keylist_from_data_start:      Listing Keys.        (line  67)
-* gpgme_op_keylist_next:                 Listing Keys.        (line  94)
-* gpgme_op_keylist_result:               Listing Keys.        (line 166)
+* gpgme_op_keylist_from_data_start:      Listing Keys.        (line  66)
+* gpgme_op_keylist_next:                 Listing Keys.        (line  93)
+* gpgme_op_keylist_result:               Listing Keys.        (line 165)
 * gpgme_op_keylist_start:                Listing Keys.        (line   6)
 * gpgme_op_keysign:                      Signing Keys.        (line  12)
 * gpgme_op_keysign_start:                Signing Keys.        (line  78)
@@ -2836,22 +3220,24 @@ Function and Data Index
                                                               (line  68)
 * gpgme_op_query_swdb_result:            Checking for updates.
                                                               (line  80)
-* gpgme_op_receive_keys:                 Importing Keys.      (line  80)
-* gpgme_op_receive_keys_start:           Importing Keys.      (line  97)
+* gpgme_op_receive_keys:                 Importing Keys.      (line  79)
+* gpgme_op_receive_keys_start:           Importing Keys.      (line  96)
 * gpgme_op_revsig:                       Signing Keys.        (line  89)
 * gpgme_op_revsig_start:                 Signing Keys.        (line 124)
-* gpgme_op_revuid:                       Generating Keys.     (line 224)
-* gpgme_op_revuid_start:                 Generating Keys.     (line 252)
+* gpgme_op_revuid:                       Generating Keys.     (line 232)
+* gpgme_op_revuid_start:                 Generating Keys.     (line 260)
 * gpgme_op_setexpire:                    Manipulating Keys.   (line  15)
 * gpgme_op_setexpire_start:              Manipulating Keys.   (line  47)
-* gpgme_op_set_uid_flag_start:           Generating Keys.     (line 293)
-* gpgme_op_set_ui_flag:                  Generating Keys.     (line 261)
+* gpgme_op_setownertrust:                Manipulating Keys.   (line  58)
+* gpgme_op_setownertrust_start:          Manipulating Keys.   (line  81)
+* gpgme_op_set_uid_flag_start:           Generating Keys.     (line 301)
+* gpgme_op_set_ui_flag:                  Generating Keys.     (line 269)
 * gpgme_op_sign:                         Creating a Signature.
-                                                              (line  21)
+                                                              (line  39)
 * gpgme_op_sign_result:                  Creating a Signature.
-                                                              (line  99)
+                                                              (line 132)
 * gpgme_op_sign_start:                   Creating a Signature.
-                                                              (line  47)
+                                                              (line  79)
 * gpgme_op_spawn:                        Running other Programs.
                                                               (line  13)
 * gpgme_op_spawn_start:                  Running other Programs.
@@ -2859,9 +3245,11 @@ Function and Data Index
 * gpgme_op_tofu_policy:                  Changing TOFU Data.  (line  29)
 * gpgme_op_tofu_policy_start:            Changing TOFU Data.  (line  43)
 * gpgme_op_verify:                       Verify.              (line   6)
-* gpgme_op_verify_result:                Verify.              (line 298)
-* gpgme_op_verify_start:                 Verify.              (line  26)
-* gpgme_passphrase_cb_t:                 Passphrase Callback. (line  10)
+* gpgme_op_verify_ext:                   Verify.              (line  44)
+* gpgme_op_verify_ext_start:             Verify.              (line  72)
+* gpgme_op_verify_result:                Verify.              (line 355)
+* gpgme_op_verify_start:                 Verify.              (line  32)
+* gpgme_passphrase_cb_t:                 Passphrase Callback. (line   9)
 * gpgme_pinentry_mode_t:                 Pinentry Mode.       (line  26)
 * gpgme_progress_cb_t:                   Progress Meter Callback.
                                                               (line   8)
@@ -2871,23 +3259,24 @@ Function and Data Index
 * gpgme_pubkey_algo_name:                Public Key Algorithms.
                                                               (line  58)
 * gpgme_pubkey_algo_string:              Public Key Algorithms.
-                                                              (line  68)
+                                                              (line  67)
 * gpgme_pubkey_algo_t:                   Public Key Algorithms.
                                                               (line  10)
 * gpgme_query_swdb_result_t:             Checking for updates.
                                                               (line  11)
-* gpgme_recipient_t:                     Decrypt.             (line  75)
+* gpgme_recipient_t:                     Decrypt.             (line  91)
 * gpgme_register_io_cb_t:                I/O Callback Interface.
-                                                              (line  23)
+                                                              (line  22)
 * gpgme_release:                         Destroying Contexts. (line   6)
 * gpgme_result_ref:                      Result Management.   (line  15)
 * gpgme_result_unref:                    Result Management.   (line  23)
+* gpgme_revocation_key_t:                Key objects.         (line 472)
 * gpgme_set_armor:                       ASCII Armor.         (line   6)
 * gpgme_set_ctx_flag:                    Context Flags.       (line   6)
 * gpgme_set_engine_info:                 Engine Configuration.
                                                               (line  11)
 * gpgme_set_global_flag:                 Library Version Check.
-                                                              (line  44)
+                                                              (line  43)
 * gpgme_set_include_certs:               Included Certificates.
                                                               (line   6)
 * gpgme_set_io_cbs:                      Registering I/O Callbacks.
@@ -2895,7 +3284,7 @@ Function and Data Index
 * gpgme_set_keylist_mode:                Key Listing Mode.    (line   6)
 * gpgme_set_locale:                      Locale.              (line  14)
 * gpgme_set_offline:                     Offline Mode.        (line   6)
-* gpgme_set_passphrase_cb:               Passphrase Callback. (line  40)
+* gpgme_set_passphrase_cb:               Passphrase Callback. (line  39)
 * gpgme_set_pinentry_mode:               Pinentry Mode.       (line   6)
 * gpgme_set_progress_cb:                 Progress Meter Callback.
                                                               (line  16)
@@ -2904,13 +3293,13 @@ Function and Data Index
 * gpgme_set_status_cb:                   Status Message Callback.
                                                               (line  17)
 * gpgme_set_textmode:                    Text Mode.           (line   6)
-* gpgme_signature_t:                     Verify.              (line  92)
+* gpgme_signature_t:                     Verify.              (line 139)
 * gpgme_signers_add:                     Selecting Signers.   (line  18)
 * gpgme_signers_clear:                   Selecting Signers.   (line  11)
 * gpgme_signers_count:                   Selecting Signers.   (line  25)
 * gpgme_signers_enum:                    Selecting Signers.   (line  31)
 * gpgme_sign_result_t:                   Creating a Signature.
-                                                              (line  85)
+                                                              (line 118)
 * gpgme_sig_mode_t:                      Creating a Signature.
                                                               (line   7)
 * gpgme_sig_notation_add:                Signature Notation Data.
@@ -2919,22 +3308,22 @@ Function and Data Index
                                                               (line  10)
 * gpgme_sig_notation_get:                Signature Notation Data.
                                                               (line  45)
-* gpgme_sig_notation_t:                  Verify.              (line  38)
+* gpgme_sig_notation_t:                  Verify.              (line  85)
 * gpgme_sig_stat_t:                      Deprecated Functions.
-                                                              (line 388)
+                                                              (line 382)
 * gpgme_ssize_t:                         Exchanging Data.     (line  32)
 * gpgme_status_cb_t:                     Status Message Callback.
                                                               (line   8)
 * gpgme_strerror:                        Error Strings.       (line   6)
 * gpgme_strerror_r:                      Error Strings.       (line  15)
 * gpgme_strsource:                       Error Strings.       (line  26)
-* gpgme_subkey_t:                        Key objects.         (line 112)
-* gpgme_tofu_info_t:                     Key objects.         (line 282)
+* gpgme_subkey_t:                        Key objects.         (line 144)
+* gpgme_tofu_info_t:                     Key objects.         (line 323)
 * gpgme_tofu_policy_t:                   Changing TOFU Data.  (line  13)
-* gpgme_user_id_t:                       Key objects.         (line 217)
+* gpgme_user_id_t:                       Key objects.         (line 258)
 * gpgme_validity_t:                      Information About Keys.
                                                               (line   9)
-* gpgme_verify_result_t:                 Verify.              (line 276)
+* gpgme_verify_result_t:                 Verify.              (line 333)
 * gpgme_wait:                            Waiting For Completion.
                                                               (line   6)
 * IMPORT_FILES:                          UI Server Import/Export Keys.
@@ -2946,7 +3335,7 @@ Function and Data Index
 * MESSAGE:                               UI Server Verify.    (line  10)
 * MICALG:                                UI Server Sign.      (line  43)
 * off_t (*gpgme_data_seek_cb_t) (void *HANDLE, off_t OFFSET, int WHENCE): Callback Based Data Buffers.
-                                                              (line  43)
+                                                              (line  42)
 * OUTPUT:                                UI Server Encrypt.   (line  36)
 * OUTPUT <1>:                            UI Server Sign.      (line  18)
 * OUTPUT <2>:                            UI Server Decrypt.   (line  19)
@@ -2965,26 +3354,26 @@ Function and Data Index
 * ssize_t (*gpgme_data_read_cb_t) (void *HANDLE, void *BUFFER, size_t SIZE): Callback Based Data Buffers.
                                                               (line  10)
 * ssize_t (*gpgme_data_write_cb_t) (void *HANDLE, const void *BUFFER, size_t SIZE): Callback Based Data Buffers.
-                                                              (line  27)
+                                                              (line  26)
 * START_CONFDIALOG:                      Miscellaneous UI Server Commands.
                                                               (line  41)
 * START_KEYMANAGER:                      Miscellaneous UI Server Commands.
                                                               (line  31)
 * struct gpgme_data_cbs:                 Callback Based Data Buffers.
-                                                              (line  59)
+                                                              (line  57)
 * struct gpgme_io_cbs:                   Registering I/O Callbacks.
                                                               (line   6)
 * VERIFY:                                UI Server Verify.    (line  31)
 * VERIFY_FILES:                          UI Server Verify/Decrypt Files.
                                                               (line  10)
 * void (*gpgme_data_release_cb_t) (void *HANDLE): Callback Based Data Buffers.
-                                                              (line  54)
+                                                              (line  52)
 * void (*gpgme_event_io_cb_t) (void *DATA, gpgme_event_io_t TYPE, void *TYPE_DATA): I/O Callback Interface.
-                                                              (line  83)
+                                                              (line  82)
 * void (*gpgme_progress_cb_t)(void *HOOK, const char *WHAT, int TYPE, int CURRENT, int TOTAL): Progress Meter Callback.
                                                               (line   6)
 * void (*gpgme_remove_io_cb_t) (void *TAG): I/O Callback Interface.
-                                                              (line  48)
+                                                              (line  47)
 * window-id:                             Miscellaneous UI Server Commands.
                                                               (line  21)
 

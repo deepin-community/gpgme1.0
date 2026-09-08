@@ -39,16 +39,8 @@
 
 #include "threadedjobmixin.h"
 
-#ifdef BUILDING_QGPGME
-# include "keylistresult.h"
-#else
 #include <gpgme++/keylistresult.h>
-#endif
-#ifdef BUILDING_QGPGME
-# include "key.h"
-#else
 #include <gpgme++/key.h>
-#endif
 
 namespace QGpgME
 {
@@ -70,17 +62,16 @@ public:
     ~QGpgMEKeyListJob();
 
     /* from KeyListJob */
-    GpgME::Error start(const QStringList &patterns, bool secretOnly) Q_DECL_OVERRIDE;
+    GpgME::Error start(const QStringList &patterns, bool secretOnly) override;
 
     /* from KeyListJob */
-    GpgME::KeyListResult exec(const QStringList &patterns, bool secretOnly, std::vector<GpgME::Key> &keys) Q_DECL_OVERRIDE;
+    GpgME::KeyListResult exec(const QStringList &patterns, bool secretOnly, std::vector<GpgME::Key> &keys) override;
 
-    void addMode(GpgME::KeyListMode mode) Q_DECL_OVERRIDE;
+    void addMode(GpgME::KeyListMode mode) override;
 
     /* from ThreadedJobMixin */
-    void resultHook(const result_type &result) Q_DECL_OVERRIDE;
+    void resultHook(const result_type &result) override;
 private:
-    GpgME::KeyListResult mResult;
     bool mSecretOnly;
 };
 

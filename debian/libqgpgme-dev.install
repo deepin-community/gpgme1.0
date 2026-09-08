@@ -1,0 +1,4 @@
+usr/include/qgpgme-qt5
+usr/lib/*/cmake/QGpgme
+usr/lib/*/libqgpgme.a
+usr/lib/*/libqgpgme.so

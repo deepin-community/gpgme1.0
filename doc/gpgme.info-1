@@ -1,4 +1,4 @@
-This is gpgme.info, produced by makeinfo version 6.5 from gpgme.texi.
+This is gpgme.info, produced by makeinfo version 6.8 from gpgme.texi.
 
 Copyright © 2002–2008, 2010, 2012–2018 g10 Code GmbH.
 
@@ -19,8 +19,8 @@ END-INFO-DIR-ENTRY
 
    This file documents the GPGME library.
 
-   This is Edition 1.18.0, last updated 3 February 2022, of ‘The ‘GnuPG
-Made Easy’ Reference Manual’, for Version 1.18.0.
+   This is Edition 1.24.2, last updated 29 October 2024, of ‘The ‘GnuPG
+Made Easy’ Reference Manual’, for Version 1.24.2.
 
    Copyright © 2002–2008, 2010, 2012–2018 g10 Code GmbH.
 
@@ -41,8 +41,8 @@ File: gpgme.info,  Node: Top,  Next: Introduction,  Up: (dir)
 Main Menu
 *********
 
-This is Edition 1.18.0, last updated 3 February 2022, of ‘The ‘GnuPG
-Made Easy’ Reference Manual’, for Version 1.18.0 of the GPGME library.
+This is Edition 1.24.2, last updated 29 October 2024, of ‘The ‘GnuPG
+Made Easy’ Reference Manual’, for Version 1.24.2 of the GPGME library.
 
 * Menu:
 
@@ -375,42 +375,41 @@ which the header file is located to the compilers include file search
 path (via the ‘-I’ option).
 
    However, the path to the include file is determined at the time the
-source is configured.  To solve this problem, gpgme ships with a small
-helper program ‘gpgme-config’ that knows about the path to the include
-file and other configuration options.  The options that need to be added
-to the compiler invocation at compile time are output by the ‘--cflags’
-option to ‘gpgme-config’.  The following example shows how it can be
-used at the command line:
+source is configured.  To solve this problem, gpgme ships with
+‘gpgme.pc’ file, that knows about the path to the include file and other
+configuration options.  The command, ‘pkg-config’, can be used to handle
+information with ‘gpgme.pc’ file.  In an environment which doesn’t have
+‘pkg-config’ (like the one in early stage of OS bootstrap), for
+Automake, you can use ‘gpgme.m4’ which invokes ‘gpgrt-config’ with
+‘gpgme.pc’.  (In the past, gpgme used to ship with a small helper
+program ‘gpgme-config’.  This functionality of ‘gpgme-config’ is
+replaced by ‘pkg-config’ with ‘gpgme.pc’ file.)
 
-     gcc -c foo.c `gpgme-config --cflags`
+   The options that need to be added to the compiler invocation at
+compile time are output by the ‘--cflags’ option to ‘pkg-config gpgme’.
+The following example shows how it can be used at the command line:
 
-   Adding the output of ‘gpgme-config --cflags’ to the compiler command
-line will ensure that the compiler can find the GPGME header file.
+     gcc -c foo.c `pkg-config --cflags gpgme`
+
+   Adding the output of ‘pkg-config --cflags gpgme’ to the compiler
+command line will ensure that the compiler can find the GPGME header
+file.
 
    A similar problem occurs when linking the program with the library.
 Again, the compiler has to find the library files.  For this to work,
 the path to the library files has to be added to the library search path
-(via the ‘-L’ option).  For this, the option ‘--libs’ to ‘gpgme-config’
-can be used.  For convenience, this option also outputs all other
+(via the ‘-L’ option).  For this, the option ‘--libs’ to ‘pkg-config
+gpgme’ can be used.  For convenience, this option also outputs all other
 options that are required to link the program with GPGME (in particular,
 the ‘-lgpgme’ option).  The example shows how to link ‘foo.o’ with the
 GPGME library to a program ‘foo’.
 
-     gcc -o foo foo.o `gpgme-config --libs`
+     gcc -o foo foo.o `pkg-config --libs gpgme`
 
    Of course you can also combine both examples to a single command by
-specifying both options to ‘gpgme-config’:
+specifying both options to ‘pkg-config gpgme’:
 
-     gcc -o foo foo.c `gpgme-config --cflags --libs`
-
-   If you need to detect the installed language bindings you can use
-list them using:
-
-     gpgme-config --print-lang
-
-   or test for the availability using
-
-     gpgme-config --have-lang=python && echo 'Bindings for Pythons available'
+     gcc -o foo foo.c `pkg-config --cflags --libs gpgme`
 
 
 File: gpgme.info,  Node: Largefile Support (LFS),  Next: Using Automake,  Prev: Building the Source,  Up: Preparation
@@ -477,7 +476,7 @@ To avoid an ABI break we stick to this convention for 32 bit Windows by
 using ‘long’ there.  GPGME versions for 64 bit Windows have never been
 released and thus we are able to use ‘int64_t’ instead of ‘off_t’ there.
 For easier migration the typedef ‘gpgme_off_t’ has been defined.  The
-reason we cannot use ‘off_t’ directly is that some toolchains (e.g.
+reason we cannot use ‘off_t’ directly is that some toolchains (e.g.,
 mingw64) introduce a POSIX compatible hack for ‘off_t’.  Some widely
 used toolkits make use of this hack and in turn GPGME would need to use
 it also.  However, this would introduce an ABI break and existing
@@ -514,43 +513,33 @@ File: gpgme.info,  Node: Using Automake,  Next: Using Libtool,  Prev: Largefile 
 2.4 Using Automake
 ==================
 
-It is much easier if you use GNU Automake instead of writing your own
-Makefiles.  If you do that you do not have to worry about finding and
-invoking the ‘gpgme-config’ script at all.  GPGME provides an extension
-to Automake that does all the work for you.
+You can simply use ‘PKG_CHECK_MODULES’ macro with ‘pkg-config’:
+     PKG_CHECK_MODULES([GPGME], [gpgme >= 1.23.1])
+
+   Alternatively, instead of using ‘pkg-config’, for building on an
+environment with no pkg-config, GPGME provides an extension to Automake
+that does all the work for you.  Please note that it is required to have
+gpgrt-config from libgpg-error installed in this case.
 
  -- Macro: AM_PATH_GPGME ([MINIMUM-VERSION], [ACTION-IF-FOUND],
-          [ACTION-IF-NOT-FOUND])
- -- Macro: AM_PATH_GPGME_PTH ([MINIMUM-VERSION], [ACTION-IF-FOUND],
-          [ACTION-IF-NOT-FOUND])
- -- Macro: AM_PATH_GPGME_PTHREAD ([MINIMUM-VERSION], [ACTION-IF-FOUND],
           [ACTION-IF-NOT-FOUND])
      Check whether GPGME (at least version MINIMUM-VERSION, if given)
      exists on the host system.  If it is found, execute
      ACTION-IF-FOUND, otherwise do ACTION-IF-NOT-FOUND, if given.
 
+     This macro locates for ‘gpgme.pc’, with cross-compile support.
+
      Additionally, the function defines ‘GPGME_CFLAGS’ to the flags
      needed for compilation of the program to find the ‘gpgme.h’ header
      file, and ‘GPGME_LIBS’ to the linker flags needed to link the
-     program to the GPGME library.  If the used helper script does not
-     match the target type you are building for a warning is printed and
-     the string ‘libgcrypt’ is appended to the variable
-     ‘gpg_config_script_warn’.
+     program to the GPGME library.
 
-     ‘AM_PATH_GPGME_PTHREAD’ checks for the version of GPGME that can be
-     used with the native pthread implementation, and defines
+     ‘AM_PATH_GPGME_PTHREAD’ was provided to check for the version of
+     GPGME with the native pthread implementation, and it defined
      ‘GPGME_PTHREAD_CFLAGS’ and ‘GPGME_PTHREAD_LIBS’.  Since version
-     1.8.0 this is no longer required to GPGME_PTHREAD as GPGME itself
-     is thread safe.
-
-     This macro searches for ‘gpgme-config’ along the PATH. If you are
-     cross-compiling, it is useful to set the environment variable
-     ‘SYSROOT’ to the top directory of your target.  The macro will then
-     first look for the helper program in the ‘bin’ directory below that
-     top directory.  An absolute directory name must be used for
-     ‘SYSROOT’.  Finally, if the configure command line option
-     ‘--with-gpgme-prefix’ is used, only its value is used for the top
-     directory below which the helper script is expected.
+     1.8.0 this is no longer necessary, as GPGME itself is thread safe.
+     Please use plain ‘AM_PATH_GPGME’ instead, with ‘GPGME_CFLAGS’ and
+     ‘GPGME_LDFLAGS’.
 
    You can use the defined Autoconf variables like this in your
 ‘Makefile.am’:
@@ -565,8 +554,7 @@ File: gpgme.info,  Node: Using Libtool,  Next: Library Version Check,  Prev: Usi
 =================
 
 The easiest way is to just use GNU Libtool.  If you use libtool, and
-link to ‘libgpgme.la’, ‘libgpgme-pth.la’ or ‘libgpgme-pthread.la’
-respectively, everything will be done automatically by Libtool.
+link to ‘libgpgme.la’, everything will be done automatically by Libtool.
 
 
 File: gpgme.info,  Node: Library Version Check,  Next: Signal Handling,  Prev: Using Libtool,  Up: Preparation
@@ -655,6 +643,14 @@ File: gpgme.info,  Node: Library Version Check,  Next: Signal Handling,  Prev: U
           version is not met, GPGME fails early instead of trying to use
           the existent version.  The given version must be a string with
           major, minor, and micro number.  Example: "2.1.0".
+
+     ‘inst-type’
+          The installation type is used to prefer a certain GnuPG
+          installation.  The value is interpreted as an integer: A value
+          of 0 is ignored, a value of 1 indicates an installation scheme
+          as used by Gpg4win, a value of 2 indicates an installation
+          scheme as used by GnuPG Desktop on Windows.  All other values
+          are reserved.
 
      ‘w32-inst-dir’
           On Windows GPGME needs to know its installation directory to
@@ -874,6 +870,9 @@ File: gpgme.info,  Node: Engine Version Check,  Next: Engine Information,  Up: P
      ‘localedir’
           Return the name of the directory with GnuPG locale data.
 
+     ‘socketdir’
+          Return the name of the directory with the following sockets.
+
      ‘agent-socket’
           Return the name of the socket to connect to the gpg-agent.
 
@@ -917,6 +916,9 @@ File: gpgme.info,  Node: Engine Version Check,  Next: Engine Information,  Up: P
 
      ‘gpg-wks-client-name’
           Return the name of the Web Key Service tool.
+
+     ‘gpgtar-name’
+          Return the name of the gpgtar program.
 
  -- Function: gpgme_error_t gpgme_engine_check_version
           (gpgme_protocol_t PROTOCOL)
@@ -1177,8 +1179,8 @@ verification of signatures.
 
      The function ‘gpgme_pubkey_algo_string’ is a convenience function
      to build and return an algorithm string in the same way GnuPG does
-     (e.g.  “rsa2048” or “ed25519”).  The caller must free the result
-     using ‘gpgme_free’.  On error (e.g.  invalid argument or memory
+     (e.g., “rsa2048” or “ed25519”).  The caller must free the result
+     using ‘gpgme_free’.  On error (e.g., invalid argument or memory
      exhausted), the function returns NULL and sets ‘ERRNO’.
 
 
@@ -1504,6 +1506,11 @@ common that you should know about them.
 ‘GPG_ERR_CANCELED’
      This value means that the operation was canceled.
 
+‘GPG_ERR_FULLY_CANCELED’
+     This value means that the operation was canceled.  It is sometimes
+     returned instead of ‘GPG_ERR_CANCELED’ for internal reasons in
+     GnuPG. You should treat both values identically.
+
 ‘GPG_ERR_INV_ENGINE’
      This value means that the engine that implements the desired
      protocol is currently not available.  This can either be because
@@ -1636,7 +1643,7 @@ relevant, for example, if the external event loop mechanism is used.
 
      On POSIX platforms the ‘gpgme_off_t’ type is an alias for ‘off_t’;
      it may be used interchangeable.  On Windows platforms ‘gpgme_off_t’
-     is defined as a long (i.e.  32 bit) for 32 bit Windows and as a 64
+     is defined as a long (i.e., 32 bit) for 32 bit Windows and as a 64
      bit signed integer for 64 bit Windows.
 
  -- Data type: gpgme_ssize_t
@@ -2028,6 +2035,11 @@ File: gpgme.info,  Node: Data Buffer Meta-Data,  Next: Data Buffer Convenience, 
      the output when encrypting or signing the data and will be returned
      to the user when decrypting or verifying the output data.
 
+     If a signed or encrypted archive is created, then the file name
+     will be interpreted as the base directory for the relative paths of
+     the files and directories to put into the archive.  This
+     corresponds to the –directory option of gpgtar.
+
      The function returns the error code ‘GPG_ERR_INV_VALUE’ if DH is
      not a valid pointer and ‘GPG_ERR_ENOMEM’ if not enough memory is
      available.
@@ -2047,7 +2059,7 @@ File: gpgme.info,  Node: Data Buffer Meta-Data,  Next: Data Buffer Convenience, 
           to detect the encoding automatically.
 
      ‘GPGME_DATA_ENCODING_BINARY’
-          This specifies that the data is encoding in binary form; i.e.
+          This specifies that the data is encoding in binary form; i.e.,
           there is no special encoding.
 
      ‘GPGME_DATA_ENCODING_BASE64’
@@ -2085,8 +2097,8 @@ File: gpgme.info,  Node: Data Buffer Meta-Data,  Next: Data Buffer Convenience, 
  -- Function: gpgme_data_encoding_t gpgme_data_get_encoding
           (gpgme_data_t DH)
      The function ‘gpgme_data_get_encoding’ returns the encoding of the
-     data object with the handle DH.  If DH is not a valid pointer (e.g.
-     ‘NULL’) ‘GPGME_DATA_ENCODING_NONE’ is returned.
+     data object with the handle DH.  If DH is not a valid pointer
+     (e.g., ‘NULL’) ‘GPGME_DATA_ENCODING_NONE’ is returned.
 
  -- Function: gpgme_error_t gpgme_data_set_encoding
           (gpgme_data_t DH, gpgme_data_encoding_t ENC)
@@ -2174,7 +2186,8 @@ File: gpgme.info,  Node: Data Buffer Convenience,  Prev: Data Buffer Meta-Data, 
      The data is a PKCS#12 message.  This is commonly used to exchange
      private keys for X.509.
 
- -- Function: gpgme_data_type_t gpgme_data_identify (gpgme_data_t DH)
+ -- Function: gpgme_data_type_t gpgme_data_identify
+          (gpgme_data_t DH, int RESERVED)
      SINCE: 1.4.3
 
      The function ‘gpgme_data_identify’ returns the type of the data
@@ -2184,6 +2197,7 @@ File: gpgme.info,  Node: Data Buffer Convenience,  Prev: Data Buffer Meta-Data, 
      object has been created the identification may not be possible or
      the data object may change its internal state (file pointer moved).
      For file or memory based data object, the state should not change.
+     RESERVED should be zero.
 
 
 File: gpgme.info,  Node: Contexts,  Next: UI Server Protocol,  Prev: Exchanging Data,  Up: Top
@@ -2394,7 +2408,7 @@ supported.
 
      The function ‘gpgme_set_sender’ specifies the sender address for
      use in sign and verify operations.  ADDRESS is expected to be the
-     “addr-spec” part of an address but my also be a complete mailbox
+     “addr-spec” part of an address but may also be a complete mailbox
      address, in which case this function extracts the “addr-spec” from
      it.  Using ‘NULL’ for ADDRESS clears the sender address.
 
@@ -2472,9 +2486,9 @@ File: gpgme.info,  Node: Offline Mode,  Next: Pinentry Mode,  Prev: Text Mode,  
 
      For the CMS protocol the offline mode specifies whether Dirmngr
      shall be used to do additional validation that might require
-     connecting external services (e.g.  CRL / OCSP checks).  Here the
-     offline mode only affects the keylist mode
-     ‘GPGME_KEYLIST_MODE_VALIDATE’.
+     connecting external services (e.g., CRL / OCSP checks).  The
+     offline mode is used for all operations on this context.  It has
+     only an effect with GnuPG versions 2.1.6 or later.
 
      For the OpenPGP protocol offline mode entirely disables the use of
      the Dirmngr and will thus guarantee that no network connections are
@@ -2671,6 +2685,13 @@ File: gpgme.info,  Node: Key Listing Mode,  Next: Passphrase Callback,  Prev: In
 
           The ‘GPGME_KEYLIST_MODE_EPHEMERAL’ symbol specifies that keys
           flagged as ephemeral are included in the listing.
+
+     ‘GPGME_KEYLIST_MODE_WITH_V5FPR’
+          SINCE: 1.23.0
+
+          The ‘GPGME_KEYLIST_MODE_WITH_V5FPR’ symbol specifies that key
+          listings shall also provide v5 style fingerprints for v4
+          OpenPGp keys.
 
      ‘GPGME_KEYLIST_MODE_VALIDATE’
           SINCE: 0.4.5
@@ -2941,8 +2962,8 @@ File: gpgme.info,  Node: Context Flags,  Next: Locale,  Prev: Status Message Cal
           session key is specific to GnuPG and can be retrieved during a
           decrypt operation when the context flag "export-session-key"
           is enabled.  Please be aware that using this feature with
-          GnuPG < 2.1.16 will leak the session key on many platforms via
-          ps(1).
+          GnuPG < 2.1.16 or when decrypting an archive will leak the
+          session key on many platforms via ps(1).
 
      ‘"auto-key-retrieve"’
           Setting the VALUE to "1" asks the backend to automatically
@@ -3032,6 +3053,27 @@ File: gpgme.info,  Node: Context Flags,  Next: Locale,  Prev: Status Message Cal
           engine to use as filter when importing keys.  Valid values are
           documented in the GnuPG manual and the gpg man page under the
           option ‘--import-filter’.
+
+     ‘"import-options"’
+          SINCE: 1.24.0 The string given in VALUE is passed to the GnuPG
+          engine to use as options when importing keys.  Valid values
+          are documented in the GnuPG manual and the gpg man page under
+          the option ‘--import-options’.
+
+     ‘"no-auto-check-trustdb"’
+          SINCE: 1.19.0 Setting the VALUE to "1" forces the GPG backend
+          to disable the automatic check of the trust database.
+
+     ‘"proc-all-sigs"’
+          SINCE: 1.24.0 Setting the VALUE to "1" forces the GPG backend
+          not to stop signature checking of data after a bad signatures.
+          This option is ignored if the backend itself does not support
+          the –proc-all-sigs option.
+
+     ‘"known-notations"’
+          SINCE: 1.24.0 The VALUE is a space or comma delimited list of
+          notation names which will be used to create ‘--known-notation’
+          options for gpg.
 
      This function returns ‘0’ on success.
 
@@ -3207,22 +3249,50 @@ long as the key object itself is valid.
           missing certificates or unmatched policies.
 
      ‘unsigned int can_encrypt : 1’
-          This is true if the key (ie one of its subkeys) can be used
-          for encryption.
+          This is true if the key or one of its subkeys can be used for
+          encryption and the encryption will likely succeed.
 
      ‘unsigned int can_sign : 1’
-          This is true if the key (ie one of its subkeys) can be used to
-          create data signatures.
+          This is true if the key or one of its subkeys can be used to
+          create data signatures and the signing will likely succeed.
 
      ‘unsigned int can_certify : 1’
-          This is true if the key (ie one of its subkeys) can be used to
+          This is true if the key or one of its subkeys can be used to
           create key certificates.
 
      ‘unsigned int can_authenticate : 1’
           SINCE: 0.4.5
 
           This is true if the key (ie one of its subkeys) can be used
-          for authentication.
+          for authentication and the authentication will likely succeed.
+
+     ‘unsigned int has_encrypt : 1’
+          SINCE: 1.23.0
+
+          This is true if the key or one of its subkeys is capable of
+          encryption.  Note that this flag is set even if the key is
+          expired.
+
+     ‘unsigned int has_sign : 1’
+          SINCE: 1.23.0
+
+          This is true if the key or one of its subkeys is capable of
+          signing.  Note that this flag is set even if the key is
+          expired.
+
+     ‘unsigned int has_certify : 1’
+          SINCE: 1.23.0
+
+          This is true if the key or one of its subkeys is capable of
+          certification.  Note that this flag is set even if the key is
+          expired.
+
+     ‘unsigned int has_authenticate : 1’
+          SINCE: 1.23.0
+
+          This is true if the key or one of its subkeys is capable of
+          authentication.  Note that this flag is set even if the key is
+          expired.
 
      ‘unsigned int is_qualified : 1’
           SINCE: 1.1.0
@@ -3283,6 +3353,10 @@ long as the key object itself is valid.
 
           Reserved for the time of the last update of this key.
 
+     ‘gpgme_revocation_key_t revkeys’
+          SINCE: 1.24.0 This is a linked list with the revocation keys
+          for the key.
+
  -- Data type: gpgme_subkey_t
      SINCE: 1.5.0
 
@@ -3338,12 +3412,17 @@ long as the key object itself is valid.
 
           This is true if the subkey complies with the rules for
           classified information in Germany at the restricted level
-          (VS-NfD). This are currently RSA keys of at least 2048 bits or
+          (VS-NfD). This are currently RSA keys of at least 3072 bits or
           ECDH/ECDSA keys using a Brainpool curve.
+
+     ‘unsigned int beta_compliance : 1;’
+          SINCE: 1.24.0 The compliance flags (e.g.  is_de_vs) are set
+          but the software has not yet been approved or is in a beta
+          state.
 
      ‘unsigned int secret : 1’
           This is true if the subkey is a secret key.  Note that it will
-          be false if the key is actually a stub key; i.e.  a secret key
+          be false if the key is actually a stub key; i.e., a secret key
           operation is currently not possible (offline-key).  This is
           only set if a listing of secret keys has been requested or if
           ‘GPGME_KEYLIST_MODE_WITH_SECRET’ is active.
@@ -3360,6 +3439,10 @@ long as the key object itself is valid.
      ‘char *fpr’
           This is the fingerprint of the subkey in hexadecimal digits,
           if available.
+
+     ‘char *v5fpr’
+          For a v4 OpenPGP key this is its v5 style fingerprint of the
+          subkey in hexadecimal digits, if available.
 
      ‘char *keygrip’
           SINCE: 1.7.0
@@ -3601,6 +3684,33 @@ long as the key object itself is valid.
 
      ‘gpgme_sig_notation_t notations’
           This is a linked list with the notation data and policy URLs.
+
+ -- Data type: gpgme_revocation_key_t
+     SINCE: 1.24.0
+
+     The ‘gpgme_revocation_key_t’ type is a pointer to a revocation key
+     structure.  Revocation key structures are one component of a
+     ‘gpgme_key_t’ object.  They provide information about the
+     designated revocation keys for a key.
+
+     The revocation key structure has the following members:
+
+     ‘gpgme_revocation_key_t next’
+          This is a pointer to the next revocation key structure in the
+          linked list, or ‘NULL’ if this is the last element.
+
+     ‘gpgme_pubkey_algo_t pubkey_algo’
+          This is the public key algorithm of the revocation key.
+
+     ‘char *fpr’
+          This is the fingerprint of the revocation_key in hexadecimal
+          digits.
+
+     ‘unsigned int key_class’
+          This is the class of the revocation key signature subpacket.
+
+     ‘unsigned int sensitive : 1’
+          This is true if the revocation key is marked as sensitive.
 
 
 File: gpgme.info,  Node: Listing Keys,  Next: Information About Keys,  Prev: Key objects,  Up: Key Management
@@ -3891,6 +4001,42 @@ File: gpgme.info,  Node: Manipulating Keys,  Next: Generating Keys,  Prev: Infor
      completed by calling ‘gpgme_wait’ on the context.  *Note Waiting
      For Completion::.
 
+ -- Function: gpgme_error_t gpgme_op_setownertrust (gpgme_ctx_t CTX,
+          gpgme_key_t KEY, const char *VALUE);
+
+     SINCE: 1.24.0
+
+     The function ‘gpgme_op_setownertrust’ sets the owner trust of the
+     key KEY or it sets the disable flag of the key KEY.  This function
+     only works for OpenPGP and requires at least version 2.4.6 of
+     GnuPG.
+
+     KEY specifies the key to operate on.
+
+     VALUE specifies the owner trust value to set.  Valid values are
+     "undefined", "never", "marginal", "full", "ultimate".  If VALUE is
+     the string "disable" then the key KEY is disabled.  If VALUE is the
+     string "enable" then the key KEY is re-enabled.
+
+     The function returns the error code ‘GPG_ERR_NO_ERROR’ if the
+     operation was completed successfully, ‘GPG_ERR_NOT_SUPPORTED’ if
+     the engine does not support the command, and ‘GPG_ERR_INV_VALUE’ if
+     KEY is not a valid pointer or not a valid key or if VALUE is not a
+     valid pointer or the empty string.
+
+ -- Function: gpgme_error_t gpgme_op_setownertrust_start
+          (gpgme_ctx_t CTX, gpgme_key_t KEY, const char *VALUE);
+
+     SINCE: 1.24.0
+
+     The function ‘gpgme_op_setownertrust_start’ initiates a
+     ‘gpgme_op_setownertrust’ operation; see there for details.  It must
+     be completed by calling ‘gpgme_wait’ on the context.  *Note Waiting
+     For Completion::.
+
+     The function returns the same error codes as
+     ‘gpgme_op_setownertrust’.
+
 
 File: gpgme.info,  Node: Generating Keys,  Next: Signing Keys,  Prev: Manipulating Keys,  Up: Key Management
 
@@ -3920,7 +4066,7 @@ provide a fallback to the old function if the error code
      USERID is commonly the mail address associated with the key.  GPGME
      does not require a specific syntax but if more than a mail address
      is given, RFC-822 style format is suggested.  The value is expected
-     to be in UTF-8 encoding (i.e.  no IDN encoding for mail addresses).
+     to be in UTF-8 encoding (i.e., no IDN encoding for mail addresses).
      This is a required parameter.
 
      ALGO specifies the algorithm for the new key (actually a keypair of
@@ -4002,6 +4148,14 @@ provide a fallback to the old function if the error code
 
           Request generation of keys that do not expire.
 
+     ‘GPGME_CREATE_ADSK’
+          SINCE: 1.24.0
+
+          Add an ADSK to the key.  With this flag ALGO is expected to be
+          the hexified fingerprint of the ADSK to be added; this must be
+          a subkey.  If the string "default" is used for ALGO the engine
+          will add all ADSK as it would do for new keys.
+
      After the operation completed successfully, information about the
      created key can be retrieved with ‘gpgme_op_genkey_result’.
 
@@ -4058,6 +4212,9 @@ provide a fallback to the old function if the error code
      FLAGS takes the same values as described above for
      ‘gpgme_op_createkey’.
 
+     If the ‘GPGME_CREATE_ADSK’ flag is set, the subkey fingerprint
+     given in the ‘algo’ parameter is added as an ADSK to the key.
+
      After the operation completed successfully, information about the
      created key can be retrieved with ‘gpgme_op_genkey_result’.
 
@@ -4094,7 +4251,7 @@ provide a fallback to the old function if the error code
      mail address to be associated with the key.  GPGME does not require
      a specific syntax but if more than a mail address is given, RFC-822
      style format is suggested.  The value is expected to be in UTF-8
-     encoding (i.e.  no IDN encoding for mail addresses).  This is a
+     encoding (i.e., no IDN encoding for mail addresses).  This is a
      required parameter.
 
      FLAGS are currently not used and must be set to zero.
@@ -4252,7 +4409,7 @@ provide a fallback to the old function if the error code
 
      The function returns the error code ‘GPG_ERR_NO_ERROR’ if the
      operation could be started successfully, ‘GPG_ERR_INV_VALUE’ if
-     PARMS is not a well-formed string (e.g.  does not have the expected
+     PARMS is not a well-formed string (e.g., does not have the expected
      tag-like headers and footers), ‘GPG_ERR_NOT_SUPPORTED’ if PUBLIC or
      SECRET is not valid, and ‘GPG_ERR_GENERAL’ if no key was created by
      the backend.
@@ -4661,16 +4818,16 @@ Importing keys means the same as running ‘gpg’ with the command
      The function ‘gpgme_op_import_keys’ adds the keys described by the
      ‘NULL’ terminated array KEYS to the key ring of the crypto engine
      used by CTX.  It is used to actually import and make keys permanent
-     which have been retrieved from an external source (i.e.  using
+     which have been retrieved from an external source (i.e., using
      ‘GPGME_KEYLIST_MODE_EXTERN’) earlier.  The external keylisting must
      have been made with the same context configuration (in particular
-     the same home directory).  (1) Note that for OpenPGP this may
+     the same home directory).  (1)  Note that for OpenPGP this may
      require another access to the keyserver over the network.
 
      Only keys of the currently selected protocol of CTX are considered
      for import.  Other keys specified by the KEYS are ignored.  As of
      now all considered keys must have been retrieved using the same
-     method, i.e.  the used key listing mode must be identical.
+     method, i.e., the used key listing mode must be identical.
 
      After the operation completed successfully, the result can be
      retrieved with ‘gpgme_op_import_result’.
@@ -4740,7 +4897,7 @@ Importing keys means the same as running ‘gpg’ with the command
 
      ‘char *fpr’
           This is the fingerprint of the key that was considered, or
-          ‘NULL’ if the fingerprint of the key is not known, e.g.
+          ‘NULL’ if the fingerprint of the key is not known, e.g.,
           because the key to import was encrypted and decryption failed.
 
      ‘gpgme_error_t result’
@@ -4884,17 +5041,20 @@ File: gpgme.info,  Node: Deleting Keys,  Next: Changing Passphrases,  Prev: Impo
      operation was started successfully, and ‘GPG_ERR_INV_VALUE’ if CTX
      or KEY is not a valid pointer.
 
-   The following functions allow only to use one particular flag.
+   The following functions allow only to use one particular flag.  Their
+use is thus deprecated.
 
  -- Function: gpgme_error_t gpgme_op_delete (gpgme_ctx_t CTX,
           const gpgme_key_t KEY, int ALLOW_SECRET)
      Similar to ‘gpgme_op_delete_ext’, but only the flag
-     ‘GPGME_DELETE_ALLOW_SECRET’ can be provided.
+     ‘GPGME_DELETE_ALLOW_SECRET’ can be provided.  Actually all true
+     values are mapped to this flag.
 
  -- Function: gpgme_error_t gpgme_op_delete_start (gpgme_ctx_t CTX,
           const gpgme_key_t KEY, int ALLOW_SECRET)
      Similar to ‘gpgme_op_delete_ext_start’, but only the flag
-     ‘GPGME_DELETE_ALLOW_SECRET’ can be provided.
+     ‘GPGME_DELETE_ALLOW_SECRET’ can be provided.  Actually all true
+     values are mapped to this flag.
 
 
 File: gpgme.info,  Node: Changing Passphrases,  Next: Changing TOFU Data,  Prev: Deleting Keys,  Up: Key Management
@@ -5095,7 +5255,10 @@ File: gpgme.info,  Node: Decrypt,  Next: Verify,  Up: Crypto Operations
  -- Function: gpgme_error_t gpgme_op_decrypt (gpgme_ctx_t CTX,
           gpgme_data_t CIPHER, gpgme_data_t PLAIN)
      The function ‘gpgme_op_decrypt’ decrypts the ciphertext in the data
-     object CIPHER and stores it into the data object PLAIN.
+     object CIPHER or, if a file name is set on the data object, the
+     ciphertext stored in the corresponding file.  The decrypted
+     ciphertext is stored into the data object PLAIN or written to the
+     file set with ‘gpgme_data_set_file_name’ for the data object PLAIN.
 
      The function returns the error code ‘GPG_ERR_NO_ERROR’ if the
      ciphertext could be decrypted successfully, ‘GPG_ERR_INV_VALUE’ if
@@ -5126,6 +5289,12 @@ File: gpgme.info,  Node: Decrypt,  Next: Verify,  Up: Crypto Operations
      ‘gpgme_op_decrypt’ but has an additional argument FLAGS.  If FLAGS
      is 0 both function behave identically.
 
+     If the flag ‘GPGME_DECRYPT_ARCHIVE’ is set, then an encrypted
+     archive in the data object CIPHER is decrypted and extracted.  The
+     content of the archive is extracted into a directory named
+     ‘GPGARCH_n_’ (where ‘n’ is a number) or into the directory set with
+     ‘gpgme_data_set_file_name’ for the data object PLAIN.
+
      The value in FLAGS is a bitwise-or combination of one or multiple
      of the following bit values:
 
@@ -5134,6 +5303,14 @@ File: gpgme.info,  Node: Decrypt,  Next: Verify,  Up: Crypto Operations
 
           The ‘GPGME_DECRYPT_VERIFY’ symbol specifies that this function
           shall exactly act as ‘gpgme_op_decrypt_verify’.
+
+     ‘GPGME_DECRYPT_ARCHIVE’
+          SINCE: 1.19.0
+
+          The ‘GPGME_DECRYPT_ARCHIVE’ symbol specifies that the input is
+          an encrypted archive that shall be decrypted and extracted.
+          This feature is currently only supported for the OpenPGP
+          crypto engine and requires GnuPG 2.4.1.
 
      ‘GPGME_DECRYPT_UNWRAP’
           SINCE: 1.8.0
@@ -5217,6 +5394,11 @@ File: gpgme.info,  Node: Decrypt,  Next: Verify,  Up: Crypto Operations
           way.  This is a specification in Germany for a restricted
           communication level.
 
+     ‘unsigned int beta_compliance : 1;’
+          SINCE: 1.24.0 The compliance flags (e.g.  is_de_vs) are set
+          but the software has not yet been approved or is in a beta
+          state.
+
      ‘gpgme_recipient_t recipients’
           SINCE: 1.1.0
 
@@ -5274,7 +5456,13 @@ File: gpgme.info,  Node: Verify,  Next: Decrypt and Verify,  Prev: Decrypt,  Up:
      and PLAIN should be a null pointer.  Otherwise, if SIG is a normal
      (or cleartext) signature, SIGNED_TEXT should be a null pointer and
      PLAIN should be a writable data object that will contain the
-     plaintext after successful verification.
+     plaintext after successful verification.  If a file name is set on
+     the data object SIG (or on the data object SIGNED_TEXT), then the
+     data of the signature (resp.  the data of the signed text) is not
+     read from the data object but from the file with the given file
+     name.  If a file name is set on the data object PLAIN then the
+     plaintext is not stored in the data object but it is written to a
+     file with the given file name.
 
      The results of the individual signature verifications can be
      retrieved with ‘gpgme_op_verify_result’.
@@ -5291,6 +5479,47 @@ File: gpgme.info,  Node: Verify,  Next: Decrypt and Verify,  Prev: Decrypt,  Up:
      The function ‘gpgme_op_verify_start’ initiates a ‘gpgme_op_verify’
      operation.  It can be completed by calling ‘gpgme_wait’ on the
      context.  *Note Waiting For Completion::.
+
+     The function returns the error code ‘GPG_ERR_NO_ERROR’ if the
+     operation could be started successfully, ‘GPG_ERR_INV_VALUE’ if
+     CTX, SIG or PLAIN is not a valid pointer, and ‘GPG_ERR_NO_DATA’ if
+     SIG or PLAIN does not contain any data to verify.
+
+ -- Function: gpgme_error_t gpgme_op_verify_ext ( gpgme_ctx_t CTX,
+          gpgme_verify_flags_t FLAGS, gpgme_data_t SIG,
+          gpgme_data_t SIGNED_TEXT, gpgme_data_t PLAIN)
+
+     The function ‘gpgme_op_verify_ext’ is the same as ‘gpgme_op_verify’
+     but has an additional argument FLAGS.  If FLAGS is 0 both function
+     behave identically.
+
+     If the flag ‘GPGME_VERIFY_ARCHIVE’ is set, then a signed archive in
+     the data object SIG is verified and extracted.  The content of the
+     archive is extracted into a directory named ‘GPGARCH_n_’ (where ‘n’
+     is a number) or into the directory set with
+     ‘gpgme_data_set_file_name’ for the data object PLAIN.
+
+     The value in FLAGS is a bitwise-or combination of one or multiple
+     of the following bit values:
+
+     ‘GPGME_VERIFY_ARCHIVE’
+          SINCE: 1.19.0
+
+          The ‘GPGME_VERIFY_ARCHIVE’ symbol specifies that the input is
+          a signed archive that shall be verified and extracted.  This
+          feature is currently only supported for the OpenPGP crypto
+          engine and requires GnuPG 2.4.1.
+
+     The function returns the error codes as descriped for
+     ‘gpgme_op_decrypt’ respective ‘gpgme_op_encrypt’.
+
+ -- Function: gpgme_error_t gpgme_op_verify_ext_start ( gpgme_ctx_t CTX,
+          gpgme_verify_flags_t FLAGS, gpgme_data_t SIG,
+          gpgme_data_t SIGNED_TEXT, gpgme_data_t PLAIN)
+
+     The function ‘gpgme_op_verify_ext_start’ initiates a
+     ‘gpgme_op_verify_ext’ operation.  It can be completed by calling
+     ‘gpgme_wait’ on the context.  *Note Waiting For Completion::.
 
      The function returns the error code ‘GPG_ERR_NO_ERROR’ if the
      operation could be started successfully, ‘GPG_ERR_INV_VALUE’ if
@@ -5386,7 +5615,7 @@ File: gpgme.info,  Node: Verify,  Next: Decrypt and Verify,  Prev: Decrypt,  Up:
 
           ‘GPGME_SIGSUM_RED’
                The signature is bad.  It might be useful to check other
-               bits and display more information, i.e.  a revoked
+               bits and display more information, i.e., a revoked
                certificate might not render a signature invalid when the
                message was received prior to the cause for the
                revocation.
@@ -5512,6 +5741,16 @@ File: gpgme.info,  Node: Verify,  Next: Decrypt and Verify,  Prev: Decrypt,  Up:
           the validity of signature as well at the entire certificate
           chain at the current time.
 
+     ‘unsigned int is_de_vs : 1;’
+          SINCE: 1.10.0 The signature was created in a VS-NfD compliant
+          way.  This is a specification in Germany for a restricted
+          communication level.
+
+     ‘unsigned int beta_compliance : 1;’
+          SINCE: 1.24.0 The compliance flags (e.g.  is_de_vs) are set
+          but the software has not yet been approved or is in a beta
+          state.
+
      ‘gpgme_validity_t validity’
           The validity of the signature.
 
@@ -5623,7 +5862,7 @@ in GPGME and GnuPG:
 
      Return the mail address (called “addr-spec” in RFC-5322) from the
      string UID which is assumed to be a user id (called “address” in
-     RFC-5322).  All plain ASCII characters (i.e.  those with bit 7
+     RFC-5322).  All plain ASCII characters (i.e., those with bit 7
      cleared) in the result are converted to lowercase.  Caller must
      free the result using ‘gpgme_free’.  Returns ‘NULL’ if no valid
      address was found (in which case ‘ERRNO’ is set to ‘EINVAL’) or for
@@ -5706,14 +5945,46 @@ File: gpgme.info,  Node: Creating a Signature,  Next: Signature Notation Data,  
           A clear text signature is made.  The ASCII armor and text mode
           settings of the context are ignored.
 
+     ‘GPGME_SIG_MODE_ARCHIVE’
+          SINCE: 1.19.0
+
+          A signed archive is created from the given files and
+          directories.  This feature is currently only supported for the
+          OpenPGP crypto engine and requires GnuPG 2.4.1.
+
+     ‘GPGME_SIG_MODE_FILE’
+          SINCE: 1.24.0
+
+          The filename set with ‘gpgme_data_set_file_name’ for the data
+          object PLAIN is passed to gpg, so that gpg reads the plaintext
+          directly from this file instead of from the data object PLAIN.
+          This flag can be combined with ‘GPGME_SIG_MODE_NORMAL’,
+          ‘GPGME_SIG_MODE_DETACH’, and ‘GPGME_SIG_MODE_CLEAR’, but not
+          with ‘GPGME_SIG_MODE_ARCHIVE’.  This feature is currently only
+          supported for the OpenPGP crypto engine.
+
  -- Function: gpgme_error_t gpgme_op_sign (gpgme_ctx_t CTX,
           gpgme_data_t PLAIN, gpgme_data_t SIG, gpgme_sig_mode_t MODE)
      The function ‘gpgme_op_sign’ creates a signature for the text in
-     the data object PLAIN and returns it in the data object SIG.  The
-     type of the signature created is determined by the ASCII armor (or,
-     if that is not set, by the encoding specified for SIG), the text
-     mode attributes set for the context CTX and the requested signature
-     mode MODE.
+     the data object PLAIN and returns it in the data object SIG or
+     writes it directly to the file set with ‘gpgme_data_set_file_name’
+     for the data object SIG.  The type of the signature created is
+     determined by the ASCII armor (or, if that is not set, by the
+     encoding specified for SIG), the text mode attributes set for the
+     context CTX and the requested signature mode MODE.
+
+     If the signature mode flag ‘GPGME_SIG_MODE_FILE’ is set and a
+     filename has been set with ‘gpgme_data_set_file_name’ for the data
+     object PLAIN, then this filename is passed to gpg, so that gpg
+     reads the plaintext directly from this file instead of from the
+     data object PLAIN.
+
+     If signature mode ‘GPGME_SIG_MODE_ARCHIVE’ is requested then a
+     signed archive is created from the files and directories given as
+     NUL-separated list in the data object PLAIN.  The paths of the
+     files and directories have to be given as paths relative to the
+     current working directory or relative to the base directory set
+     with ‘gpgme_data_set_file_name’ for the data object PLAIN.
 
      After the operation completed successfully, the result can be
      retrieved with ‘gpgme_op_sign_result’.
@@ -5761,7 +6032,8 @@ File: gpgme.info,  Node: Creating a Signature,  Next: Signature Notation Data,  
           The hash algorithm used to create this signature.
 
      ‘unsigned int sig_class’
-          The signature class of this signature.
+          The signature class of this signature.  Note that only the
+          values 0, 1, and 2 are well-defined.
 
      ‘long int timestamp’
           The creation timestamp of this signature.
@@ -5874,10 +6146,25 @@ File: gpgme.info,  Node: Encrypting a Plaintext,  Up: Encrypt
           gpgme_data_t PLAIN, gpgme_data_t CIPHER)
      The function ‘gpgme_op_encrypt’ encrypts the plaintext in the data
      object PLAIN for the recipients RECP and stores the ciphertext in
-     the data object CIPHER.  The type of the ciphertext created is
-     determined by the ASCII armor (or, if that is not set, by the
-     encoding specified for CIPHER) and the text mode attributes set for
-     the context CTX.
+     the data object CIPHER or writes it directly to the file set with
+     ‘gpgme_data_set_file_name’ for the data object CIPHER.  The type of
+     the ciphertext created is determined by the ASCII armor (or, if
+     that is not set, by the encoding specified for CIPHER) and the text
+     mode attributes set for the context CTX.  If a filename has been
+     set with ‘gpgme_data_set_file_name’ for the data object PLAIN then
+     this filename is stored in the ciphertext.
+
+     If the flag ‘GPGME_ENCRYPT_FILE’ is set and a filename has been set
+     with ‘gpgme_data_set_file_name’ for the data object PLAIN, then
+     this filename is passed to gpg, so that gpg reads the plaintext
+     directly from this file instead of from the data object PLAIN.
+
+     If the flag ‘GPGME_ENCRYPT_ARCHIVE’ is set, then an encrypted
+     archive is created from the files and directories given as
+     NUL-separated list in the data object PLAIN.  The paths of the
+     files and directories have to be given as paths relative to the
+     current working directory or relative to the base directory set
+     with ‘gpgme_data_set_file_name’ for the data object PLAIN.
 
      RECP must be a ‘NULL’-terminated array of keys.  The user must keep
      references for all keys during the whole duration of the call (but
@@ -5893,6 +6180,10 @@ File: gpgme.info,  Node: Encrypting a Plaintext,  Up: Encrypt
           have a high enough validity in the keyring.  This flag should
           be used with care; in general it is not a good idea to use any
           untrusted keys.
+
+          For the S/MIME (CMS) protocol this flag allows to encrypt to a
+          certificate without running any checks on the validity of the
+          certificate.
 
      ‘GPGME_ENCRYPT_NO_ENCRYPT_TO’
           SINCE: 1.2.0
@@ -5913,7 +6204,7 @@ File: gpgme.info,  Node: Encrypting a Plaintext,  Up: Encrypt
      ‘GPGME_ENCRYPT_PREPARE’
      ‘GPGME_ENCRYPT_EXPECT_SIGN’
           The ‘GPGME_ENCRYPT_PREPARE’ symbol is used with the UI Server
-          protocol to prepare an encryption (i.e.  sending the
+          protocol to prepare an encryption (i.e., sending the
           ‘PREP_ENCRYPT’ command).  With the ‘GPGME_ENCRYPT_EXPECT_SIGN’
           symbol the UI Server is advised to also expect a sign command.
 
@@ -5924,6 +6215,17 @@ File: gpgme.info,  Node: Encrypting a Plaintext,  Up: Encrypt
           should be additionally encrypted symmetrically even if
           recipients are provided.  This feature is only supported for
           the OpenPGP crypto engine.
+
+     ‘GPGME_ENCRYPT_ADD_RECP’
+     ‘GPGME_ENCRYPT_CHG_RECP’
+          SINCE: 1.24.0
+
+          Instead of encrypting, decrypt the input and write an output
+          which is additionally encrypted to the specified keys.  The
+          CHG flag is similar but does not add encryption to the
+          specified keys but existing encryption keys by the new ones.
+          This feature is only supported for the OpenPGP crypto engine
+          and requires at least GnuPG version 2.5.1.
 
      ‘GPGME_ENCRYPT_THROW_KEYIDS’
           SINCE: 1.8.0
@@ -5954,6 +6256,25 @@ File: gpgme.info,  Node: Encrypting a Plaintext,  Up: Encrypt
           using the RECPSTRING argument of the extended encrypt
           functions.  This feature is currently only supported for the
           OpenPGP crypto engine.
+
+     ‘GPGME_ENCRYPT_ARCHIVE’
+          SINCE: 1.19.0
+
+          The ‘GPGME_ENCRYPT_ARCHIVE’ symbol specifies that the input is
+          a NUL-separated list of file paths and directory paths that
+          shall be encrypted into an archive.  This feature is currently
+          only supported for the OpenPGP crypto engine and requires
+          GnuPG 2.4.1.
+
+     ‘GPGME_ENCRYPT_FILE’
+          SINCE: 1.24.0
+
+          The ‘GPGME_ENCRYPT_FILE’ symbol specifies that the filename
+          set with ‘gpgme_data_set_file_name’ for the data object PLAIN
+          is passed to gpg, so that gpg reads the plaintext directly
+          from this file instead of from the data object PLAIN.  This
+          feature is currently only supported for the OpenPGP crypto
+          engine.
 
      If ‘GPG_ERR_UNUSABLE_PUBKEY’ is returned, some recipients in RECP
      are invalid, but not all.  In this case the plaintext might be
@@ -6940,382 +7261,4 @@ next.  We only support waiting for the success of a single operation.
        ...
        return 0;
      }
-
-
-File: gpgme.info,  Node: I/O Callback Example GTK+,  Next: I/O Callback Example GDK,  Prev: I/O Callback Example,  Up: Using External Event Loops
-
-7.8.2.4 I/O Callback Example GTK+
-.................................
-
-The I/O callback interface can be used to integrate GPGME with the GTK+
-event loop.  The following code snippets shows how this can be done
-using the appropriate register and remove I/O callback functions.  In
-this example, the private data of the register I/O callback function is
-unused.  The event notifications is missing because it does not require
-any GTK+ specific setup.
-
-     #include <gtk/gtk.h>
-
-     struct my_gpgme_io_cb
-     {
-       gpgme_io_cb_t fnc;
-       void *fnc_data;
-       guint input_handler_id
-     };
-
-     void
-     my_gpgme_io_cb (gpointer data, gint source, GdkInputCondition condition)
-     {
-       struct my_gpgme_io_cb *iocb = data;
-       (*(iocb->fnc)) (iocb->data, source);
-     }
-
-     void
-     my_gpgme_remove_io_cb (void *data)
-     {
-       struct my_gpgme_io_cb *iocb = data;
-       gtk_input_remove (data->input_handler_id);
-     }
-
-     void
-     my_gpgme_register_io_callback (void *data, int fd, int dir, gpgme_io_cb_t fnc,
-                                    void *fnc_data, void **tag)
-     {
-       struct my_gpgme_io_cb *iocb = g_malloc (sizeof (struct my_gpgme_io_cb));
-       iocb->fnc = fnc;
-       iocb->data = fnc_data;
-       iocb->input_handler_id = gtk_input_add_full (fd, dir
-                                                        ? GDK_INPUT_READ
-                                                        : GDK_INPUT_WRITE,
-                                                    my_gpgme_io_callback,
-                                                    0, iocb, NULL);
-       *tag = iocb;
-       return 0;
-     }
-
-
-File: gpgme.info,  Node: I/O Callback Example GDK,  Next: I/O Callback Example Qt,  Prev: I/O Callback Example GTK+,  Up: Using External Event Loops
-
-7.8.2.5 I/O Callback Example GDK
-................................
-
-The I/O callback interface can also be used to integrate GPGME with the
-GDK event loop.  The following code snippets shows how this can be done
-using the appropriate register and remove I/O callback functions.  In
-this example, the private data of the register I/O callback function is
-unused.  The event notifications is missing because it does not require
-any GDK specific setup.
-
-   It is very similar to the GTK+ example in the previous section.
-
-     #include <gdk/gdk.h>
-
-     struct my_gpgme_io_cb
-     {
-       gpgme_io_cb_t fnc;
-       void *fnc_data;
-       gint tag;
-     };
-
-     void
-     my_gpgme_io_cb (gpointer data, gint source, GdkInputCondition condition)
-     {
-       struct my_gpgme_io_cb *iocb = data;
-       (*(iocb->fnc)) (iocb->data, source);
-     }
-
-     void
-     my_gpgme_remove_io_cb (void *data)
-     {
-       struct my_gpgme_io_cb *iocb = data;
-       gdk_input_remove (data->tag);
-     }
-
-     void
-     my_gpgme_register_io_callback (void *data, int fd, int dir, gpgme_io_cb_t fnc,
-                                    void *fnc_data, void **tag)
-     {
-       struct my_gpgme_io_cb *iocb = g_malloc (sizeof (struct my_gpgme_io_cb));
-       iocb->fnc = fnc;
-       iocb->data = fnc_data;
-       iocb->tag = gtk_input_add_full (fd, dir ? GDK_INPUT_READ : GDK_INPUT_WRITE,
-                                       my_gpgme_io_callback, iocb, NULL);
-       *tag = iocb;
-       return 0;
-     }
-
-
-File: gpgme.info,  Node: I/O Callback Example Qt,  Prev: I/O Callback Example GDK,  Up: Using External Event Loops
-
-7.8.2.6 I/O Callback Example Qt
-...............................
-
-The I/O callback interface can also be used to integrate GPGME with the
-Qt event loop.  The following code snippets show how this can be done
-using the appropriate register and remove I/O callback functions.  In
-this example, the private data of the register I/O callback function is
-unused.  The event notifications is missing because it does not require
-any Qt specific setup.
-
-     #include <qsocketnotifier.h>
-     #include <qapplication.h>
-
-     struct IOCB {
-       IOCB( GpgmeIOCb f, void * d, QSocketNotifier * n )
-         : func( f ), data( d ), notifier( n ) {}
-       GpgmeIOCb func;
-       void * data;
-       QSocketNotifier * notifier;
-     }
-
-     class MyApp : public QApplication {
-
-       // ...
-
-       static void registerGpgmeIOCallback( void * data, int fd, int dir,
-                                            GpgmeIOCb func, void * func_data,
-                                            void ** tag ) {
-         QSocketNotifier * n =
-           new QSocketNotifier( fd, dir ? QSocketNotifier::Read
-                                        : QSocketNotifier::Write );
-         connect( n, SIGNAL(activated(int)),
-                  qApp, SLOT(slotGpgmeIOCallback(int)) );
-         qApp->mIOCBs.push_back( IOCB( func, func_data, n ) );
-         *tag = (void*)n;
-       }
-
-       static void removeGpgmeIOCallback( void * tag ) {
-         if ( !tag ) return;
-         QSocketNotifier * n = static_cast<QSocketNotifier*>( tag );
-         for ( QValueList<IOCB>::iterator it = qApp->mIOCBs.begin() ;
-               it != qApp->mIOCBs.end() ; ++it )
-           if ( it->notifier == n ) {
-             delete it->notifier;
-             qApp->mIOCBs.erase( it );
-             return;
-           }
-       }
-
-     public slots:
-       void slotGpgmeIOCallback( int fd ) {
-         for ( QValueList<IOCB>::const_iterator it = mIOCBs.begin() ;
-               it != mIOCBs.end() ; ++it )
-           if ( it->notifier && it->notifier->socket() == fd )
-             (*(it->func)) ( it->func_data, fd );
-       }
-
-       // ...
-
-     private:
-       QValueList<IOCB> mIOCBs;
-       // ...
-     };
-
-
-File: gpgme.info,  Node: Cancellation,  Prev: Using External Event Loops,  Up: Run Control
-
-7.8.3 Cancellation
-------------------
-
-Sometimes you do not want to wait for an operation to finish.  GPGME
-provides two different functions to achieve that.  The function
-‘gpgme_cancel’ takes effect immediately.  When it returns, the operation
-is effectively canceled.  However, it has some limitations and can not
-be used with synchronous operations.  In contrast, the function
-‘gpgme_cancel_async’ can be used with any context and from any thread,
-but it is not guaranteed to take effect immediately.  Instead,
-cancellation occurs at the next possible time (typically the next time
-I/O occurs in the target context).
-
- -- Function: gpgme_ctx_t gpgme_cancel (gpgme_ctx_t CTX)
-     SINCE: 0.4.5
-
-     The function ‘gpgme_cancel’ attempts to cancel a pending operation
-     in the context CTX.  This only works if you use the global event
-     loop or your own event loop.
-
-     If you use the global event loop, you must not call ‘gpgme_wait’
-     during cancellation.  After successful cancellation, you can call
-     ‘gpgme_wait’ (optionally waiting on CTX), and the context CTX will
-     appear as if it had finished with the error code ‘GPG_ERR_CANCEL’.
-
-     If you use an external event loop, you must ensure that no I/O
-     callbacks are invoked for this context (for example by halting the
-     event loop).  On successful cancellation, all registered I/O
-     callbacks for this context will be unregistered, and a
-     ‘GPGME_EVENT_DONE’ event with the error code ‘GPG_ERR_CANCEL’ will
-     be signalled.
-
-     The function returns an error code if the cancellation failed (in
-     this case the state of CTX is not modified).
-
- -- Function: gpgme_ctx_t gpgme_cancel_async (gpgme_ctx_t CTX)
-     SINCE: 1.1.7
-
-     The function ‘gpgme_cancel_async’ attempts to cancel a pending
-     operation in the context CTX.  This can be called by any thread at
-     any time after starting an operation on the context, but will not
-     take effect immediately.  The actual cancellation happens at the
-     next time GPGME processes I/O in that context.
-
-     The function returns an error code if the cancellation failed (in
-     this case the state of CTX is not modified).
-
-
-File: gpgme.info,  Node: UI Server Protocol,  Next: Debugging,  Prev: Contexts,  Up: Top
-
-Appendix A The GnuPG UI Server Protocol
-***************************************
-
-This section specifies the protocol used between clients and a User
-Interface Server (UI server).  This protocol helps to build a system
-where all cryptographic operations are done by a server and the server
-is responsible for all dialogs.  Although GPGME has no direct support
-for this protocol it is believed that servers will utilize the GPGME
-library; thus having the specification included in this manual is an
-appropriate choice.  This protocol should be referenced as ‘The GnuPG UI
-Server Protocol’.
-
-A server needs to implement these commands:(1)
-
-* Menu:
-
-* UI Server Encrypt::                Encrypt a message.
-* UI Server Sign::                   Sign a message.
-* UI Server Decrypt::                Decrypt a message.
-* UI Server Verify::                 Verify a message.
-* UI Server Set Input Files::        Specifying the input files to operate on.
-* UI Server Sign/Encrypt Files::     Encrypting and signing files.
-* UI Server Verify/Decrypt Files::   Decrypting and verifying files.
-* UI Server Import/Export Keys::     Managing certificates.
-* UI Server Checksum Files::         Create and verify checksums for files.
-* Miscellaneous UI Server Commands::   Commands not related to a specific operation.
-
-   ---------- Footnotes ----------
-
-   (1) In all examples we assume that the connection has already been
-established; see the Assuan manual for details.
-
-
-File: gpgme.info,  Node: UI Server Encrypt,  Next: UI Server Sign,  Up: UI Server Protocol
-
-A.1 UI Server: Encrypt a Message
-================================
-
-Before encryption can be done the recipients must be set using the
-command:
-
- -- Command: RECIPIENT STRING
-
-     Set the recipient for the encryption.  STRING is an RFC-2822
-     recipient name ("mailbox" as per section 3.4).  This command may or
-     may not check the recipient for validity right away; if it does not
-     all recipients are expected to be checked at the time of the
-     ‘ENCRYPT’ command.  All ‘RECIPIENT’ commands are cumulative until a
-     successful ‘ENCRYPT’ command or until a ‘RESET’ command.  Linefeeds
-     are obviously not allowed in STRING and should be folded into
-     spaces (which are equivalent).
-
-To tell the server the source and destination of the data, the next two
-commands are to be used:
-
- -- Command: INPUT FD=N
-     Set the file descriptor for the message to be encrypted to N.  The
-     message send to the server is binary encoded.
-
-     GpgOL is a Windows only program, thus N is not a libc file
-     descriptor but a regular system handle.  Given that the Assuan
-     connection works over a socket, it is not possible to use regular
-     inheritance to make the file descriptor available to the server.
-     Thus ‘DuplicateHandle’ needs to be used to duplicate a handle to
-     the server process.  This is the reason that the server needs to
-     implement the ‘GETINFO pid’ command.  Sending this command a second
-     time replaces the file descriptor set by the last one.
-
- -- Command: OUTPUT FD=N [--binary]
-     Set the file descriptor to be used for the output (i.e.  the
-     encrypted message) to N.  If the option ‘--binary’ is given the
-     output shall be in binary format; if not given, the output for
-     OpenPGP needs to be ASCII armored and for CMS Base-64 encoded.  For
-     details on the file descriptor, see the ‘INPUT’ command.
-
-The setting of the recipients, the data source and destination may
-happen in any order, even intermixed.  If this has been done the actual
-encryption operation is called using:
-
- -- Command: ENCRYPT --protocol=NAME
-
-     This command reads the plaintext from the file descriptor set by
-     the ‘INPUT’ command, encrypts it and writes the ciphertext to the
-     file descriptor set by the ‘OUTPUT’ command.  The server may (and
-     should) overlap reading and writing.  The recipients used for the
-     encryption are all the recipients set so far.  If any recipient is
-     not usable the server should take appropriate measures to notify
-     the user about the problem and may cancel the operation by
-     returning an error code.  The used file descriptors are void after
-     this command; the recipient list is only cleared if the server
-     returns success.
-
-     Because GpgOL uses a streaming mode of operation the server is not
-     allowed to auto select the protocol and must obey to the mandatory
-     PROTOCOL parameter:
-
-     ‘OpenPGP’
-          Use the OpenPGP protocol (RFC-2440).
-     ‘CMS’
-          Use the CMS (PKCS#7) protocol (RFC-3852).
-
-   To support automagically selection of the protocol depending on the
-selected keys, the server MAY implement the command:
-
- -- Command: PREP_ENCRYPT [--protocol=NAME] [--expect-sign]
-
-     This commands considers all recipients set so far and decides
-     whether it is able to take input and start the actual encryption.
-     This is kind of a dry-run ‘ENCRYPT’ without requiring or using the
-     input and output file descriptors.  The server shall cache the
-     result of any user selection to avoid asking this again when the
-     actual ‘ENCRYPT’ command is send.  The ‘--protocol’ option is
-     optional; if it is not given, the server should allow the user to
-     select the protocol to be used based on the recipients given or by
-     any other means.
-
-     If ‘--expect-sign’ is given the server should expect that the
-     message will also be signed and use this hint to present a unified
-     recipient and signer selection dialog if possible and desired.  A
-     selected signer should then be cached for the expected SIGN command
-     (which is expected in the same session but possible on another
-     connection).
-
-     If this command is given again before a successful ‘ENCRYPT’
-     command, the second one takes effect.
-
-     Before sending the OK response the server shall tell the client the
-     protocol to be used (either the one given by the argument or the
-     one selected by the user) by means of a status line:
-
- -- Status line: PROTOCOL NAME
-     Advise the client to use the protocol NAME for the ‘ENCRYPT’
-     command.  The valid protocol names are listed under the description
-     of the ‘ENCRYPT’ command.  The server shall emit exactly one
-     PROTOCOL status line.
-
-Here is an example of a complete encryption sequence; client lines are
-indicated by a C:, server responses by C::
-
-         C: RESET
-         S: OK
-         C: RECIPIENT foo@example.net
-         S: OK
-         C: RECIPIENT bar@example.com
-         S: OK
-         C: PREP_ENCRYPT
-         S: S PROTOCOL OpenPGP
-         S: OK
-         C: INPUT FD=17
-         S: OK
-         C: OUTPUT FD=18
-         S: OK
-         C: ENCRYPT
-         S: OK
 
