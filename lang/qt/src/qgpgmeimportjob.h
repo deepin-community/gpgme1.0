@@ -5,6 +5,8 @@
     Copyright (c) 2004,2008 Klarälvdalens Datakonsult AB
     Copyright (c) 2016 by Bundesamt für Sicherheit in der Informationstechnik
     Software engineering by Intevation GmbH
+    Copyright (c) 2023 g10 Code GmbH
+    Software engineering by Ingo Klöcker <dev@ingo-kloecker.de>
 
     QGpgME is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -39,11 +41,7 @@
 
 #include "threadedjobmixin.h"
 
-#ifdef BUILDING_QGPGME
-# include "importresult.h"
-#else
 #include <gpgme++/importresult.h>
-#endif
 
 namespace QGpgME
 {
@@ -65,16 +63,12 @@ public:
     ~QGpgMEImportJob();
 
     /* from ImportJob */
-    GpgME::Error start(const QByteArray &keyData) Q_DECL_OVERRIDE;
+    GpgME::Error start(const QByteArray &keyData) override;
 
     /* from ImportJob */
-    GpgME::ImportResult exec(const QByteArray &keyData) Q_DECL_OVERRIDE;
+    GpgME::ImportResult exec(const QByteArray &keyData) override;
 
-    /* from ThreadedJobMixin */
-    void resultHook(const result_type &r) Q_DECL_OVERRIDE;
-
-private:
-    GpgME::ImportResult mResult;
+    GpgME::Error startLater(const QByteArray &keyData) override;
 };
 
 }

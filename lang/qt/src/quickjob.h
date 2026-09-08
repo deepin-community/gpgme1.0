@@ -39,11 +39,7 @@
 
 #include <QDateTime>
 
-#ifdef BUILDING_QGPGME
-# include "key.h"
-#else
-# include <gpgme++/key.h>
-#endif
+#include <gpgme++/key.h>
 
 class QString;
 
@@ -56,7 +52,7 @@ class QGPGME_EXPORT QuickJob : public Job
 {
     Q_OBJECT
 public:
-    explicit QuickJob(QObject *parent = Q_NULLPTR);
+    explicit QuickJob(QObject *parent = nullptr);
     ~QuickJob();
 
     /** Start --quick-gen-key */
@@ -84,6 +80,17 @@ public:
     */
     virtual void startRevokeSignature(const GpgME::Key &key, const GpgME::Key &signingKey,
                                       const std::vector<GpgME::UserID> &userIds = std::vector<GpgME::UserID>()) = 0;
+
+    /** Start --quick-add-adsk */
+    virtual void startAddAdsk(const GpgME::Key &key, const char *adsk) = 0;
+
+    /**
+     * Starts the operation to enable or disable the OpenPGP key \a key.
+     * If \a enabled is \c true then the key is enabled. Otherwise, the key is disabled.
+     *
+     * \note Requires gpg 2.4.6.
+     */
+    GpgME::Error startSetKeyEnabled(const GpgME::Key &key, bool enabled);
 
 Q_SIGNALS:
     void result(const GpgME::Error &error,

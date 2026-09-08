@@ -1,0 +1,4 @@
+usr/include/qgpgme-qt6
+usr/lib/*/cmake/QGpgmeQt6
+usr/lib/*/libqgpgmeqt6.a
+usr/lib/*/libqgpgmeqt6.so

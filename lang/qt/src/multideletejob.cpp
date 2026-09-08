@@ -38,9 +38,9 @@
 #include "protocol.h"
 #include "deletejob.h"
 
-#include <key.h>
-#include <context.h>
-#include <data.h>
+#include <gpgme++/key.h>
+#include <gpgme++/context.h>
+#include <gpgme++/data.h>
 
 #include <iterator>
 
@@ -97,7 +97,13 @@ void QGpgME::MultiDeleteJob::slotResult(const GpgME::Error &err)
 
     const int current = mIt - mKeys.begin();
     const int total = mKeys.size();
-    Q_EMIT progress(QStringLiteral("%1/%2").arg(current).arg(total), current, total);
+    const QString what = QStringLiteral("%1/%2").arg(current).arg(total);
+    Q_EMIT jobProgress(current, total);
+    Q_EMIT rawProgress(what, '?', current, total);
+    QT_WARNING_PUSH
+    QT_WARNING_DISABLE_DEPRECATED
+    Q_EMIT progress(what, current, total);
+    QT_WARNING_POP
 }
 
 GpgME::Error QGpgME::MultiDeleteJob::startAJob()

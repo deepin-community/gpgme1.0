@@ -34,13 +34,14 @@
 #ifndef __QGPGME_UTIL_H__
 #define __QGPGME_UTIL_H__
 
+#include <QStringList>
+
+#include <gpgme++/error.h>
+
 #include <gpgme.h>
 
-#include <sstream>
 #include <string>
 #include <vector>
-
-class QStringList;
 
 namespace GpgME
 {
@@ -52,16 +53,39 @@ static inline gpgme_error_t make_error(gpgme_err_code_t code)
     return gpgme_err_make((gpgme_err_source_t)22, code);
 }
 
+static inline QString errorAsString(const GpgME::Error &error)
+{
+#ifdef Q_OS_WIN
+    return QString::fromStdString(error.asStdString());
+#else
+    return QString::fromLocal8Bit(error.asStdString().c_str());
+#endif
+}
+
 std::vector<std::string> toStrings(const QStringList &l);
 
 QStringList toFingerprints(const std::vector<GpgME::Key> &keys);
 
-template<class Result>
-std::string toLogString(const Result &result)
+/**
+ * Helper for using a temporary "part" file for writing a result to, similar
+ * to what browsers do when downloading files.
+ * On success, you commit() which renames the temporary file to the
+ * final file name. Otherwise, you do nothing and let the helper remove the
+ * temporary file on destruction.
+ */
+class PartialFileGuard
 {
-    std::stringstream stream;
-    stream << result;
-    return stream.str();
-}
+public:
+    explicit PartialFileGuard(const QString &fileName);
+    ~PartialFileGuard();
+
+    QString tempFileName() const;
+
+    bool commit();
+
+private:
+    QString mFileName;
+    QString mTempFileName;
+};
 
 #endif // __QGPGME_UTIL_H__

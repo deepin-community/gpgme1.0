@@ -79,6 +79,11 @@ gpgme_set_global_flag (const char *name, const char *value)
     return _gpgme_set_default_gpgconf_name (value);
   else if (!strcmp (name, "gpg-name"))
     return _gpgme_set_default_gpg_name (value);
+  else if (!strcmp (name, "inst-type"))
+    {
+      _gpgme_set_get_inst_type (value);
+      return 0;
+    }
   else if (!strcmp (name, "w32-inst-dir"))
     return _gpgme_set_override_inst_dir (value);
   else
@@ -256,6 +261,8 @@ gpgme_release (gpgme_ctx_t ctx)
   free (ctx->cert_expire);
   free (ctx->key_origin);
   free (ctx->import_filter);
+  free (ctx->import_options);
+  free (ctx->known_notations);
   _gpgme_engine_info_release (ctx->engine_info);
   ctx->engine_info = NULL;
   DESTROY_LOCK (ctx->lock);
@@ -602,6 +609,28 @@ gpgme_set_ctx_flag (gpgme_ctx_t ctx, const char *name, const char *value)
       if (!ctx->import_filter)
         err = gpg_error_from_syserror ();
     }
+  else if (!strcmp (name, "import-options"))
+    {
+      free (ctx->import_options);
+      ctx->import_options = strdup (value);
+      if (!ctx->import_options)
+        err = gpg_error_from_syserror ();
+    }
+  else if (!strcmp (name, "no-auto-check-trustdb"))
+    {
+      ctx->no_auto_check_trustdb = abool;
+    }
+  else if (!strcmp (name, "proc-all-sigs"))
+    {
+      ctx->proc_all_sigs = abool;
+    }
+  else if (!strcmp (name, "known-notations"))
+    {
+      free (ctx->known_notations);
+      ctx->known_notations = strdup (value);
+      if (!ctx->known_notations)
+        err = gpg_error_from_syserror ();
+    }
   else
     err = gpg_error (GPG_ERR_UNKNOWN_NAME);
 
@@ -682,6 +711,22 @@ gpgme_get_ctx_flag (gpgme_ctx_t ctx, const char *name)
   else if (!strcmp (name, "import-filter"))
     {
       return ctx->import_filter? ctx->import_filter : "";
+    }
+  else if (!strcmp (name, "import-options"))
+    {
+      return ctx->import_options? ctx->import_options : "";
+    }
+  else if (!strcmp (name, "no-auto-check-trustdb"))
+    {
+      return ctx->no_auto_check_trustdb? "1":"";
+    }
+  else if (!strcmp (name, "proc-all-sigs"))
+    {
+      return ctx->proc_all_sigs? "1":"";
+    }
+  else if (!strcmp (name, "known-notations"))
+    {
+      return ctx->known_notations? ctx->known_notations: "";
     }
   else
     return NULL;
@@ -1250,6 +1295,7 @@ gpgme_pubkey_algo_string (gpgme_subkey_t subkey)
 {
   const char *prefix = NULL;
   char *result;
+  int composite = 0;
 
   if (!subkey)
     {
@@ -1262,6 +1308,7 @@ gpgme_pubkey_algo_string (gpgme_subkey_t subkey)
     case GPGME_PK_RSA:
     case GPGME_PK_RSA_E:
     case GPGME_PK_RSA_S: prefix = "rsa"; break;
+    case GPGME_PK_KYBER: composite = 1; break;
     case GPGME_PK_ELG_E: prefix = "elg"; break;
     case GPGME_PK_DSA:	 prefix = "dsa"; break;
     case GPGME_PK_ELG:   prefix = "xxx"; break;
@@ -1271,9 +1318,12 @@ gpgme_pubkey_algo_string (gpgme_subkey_t subkey)
     case GPGME_PK_EDDSA: prefix = "";    break;
     }
 
-  if (prefix && *prefix)
+  if (composite && subkey->curve)
+    result = strdup (subkey->curve);
+  else if (prefix && *prefix)
     {
       char buffer[40];
+
       snprintf (buffer, sizeof buffer, "%s%u", prefix, subkey->length);
       result = strdup (buffer);
     }
@@ -1296,6 +1346,7 @@ gpgme_pubkey_algo_name (gpgme_pubkey_algo_t algo)
     case GPGME_PK_RSA:   return "RSA";
     case GPGME_PK_RSA_E: return "RSA-E";
     case GPGME_PK_RSA_S: return "RSA-S";
+    case GPGME_PK_KYBER: return "KYBER";
     case GPGME_PK_ELG_E: return "ELG-E";
     case GPGME_PK_DSA:   return "DSA";
     case GPGME_PK_ECC:   return "ECC";

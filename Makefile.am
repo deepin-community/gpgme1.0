@@ -36,8 +36,11 @@ DISTCHECK_CONFIGURE_FLAGS =
 
 EXTRA_DIST = autogen.sh autogen.rc gpgme.spec.in  \
              ChangeLog-2011 m4/ChangeLog-2011     \
+             build-aux/libtool-patch.sed          \
              conf/whatisthis VERSION LICENSES
 
+# This artificial line is to put a dependency to conf/config.h for 'all'
+BUILT_SOURCES = conf/config.h
 
 if RUN_GPG_TESTS
 tests = tests
@@ -71,7 +74,7 @@ distcheck-hook:
 
 gen_start_date = 2011-12-01T00:00:00
 gen-ChangeLog:
-	if test -d $(top_srcdir)/.git; then				\
+	if test -e $(top_srcdir)/.git; then				\
 	  (cd $(top_srcdir) &&                      			\
 	    $(GITLOG_TO_CHANGELOG) --append-dot --tear-off		\
 	    --amend=build-aux/git-log-fix				\

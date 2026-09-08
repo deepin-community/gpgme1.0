@@ -144,29 +144,30 @@ gpgme_error_t _gpgme_engine_op_import (engine_t engine,
                                        gpgme_key_t *keyarray,
                                        const char *keyids[],
                                        const char *import_filter,
+                                       const char *import_options,
                                        const char *key_origin);
 gpgme_error_t _gpgme_engine_op_keylist (engine_t engine,
 					const char *pattern,
 					int secret_only,
-					gpgme_keylist_mode_t mode,
-					int engine_flags);
+					gpgme_keylist_mode_t mode);
 gpgme_error_t _gpgme_engine_op_keylist_ext (engine_t engine,
 					    const char *pattern[],
 					    int secret_only,
 					    int reserved,
-					    gpgme_keylist_mode_t mode,
-					    int engine_flags);
+					    gpgme_keylist_mode_t mode);
 gpgme_error_t _gpgme_engine_op_keylist_data (engine_t engine,
 					     gpgme_keylist_mode_t mode,
 					     gpgme_data_t data);
 gpgme_error_t _gpgme_engine_op_sign (engine_t engine, gpgme_data_t in,
-				     gpgme_data_t out, gpgme_sig_mode_t mode,
+				     gpgme_data_t out, gpgme_sig_mode_t flags,
 				     int use_armor, int use_textmode,
 				     int include_certs,
 				     gpgme_ctx_t ctx /* FIXME */);
 gpgme_error_t _gpgme_engine_op_trustlist (engine_t engine,
 					  const char *pattern);
-gpgme_error_t _gpgme_engine_op_verify (engine_t engine, gpgme_data_t sig,
+gpgme_error_t _gpgme_engine_op_verify (engine_t engine,
+                                       gpgme_verify_flags_t flags,
+                                       gpgme_data_t sig,
 				       gpgme_data_t signed_text,
 				       gpgme_data_t plaintext,
                                        gpgme_ctx_t ctx);
@@ -224,9 +225,8 @@ gpgme_error_t _gpgme_engine_op_setexpire (engine_t engine,
                                           unsigned long expires,
                                           const char *subfprs,
                                           unsigned int reserved);
-
-/* The available engine option flags.  */
-#define GPGME_ENGINE_FLAG_OFFLINE        1
-
+gpgme_error_t _gpgme_engine_op_setownertrust (engine_t engine,
+                                              gpgme_key_t key,
+                                              const char *value);
 
 #endif /* ENGINE_H */

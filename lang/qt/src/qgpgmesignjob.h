@@ -39,16 +39,8 @@
 
 #include "threadedjobmixin.h"
 
-#ifdef BUILDING_QGPGME
-# include "signingresult.h"
-#else
 #include <gpgme++/signingresult.h>
-#endif
-#ifdef BUILDING_QGPGME
-# include "key.h"
-#else
 #include <gpgme++/key.h>
-#endif
 
 namespace QGpgME
 {
@@ -72,28 +64,24 @@ public:
     /* from SignJob */
     GpgME::Error start(const std::vector<GpgME::Key> &signers,
                        const QByteArray &plainText,
-                       GpgME::SignatureMode mode) Q_DECL_OVERRIDE;
+                       GpgME::SignatureMode mode) override;
 
     /* from SignJob */
     void start(const std::vector<GpgME::Key> &signers,
                const std::shared_ptr<QIODevice> &plainText,
                const std::shared_ptr<QIODevice> &signature,
-               GpgME::SignatureMode mode) Q_DECL_OVERRIDE;
+               GpgME::SignatureMode mode) override;
 
     /* from SignJob */
     GpgME::SigningResult exec(const std::vector<GpgME::Key> &signers,
                               const QByteArray &plainText,
                               GpgME::SignatureMode mode,
-                              QByteArray &signature) Q_DECL_OVERRIDE;
+                              QByteArray &signature) override;
 
     /* from SignJob */
-    void setOutputIsBase64Encoded(bool on) Q_DECL_OVERRIDE;
-
-    /* from ThreadedJobMixin */
-    void resultHook(const result_type &r) Q_DECL_OVERRIDE;
+    void setOutputIsBase64Encoded(bool on) override;
 
 private:
-    GpgME::SigningResult mResult;
     bool mOutputIsBase64Encoded;
 };
 

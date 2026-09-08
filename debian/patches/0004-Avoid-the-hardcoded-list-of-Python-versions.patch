@@ -10,11 +10,11 @@ Forwarded: not-needed
  configure.ac | 4 ++++
  1 file changed, 4 insertions(+)
 
-diff --git a/configure.ac b/configure.ac
-index 581cc56..aed5594 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -475,6 +475,10 @@ if test "$found_py" = "1"; then
+@@ -645,10 +645,14 @@ if test "$found_py" = "1"; then
+ 
+ 	# Remove duplicates.
  	PYTHONS="$(echo $PYTHONS | tr '[[:space:]]' '\n' | sort | uniq | tr '\n' ' ' | sed -e 's/ $//')"
  	PYTHON_VERSIONS="$(echo $PYTHON_VERSIONS | tr '[[:space:]]' '\n' | sort | uniq | tr '\n' ' ' | sed -e 's/ $//')"
  
@@ -25,3 +25,5 @@ index 581cc56..aed5594 100644
  	if test "$PYTHON_VERSIONS"; then
  	   enabled_languages_v=$(echo $enabled_languages | sed -Ee "s/python[[23]]?/python ($PYTHON_VERSIONS)/")
  	   enabled_languages=$(echo $enabled_languages | sed -Ee "s/python[[23]]?/python/")
+ 	else
+             if test "$explicit_languages" = "1"; then

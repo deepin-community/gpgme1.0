@@ -39,7 +39,7 @@ typedef enum
     OPDATA_IMPORT, OPDATA_GENKEY, OPDATA_KEYLIST, OPDATA_EDIT,
     OPDATA_VERIFY, OPDATA_TRUSTLIST, OPDATA_ASSUAN, OPDATA_VFS_MOUNT,
     OPDATA_PASSWD, OPDATA_EXPORT, OPDATA_KEYSIGN, OPDATA_TOFU_POLICY,
-    OPDATA_QUERY_SWDB, OPDATA_SETEXPIRE, OPDATA_REVSIG
+    OPDATA_QUERY_SWDB, OPDATA_SETEXPIRE, OPDATA_REVSIG, OPDATA_SETOWNERTRUST
   } ctx_op_data_id_t;
 
 
@@ -134,6 +134,12 @@ struct gpgme_context
    * after the operation.  */
   unsigned int ignore_mdc_error : 1;
 
+  /* True if the option --no-auto-check-trustdb shall be passed to gpg.  */
+  unsigned int no_auto_check_trustdb : 1;
+
+  /* True if the option --proc-all-sigs shall be passed to gpg.  */
+  unsigned int proc_all_sigs : 1;
+
   /* Pass --expert to gpg edit key. */
   unsigned int extended_edit : 1;
 
@@ -182,6 +188,13 @@ struct gpgme_context
 
   /* The optional import filter.  */
   char *import_filter;
+
+  /* The optional import options.  */
+  char *import_options;
+
+  /* A comma or space delimited list to create gpg --known-notations
+   * options.  */
+  char *known_notations;
 
   /* The operation data hooked into the context.  */
   ctx_op_data_t op_data;

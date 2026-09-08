@@ -39,11 +39,7 @@
 
 #include "threadedjobmixin.h"
 
-#ifdef BUILDING_QGPGME
-# include "keygenerationresult.h"
-#else
 #include <gpgme++/keygenerationresult.h>
-#endif
 
 namespace QGpgME
 {
@@ -65,7 +61,7 @@ public:
     ~QGpgMEKeyGenerationJob();
 
     /* from KeygenerationJob */
-    GpgME::Error start(const QString &parameters) Q_DECL_OVERRIDE;
+    GpgME::Error start(const QString &parameters) override;
 };
 
 }

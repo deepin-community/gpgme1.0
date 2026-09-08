@@ -217,6 +217,11 @@ GpgME::Error GpgME::Data::setFileName(const char *name)
     return Error(gpgme_data_set_file_name(d->data, name));
 }
 
+GpgME::Error GpgME::Data::setFileName(const std::string &name)
+{
+    return Error(gpgme_data_set_file_name(d->data, name.c_str()));
+}
+
 ssize_t GpgME::Data::read(void *buffer, size_t length)
 {
     return gpgme_data_read(d->data, buffer, length);
@@ -274,4 +279,15 @@ std::string GpgME::Data::toString()
     }
   seek (0, SEEK_SET);
   return ret;
+}
+
+GpgME::Error GpgME::Data::setFlag(const char *name, const char *value)
+{
+    return Error(gpgme_data_set_flag(d->data, name, value));
+}
+
+GpgME::Error GpgME::Data::setSizeHint(uint64_t size)
+{
+    const std::string val = std::to_string(size);
+    return Error(gpgme_data_set_flag(d->data, "size-hint", val.c_str()));
 }

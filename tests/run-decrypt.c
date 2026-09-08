@@ -57,7 +57,8 @@ print_result (gpgme_decrypt_result_t result)
   printf ("Original file name .: %s\n", nonnull(result->file_name));
   printf ("Wrong key usage ....: %s\n", result->wrong_key_usage? "yes":"no");
   printf ("Legacy w/o MDC ... .: %s\n", result->legacy_cipher_nomdc?"yes":"no");
-  printf ("Compliance de-vs ...: %s\n", result->is_de_vs? "yes":"no");
+  printf ("Compliance de-vs ...: %s%s\n", result->is_de_vs? "yes":"no",
+          result->is_de_vs && result->beta_compliance? "(beta)":"");
   printf ("MIME flag ..........: %s\n", result->is_mime? "yes":"no");
   printf ("Unsupported algo ...: %s\n", nonnull(result->unsupported_algorithm));
   printf ("Session key ........: %s\n", nonnull (result->session_key));
@@ -91,7 +92,12 @@ show_usage (int ex)
          "  --unwrap         remove only the encryption layer\n"
          "  --large-buffers  use large I/O buffer\n"
          "  --sensitive      mark data objects as sensitive\n"
+         "  --output FILE    write output to FILE instead of stdout\n"
+         "  --archive        extract files from an encrypted archive\n"
+         "  --directory DIR  extract the files into the directory DIR\n"
          "  --diagnostics    print diagnostics\n"
+         "  --direct-file-io pass FILE instead of stream with content of FILE to backend\n"
+         "  --known-notations STRING  Parse STRING and pass to gpg\n"
          , stderr);
   exit (ex);
 }
@@ -113,12 +119,16 @@ main (int argc, char **argv)
   int export_session_key = 0;
   const char *override_session_key = NULL;
   const char *request_origin = NULL;
+  const char *output = NULL;
+  const char *directory = NULL;
+  const char *known_notations = NULL;
   int no_symkey_cache = 0;
   int ignore_mdc_error = 0;
   int raw_output = 0;
   int large_buffers = 0;
   int sensitive = 0;
   int diagnostics = 0;
+  int direct_file_io = 0;
 
   if (argc)
     { argc--; argv++; }
@@ -205,6 +215,40 @@ main (int argc, char **argv)
           raw_output = 1;
           argc--; argv++;
         }
+      else if (!strcmp (*argv, "--output"))
+        {
+          argc--; argv++;
+          if (!argc)
+            show_usage (1);
+          output = *argv;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--archive"))
+        {
+          flags |= GPGME_DECRYPT_ARCHIVE;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--directory"))
+        {
+          argc--; argv++;
+          if (!argc)
+            show_usage (1);
+          directory = *argv;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--direct-file-io"))
+        {
+          direct_file_io = 1;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--known-notations"))
+        {
+          argc--; argv++;
+          if (!argc)
+            show_usage (1);
+          known_notations = *argv;
+          argc--; argv++;
+        }
       else if (!strncmp (*argv, "--", 2))
         show_usage (1);
 
@@ -213,13 +257,16 @@ main (int argc, char **argv)
   if (argc < 1 || argc > 2)
     show_usage (1);
 
-  fp_in = fopen (argv[0], "rb");
-  if (!fp_in)
+  if (!direct_file_io)
     {
-      err = gpgme_error_from_syserror ();
-      fprintf (stderr, PGM ": can't open `%s': %s\n",
-               argv[0], gpgme_strerror (err));
-      exit (1);
+      fp_in = fopen (argv[0], "rb");
+      if (!fp_in)
+        {
+          err = gpgme_error_from_syserror ();
+          fprintf (stderr, PGM ": can't open `%s': %s\n",
+                   argv[0], gpgme_strerror (err));
+          exit (1);
+        }
     }
 
   init_gpgme (protocol);
@@ -287,12 +334,32 @@ main (int argc, char **argv)
         }
     }
 
-  err = gpgme_data_new_from_stream (&in, fp_in);
+  if (known_notations)
+    {
+      err = gpgme_set_ctx_flag (ctx, "known-notations", known_notations);
+      fail_if_err (err);
+    }
+
+
+  if (direct_file_io)
+    err = gpgme_data_new (&in);
+  else
+    err = gpgme_data_new_from_stream (&in, fp_in);
   if (err)
     {
       fprintf (stderr, PGM ": error allocating data object: %s\n",
                gpgme_strerror (err));
       exit (1);
+    }
+  if (direct_file_io)
+    {
+      err = gpgme_data_set_file_name (in, argv[0]);
+      if (err)
+        {
+          fprintf (stderr, PGM ": error setting file name (in): %s\n",
+                   gpgme_strerror (err));
+          exit (1);
+        }
     }
 
   err = gpgme_data_new (&out);
@@ -301,6 +368,26 @@ main (int argc, char **argv)
       fprintf (stderr, PGM ": error allocating data object: %s\n",
                gpgme_strerror (err));
       exit (1);
+    }
+  if (output && !(flags & GPGME_DECRYPT_ARCHIVE))
+    {
+      err = gpgme_data_set_file_name (out, output);
+      if (err)
+        {
+          fprintf (stderr, PGM ": error setting file name (out): %s\n",
+                   gpgme_strerror (err));
+          exit (1);
+        }
+    }
+  if (directory && (flags & GPGME_DECRYPT_ARCHIVE))
+    {
+      err = gpgme_data_set_file_name (out, directory);
+      if (err)
+        {
+          fprintf (stderr, PGM ": error setting file name (out): %s\n",
+                   gpgme_strerror (err));
+          exit (1);
+        }
     }
   if (large_buffers)
     {
@@ -358,11 +445,14 @@ main (int argc, char **argv)
     {
       if (!raw_output)
         print_result (result);
-      if (!raw_output)
-        fputs ("Begin Output:\n", stdout);
-      print_data (out);
-      if (!raw_output)
-        fputs ("End Output.\n", stdout);
+      if (!output)
+        {
+          if (!raw_output)
+            fputs ("Begin Output:\n", stdout);
+          print_data (out);
+          if (!raw_output)
+            fputs ("End Output.\n", stdout);
+        }
     }
 
   gpgme_data_release (out);

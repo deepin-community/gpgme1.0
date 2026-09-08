@@ -37,11 +37,12 @@
 
 #include "qgpgmewkdlookupjob.h"
 
+#include "debug.h"
 #include "qgpgme_debug.h"
 
-#include <context.h>
-#include <data.h>
-#include <defaultassuantransaction.h>
+#include <gpgme++/context.h>
+#include <gpgme++/data.h>
+#include <gpgme++/defaultassuantransaction.h>
 
 #include <gpg-error.h>
 
@@ -62,24 +63,26 @@ static GpgME::Error startDirmngr(Context *assuanCtx)
 
     auto spawnCtx = std::unique_ptr<Context>{Context::createForEngine(SpawnEngine, &err)};
     if (err) {
-        qCDebug(QGPGME_LOG) << "Error: Failed to get context for spawn engine (" << err.asString() << ")";
+        qCDebug(QGPGME_LOG) << "Error: Failed to get context for spawn engine (" << err << ")";
     }
-
-    const auto dirmngrProgram = GpgME::dirInfo("dirmngr-name");
-    const auto homedir = GpgME::dirInfo("homedir");
+    const auto gpgconfProgram = GpgME::dirInfo("gpgconf-name");
+    // replace backslashes with forward slashes in homedir to work around bug T6833
+    std::string homedir{GpgME::dirInfo("homedir")};
+    std::replace(homedir.begin(), homedir.end(), '\\', '/');
     const char *argv[] = {
-        dirmngrProgram,
+        gpgconfProgram,
         "--homedir",
-        homedir,
-        "--daemon",
+        homedir.c_str(),
+        "--launch",
+        "dirmngr",
         NULL
     };
     auto ignoreIO = Data{Data::null};
     if (!err) {
         qCDebug(QGPGME_LOG) << "Starting dirmngr ...";
-        err = spawnCtx->spawnAsync(dirmngrProgram, argv,
-                                   ignoreIO, ignoreIO, ignoreIO,
-                                   Context::SpawnDetached);
+        err = spawnCtx->spawn(gpgconfProgram, argv,
+                              ignoreIO, ignoreIO, ignoreIO,
+                              Context::SpawnDetached);
     }
 
     if (!err) {
@@ -130,11 +133,11 @@ static GpgME::Error run_wkd_get(Context *ctx, const std::string &email)
         // no key for email is available via WKD or that the domain doesn't
         // support WKD or that the domain doesn't exist (on subsequent requests
         // using dirmngr's internal cache)
-        qCDebug(QGPGME_LOG) << "WKD_GET returned" << err.asString() << "; ignoring...";
+        qCDebug(QGPGME_LOG) << "WKD_GET returned" << err << "; ignoring...";
         err = {};
     }
     if (err) {
-        qCDebug(QGPGME_LOG) << "WKD_GET failed with" << err.asString();
+        qCDebug(QGPGME_LOG) << "WKD_GET failed with" << err;
     }
 
     return err;
@@ -176,7 +179,6 @@ Error QGpgMEWKDLookupJob::start(const QString &email)
 WKDLookupResult QGpgMEWKDLookupJob::exec(const QString &email)
 {
     const result_type r = lookup_keys(context(), email);
-    resultHook(r);
     return std::get<0>(r);
 }
 

@@ -36,17 +36,19 @@
 
 #include "t-support.h"
 
-#include "context.h"
-#include "engineinfo.h"
+#include <gpgme++/context.h>
+#include <gpgme++/engineinfo.h>
 #include "protocol.h"
 #include "importjob.h"
 
-#include <importresult.h>
+#include <gpgme++/importresult.h>
 
 #include <QDebug>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
+
+#include <memory>
 
 using namespace QGpgME;
 using namespace GpgME;
@@ -111,12 +113,54 @@ private Q_SLOTS:
         QSignalSpy spy (this, SIGNAL(asyncDone()));
         QVERIFY(spy.wait());
 
-        auto ctx = Context::createForProtocol(GpgME::OpenPGP);
+        auto ctx = std::unique_ptr<GpgME::Context>(Context::createForProtocol(GpgME::OpenPGP));
         GpgME::Error err;
         const auto key = ctx->key(keyFpr, err, false);
         QVERIFY(!key.isNull());
-        QCOMPARE(key.numUserIDs(), 1);
+        QCOMPARE(key.numUserIDs(), 1u);
         QCOMPARE(key.userID(0).id(), "importWithImportFilter@example.net");
+    }
+
+    void testImportWithImportOptions()
+    {
+        if (GpgME::engineInfo(GpgME::GpgEngine).engineVersion() < "2.1.23") {
+            QSKIP("gpg does not yet support --import-options show-only");
+        }
+
+        // pub   ed25519 2024-06-12 [SC]
+        //       A52F4947AF1506F3A7572EFC140278B773CA7C16
+        // uid                      importOptions@example.net
+        static const char keyFpr[] = "A52F4947AF1506F3A7572EFC140278B773CA7C16";
+        static const char keyData[] =
+            "-----BEGIN PGP PUBLIC KEY BLOCK-----\n"
+            "\n"
+            "mDMEZmlpmBYJKwYBBAHaRw8BAQdAZaSopKwccTwnMlJBVCWMT6et1T1WF9EkXdJi\n"
+            "gzI74xW0GWltcG9ydE9wdGlvbnNAZXhhbXBsZS5uZXSIkwQTFgoAOxYhBKUvSUev\n"
+            "FQbzp1cu/BQCeLdzynwWBQJmaWmYAhsDBQsJCAcCAiICBhUKCQgLAgQWAgMBAh4H\n"
+            "AheAAAoJEBQCeLdzynwWjmQBAP4dQEN/M4/dKIAlxNAbWzIkV+eSoUFLJszOJ/xx\n"
+            "FwJzAP43gkdXkUsHZt/U3mLZqtiHJFd7JxVm7hKRoAVBhZZYDw==\n"
+            "=7Z1j\n"
+            "-----END PGP PUBLIC KEY BLOCK-----\n";
+
+        auto *job = openpgp()->importJob();
+        job->setImportOptions({QStringLiteral("show-only")});
+        connect(job, &ImportJob::result, this,
+                [this](ImportResult result, QString, Error)
+        {
+            QVERIFY(!result.error());
+            QCOMPARE(result.numConsidered(), 0);
+            QCOMPARE(result.numImported(), 0);
+            QVERIFY(result.imports().empty());
+            Q_EMIT asyncDone();
+        });
+        job->start(QByteArray{keyData});
+        QSignalSpy spy (this, SIGNAL(asyncDone()));
+        QVERIFY(spy.wait());
+
+        auto ctx = std::unique_ptr<GpgME::Context>(Context::createForProtocol(GpgME::OpenPGP));
+        GpgME::Error err;
+        const auto key = ctx->key(keyFpr, err, false);
+        QVERIFY(key.isNull());
     }
 
     void testImportWithKeyOrigin()
@@ -155,12 +199,49 @@ private Q_SLOTS:
         QSignalSpy spy (this, SIGNAL(asyncDone()));
         QVERIFY(spy.wait());
 
-        auto ctx = Context::createForProtocol(GpgME::OpenPGP);
+        auto ctx = std::unique_ptr<GpgME::Context>(Context::createForProtocol(GpgME::OpenPGP));
         GpgME::Error err;
         const auto key = ctx->key(keyFpr, err, false);
         QVERIFY(!key.isNull());
         QVERIFY(key.origin() == Key::OriginWKD);
         // the origin URL is currently not available in GpgME
+    }
+
+    void testDeferredStart()
+    {
+        // pub   ed25519 2023-01-05 [SC]
+        //       4D1367FE9AF6334D8A55BA635A817A94C7B37E5D
+        // uid                      importDeferred@example.net
+        static const char keyFpr[] = "4D1367FE9AF6334D8A55BA635A817A94C7B37E5D";
+        static const char keyData[] =
+            "-----BEGIN PGP PUBLIC KEY BLOCK-----\n"
+            "\n"
+            "mDMEY7bNSxYJKwYBBAHaRw8BAQdAazIWyd/xEMeObDSUnh2+AXQuo0oM+TDBG49z\n"
+            "KHvTAYG0GmltcG9ydERlZmVycmVkQGV4YW1wbGUubmV0iJMEExYKADsWIQRNE2f+\n"
+            "mvYzTYpVumNagXqUx7N+XQUCY7bNSwIbAwULCQgHAgIiAgYVCgkICwIEFgIDAQIe\n"
+            "BwIXgAAKCRBagXqUx7N+XasrAP4qPzLzPd6tWDZvP29ZYPTSrjrTb0U5MOJeIPKX\n"
+            "73jZswEAwWRvgH+GmhTOigw0UVtinAFvUEFVyvcW/GR19mw5XA0=\n"
+            "=JnpA\n"
+            "-----END PGP PUBLIC KEY BLOCK-----\n";
+
+        auto *job = openpgp()->importJob();
+        job->startLater(QByteArray{keyData});
+        connect(job, &ImportJob::result, this,
+                [this](ImportResult result, QString, Error)
+        {
+            QVERIFY(!result.error());
+            QVERIFY(!result.imports().empty());
+            QVERIFY(result.numImported());
+            Q_EMIT asyncDone();
+        });
+        job->startNow();
+        QSignalSpy spy (this, SIGNAL(asyncDone()));
+        QVERIFY(spy.wait());
+
+        auto ctx = std::unique_ptr<GpgME::Context>(Context::createForProtocol(GpgME::OpenPGP));
+        GpgME::Error err;
+        const auto key = ctx->key(keyFpr, err, false);
+        QVERIFY(!key.isNull());
     }
 };
 

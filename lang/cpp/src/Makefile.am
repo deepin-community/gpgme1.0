@@ -19,8 +19,12 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 # 02111-1307, USA
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = gpgmepp.pc
+
 EXTRA_DIST = GpgmeppConfig.cmake.in.in GpgmeppConfigVersion.cmake.in \
-             gpgmepp_version.h.in GpgmeppConfig-w32.cmake.in.in
+             gpgmepp_version.h.in GpgmeppConfig-w32.cmake.in.in \
+             gpgmepp.pc.in
 
 lib_LTLIBRARIES = libgpgmepp.la
 
@@ -88,6 +92,14 @@ else
 libsuffix=.so
 endif
 
+copied_headers = $(gpgmepp_headers:%=gpgme++/%) $(interface_headers:%=gpgme++/%)
+
+$(copied_headers): Makefile.am
+	mkdir -p $(builddir)/gpgme++/interfaces
+	echo -n "#include \"$(abs_srcdir)" > "$@"
+	echo -n "$@" | sed "s/gpgme++//" >> "$@"
+	echo "\"" >> "$@"
+
 if HAVE_W32_SYSTEM
 GpgmeppConfig.cmake: GpgmeppConfig-w32.cmake.in
 	sed -e 's|[@]resolved_bindir@|$(bindir)|g' < "$<" | \
@@ -115,5 +127,8 @@ install-data-local: install-cmake-files
 
 uninstall-local: uninstall-cmake-files
 
+BUILT_SOURCES = $(copied_headers)
+
 CLEANFILES = GpgmeppConfig.cmake GpgmeppConfigVersion.cmake \
-             gpgmepp_version.h GpgmeppConfig.cmake.in
+             gpgmepp_version.h GpgmeppConfig.cmake.in \
+             $(copied_headers)

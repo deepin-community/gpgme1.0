@@ -41,10 +41,10 @@
 
 #include <QDateTime>
 
-#include "context.h"
-#include "data.h"
-#include "gpgaddexistingsubkeyeditinteractor.h"
-#include "key.h"
+#include <gpgme++/context.h>
+#include <gpgme++/data.h>
+#include <gpgme++/gpgaddexistingsubkeyeditinteractor.h>
+#include <gpgme++/key.h>
 
 #include <gpg-error.h>
 
@@ -64,7 +64,8 @@ static QGpgMEAddExistingSubkeyJob::result_type add_subkey(Context *ctx, const Ke
     std::unique_ptr<GpgAddExistingSubkeyEditInteractor> interactor{new GpgAddExistingSubkeyEditInteractor{subkey.keyGrip()}};
 
     if (!subkey.neverExpires()) {
-        const auto expiry = QDateTime::fromSecsSinceEpoch(subkey.expirationTime(), Qt::UTC).toString(u"yyyyMMdd'T'hhmmss").toStdString();
+        const auto expiry = QDateTime::fromSecsSinceEpoch(uint_least32_t(subkey.expirationTime()),
+                                                          Qt::UTC).toString(u"yyyyMMdd'T'hhmmss").toStdString();
         interactor->setExpiry(expiry);
     }
 
@@ -89,7 +90,6 @@ Error QGpgMEAddExistingSubkeyJob::start(const GpgME::Key &key, const GpgME::Subk
 Error QGpgMEAddExistingSubkeyJob::exec(const GpgME::Key &key, const GpgME::Subkey &subkey)
 {
     const result_type r = add_subkey(context(), key, subkey);
-    resultHook(r);
     return std::get<0>(r);
 }
 

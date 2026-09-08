@@ -40,6 +40,7 @@ c_tests = \
 	t-decrypt t-verify t-decrypt-verify t-sig-notation t-export	\
 	t-import t-edit t-keylist t-keylist-sig t-keylist-secret-sig t-wait \
 	t-encrypt-large t-file-name t-gpgconf t-encrypt-mixed t-edit-sign \
+	t-setownertrust							\
 	$(tests_unix)
 
 TESTS = initial.test $(c_tests) final.test
@@ -61,13 +62,13 @@ EXTRA_DIST = initial.test final.test \
         pubdemo.asc secdemo.asc cipher-1.asc cipher-2.asc \
 	cipher-3.asc cipher-no-sig.asc \
 	geheim.txt pubkey-1.asc seckey-1.asc pinentry $(private_keys) \
-	gpg.conf.in
+	gpg.conf.in ownertrust.txt
 
 BUILT_SOURCES = gpg.conf gpg-agent.conf pubring-stamp \
            gpg-sample.stamp
 AM_CPPFLAGS = -I$(top_builddir)/src @GPG_ERROR_CFLAGS@
 AM_LDFLAGS = -no-install
-LDADD = ../../src/libgpgme.la @LDADD_FOR_TESTS_KLUDGE@
+LDADD = ../../src/libgpgme.la @GPG_ERROR_LIBS@ @LDADD_FOR_TESTS_KLUDGE@
 
 WITH_THREAD_CPPFLAGS =  -I$(top_builddir)/src @GPG_ERROR_MT_CFLAGS@
 WITH_THREAD_LDADD = ../../src/libgpgme.la \
@@ -99,15 +100,18 @@ gpg-sample.stamp: $(srcdir)/$(private_keys)
 	-$(TESTS_ENVIRONMENT) gpgconf --kill all
 	$(MKDIR_P) ./private-keys-v1.d
 	for k in $(private_keys); do \
-          cp $(srcdir)/$$k private-keys-v1.d/$$k.key; \
-        done
+	  cp $(srcdir)/$$k private-keys-v1.d/$$k.key; \
+	done
 	echo x > ./gpg-sample.stamp
 
 pubring-stamp: $(srcdir)/pubdemo.asc gpg-sample.stamp
 	$(TESTS_ENVIRONMENT) $(GPG) --batch --no-permission-warning \
-               --import $(srcdir)/pubdemo.asc
+		--import $(srcdir)/pubdemo.asc
 	-$(TESTS_ENVIRONMENT) $(GPG) --batch --no-permission-warning \
 		--import $(srcdir)/secdemo.asc
+	-$(TESTS_ENVIRONMENT) $(GPG) --batch --no-permission-warning \
+		--import-ownertrust $(srcdir)/ownertrust.txt
+	-$(TESTS_ENVIRONMENT) gpgconf --kill all
 	echo x > ./pubring-stamp
 
 gpg.conf: $(srcdir)/gpg.conf.in
