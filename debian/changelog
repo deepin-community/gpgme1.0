@@ -1,3 +1,12 @@
+gpgme1.0 (1.24.2-3deepin2) unstable; urgency=medium
+
+  * fix(cve): CVE-2026-129975 (unknown) - Fix a double free in the
+    status line read code.   Upstream:
+    https://github.com/gpg/gpgme/commit/14499348b966cd7b3d72afee15a5cd51
+    cdd0a727
+
+ -- deepin-ci-robot <packages@deepin.org>  Mon, 23 Nov 2026 20:01:23 +0800
+
 gpgme1.0 (1.24.2-3deepin1) unstable; urgency=medium
 
   * Revert 64-bit time_t transition (restore libgpgme11, libqgpgme15 and libgpgmepp6 package names).
